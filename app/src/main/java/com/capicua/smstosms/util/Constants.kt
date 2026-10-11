@@ -5,6 +5,8 @@
 
 package com.capicua.smstosms.util
 
+import com.capicua.smstosms.BuildConfig
+
 /**
  * Constantes de infraestructura.
  *
@@ -38,6 +40,15 @@ object Constants {
     const val NOTIFICATION_CHANNEL_NAME  = "SMStoSMS"
     const val NOTIFICATION_ID_FOREGROUND = 1001
 
-    // FileProvider authority (para exportar el registro a un fichero compartible)
-    const val FILE_PROVIDER_AUTHORITY = "com.capicua.smstosms.provider"
+    /**
+     * FileProvider authority (para exportar el registro a un fichero compartible).
+     *
+     * Se deriva del `applicationId` y **no se escribe a mano**: una autoridad es única en todo
+     * el dispositivo, así que con el nombre fijo la variante de depuración y la de publicación
+     * declaraban la misma y Android se negaba a tener las dos instaladas
+     * (`INSTALL_FAILED_CONFLICTING_PROVIDER`), que es justo lo que el `applicationIdSuffix`
+     * pretendía evitar. El manifiesto usa el mismo valor con `${applicationId}.provider`:
+     * si cambia uno, tiene que cambiar el otro.
+     */
+    val FILE_PROVIDER_AUTHORITY = "${BuildConfig.APPLICATION_ID}.provider"
 }

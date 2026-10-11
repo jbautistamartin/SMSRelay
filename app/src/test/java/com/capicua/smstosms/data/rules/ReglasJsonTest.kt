@@ -5,6 +5,7 @@
 
 package com.capicua.smstosms.data.rules
 
+import com.capicua.smstosms.data.config.AppConfig
 import com.capicua.smstosms.domain.model.Regla
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -17,8 +18,8 @@ import org.junit.Test
  * Tests del formato de intercambio de reglas.
  *
  * Lo que se verifica no es que kotlinx.serialization funcione, sino las decisiones propias del
- * formato: que los ids locales no viajen, que el orden relativo se conserve y que un fichero
- * escrito por otra versión no reviente el parseo.
+ * formato: que los ids locales no viajen, que la SIM tampoco, que el orden relativo se conserve
+ * y que un fichero escrito por otra versión no reviente el parseo.
  */
 class ReglasJsonTest {
 
@@ -123,7 +124,60 @@ class ReglasJsonTest {
         )
 
         assertTrue(serializado.contains("\"version\""))
-        assertEquals(2, ReglasExportadas.VERSION_ACTUAL)
+        assertEquals(3, ReglasExportadas.VERSION_ACTUAL)
+    }
+
+    // ── La configuración viaja con las reglas ─────────────────────────────────
+
+    @Test
+    fun `los ajustes sobreviven a la ida y vuelta`() {
+        val original = AppConfig(
+            maxReintentos = 7,
+            intervaloReintentoSegundos = 45,
+            timeoutEnvioSegundos = 90,
+            maxReenviosPorMinuto = 3,
+            protegerBucles = false,
+            subscriptionId = 12,
+            recepcionActiva = false
+        )
+
+        val recuperado = json.decodeFromString(
+            ReglasExportadas.serializer(),
+            json.encodeToString(
+                ReglasExportadas.serializer(),
+                ReglasExportadas(
+                    exportado = "2026-10-10T22:00:00Z",
+                    configuracion = original.aJson(),
+                    reglas = emptyList()
+                )
+            )
+        )
+
+        // La SIM es de este teléfono y no viaja: al importar se conserva la del destino.
+        val importado = recuperado.configuracion!!.aDominio(simActual = 99)
+
+        assertEquals(original.copy(subscriptionId = 99), importado)
+    }
+
+    /**
+     * Los ficheros de los formatos 1 y 2 solo llevaban reglas. Tienen que seguir entrando, y
+     * dejar los ajustes del dispositivo como estén en lugar de pisarlos con valores por
+     * defecto.
+     */
+    @Test
+    fun `un fichero sin bloque de configuracion se sigue importando`() {
+        val soloReglas = """
+            {
+              "version": 2,
+              "exportado": "2026-10-07T19:30:00Z",
+              "reglas": [ { "nombre": "Simple", "destino": "+34600112233" } ]
+            }
+        """.trimIndent()
+
+        val fichero = json.decodeFromString(ReglasExportadas.serializer(), soloReglas)
+
+        assertNull(fichero.configuracion)
+        assertEquals(1, fichero.reglas.size)
     }
 
     // ── Tolerancia ────────────────────────────────────────────────────────────

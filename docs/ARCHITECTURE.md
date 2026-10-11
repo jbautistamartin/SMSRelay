@@ -293,11 +293,20 @@ export JAVA_HOME="/ruta/al/jdk-21"
 Las claves se leen de `local.properties`, que no se versiona:
 
 ```properties
-KEYSTORE_PATH=/ruta/absoluta/al/almacen.keystore
+KEYSTORE_PATH=../../Claves/capicua.jks
 KEYSTORE_PASSWORD=...
 KEY_ALIAS=...
 KEY_PASSWORD=...
 ```
+
+El almacén vive **fuera del repositorio** y lo comparten las demás aplicaciones de la casa: una
+misma clave las firma todas. `KEYSTORE_PATH` admite ruta absoluta, pero se escribe relativa para
+que el proyecto se pueda mover de sitio, y **resuelve desde el módulo `app/`**, no desde la raíz,
+porque es ahí donde la interpreta el `file()` de `app/build.gradle.kts`.
+
+Que la clave sea compartida tiene una consecuencia: toda actualización futura tiene que firmarse
+con ese mismo almacén. Si se pierde, la aplicación instalada ya no se puede actualizar — solo
+desinstalar y volver a instalar, perdiendo sus datos.
 
 Si falta alguna de las cuatro, el build **no falla**: se omite la configuración de firma y el APK
 sale sin firmar. Es deliberado, para que clonar el repositorio y compilar funcione sin tener que
@@ -518,12 +527,26 @@ panel de prueba lo muestra para el texto real.
 
 ### Exportar e importar
 
-El juego de reglas se exporta a JSON versionado:
+La copia de seguridad se hace desde **Configuración**, no desde la pantalla de Reglas: las
+reglas son configuración —son lo que decide a quién se reenvía qué—, y tenerlas en otro sitio
+obligaba a guardar dos ficheros, en dos pantallas distintas, para una sola cosa. Lo implementa
+`data/config/ConfigBackup`, sobre un `Uri` del Storage Access Framework, de modo que el fichero
+lo elige el operador y no hace falta ningún permiso de almacenamiento.
+
+Un fichero completo (formato 3):
 
 ```json
 {
-  "version": 1,
-  "exportado": "2026-10-07T19:30:00Z",
+  "version": 3,
+  "exportado": "2026-10-10T22:00:00Z",
+  "configuracion": {
+    "max_reintentos": 10,
+    "intervalo_reintento_segundos": 30,
+    "timeout_envio_segundos": 60,
+    "max_reenvios_por_minuto": 10,
+    "proteger_bucles": true,
+    "recepcion_activa": true
+  },
   "reglas": [
     {
       "nombre": "Banco",
@@ -538,11 +561,27 @@ El juego de reglas se exporta a JSON versionado:
 }
 ```
 
+| Versión | Cambio |
+|---------|--------------------------------------------|
+| 1 | Formato inicial, solo reglas. |
+| 2 | La regla gana `ignorar_mayusculas`. |
+| 3 | El fichero gana el bloque `configuracion`. |
+
 Los **ids no viajan** en el fichero: son locales a la base de datos de cada dispositivo y
-reutilizarlos provocaría colisiones. Importar **añade** reglas nuevas al final, conservando el
-orden relativo del fichero; nunca reemplaza las existentes. Cada regla se valida antes de
-escribir —expresiones que compilen, destino y nombre no vacíos— y las rechazadas se cuentan
-aparte.
+reutilizarlos provocaría colisiones. **La SIM tampoco**: `subscriptionId` identifica una tarjeta
+en *este* teléfono y, restaurado en otro, mandaría los reenvíos por donde no es; al importar se
+conserva la del dispositivo de destino.
+
+Los dos bloques se tratan distinto al importar, y no por capricho:
+
+- **Los ajustes se sustituyen.** Son un juego de valores único: mezclarlos no significa nada.
+- **Las reglas se añaden** al final, conservando el orden relativo del fichero. Importar nunca
+  borra: una importación equivocada que vaciara la lista dejaría el teléfono sin reenviar nada.
+  Cada regla se valida antes de escribir —expresiones que compilen, destino y nombre no
+  vacíos— y las rechazadas se cuentan aparte.
+
+Un fichero de los formatos 1 y 2 no lleva `configuracion` y se sigue importando: entran sus
+reglas y los ajustes del teléfono se quedan como estén.
 
 ---
 
@@ -829,12 +868,41 @@ En **Configuración**, persistidos en DataStore:
 
 | Parámetro | Por defecto | Rango | Qué controla |
 |-----------|-------------|-------|--------------|
+| Leer los SMS que llegan | Activado | — | Interruptor general: al apagarlo se deshabilita el componente `SmsReceiver` |
 | Evitar bucles de reenvío | Activado | — | Protecciones 1 y 2 de §11 |
 | Máximo de reenvíos por minuto | 10 | 1–100 | Protección 3 de §11 |
 | Espera de confirmación | 60 s | 10–300 | Cuánto se espera el `sentIntent` |
 | Máximo de reintentos | 10 | 1–100 | Cuándo se da un reenvío por perdido |
 | Intervalo inicial de reintento | 30 s | 5–3600 | Backoff lineal de WorkManager |
 | SIM de envío | Predeterminada | — | Solo visible con dos o más tarjetas |
+
+Apagar «Leer los SMS que llegan» no pone un `if` al principio de `onReceive`: deshabilita el
+componente con el `PackageManager` (`util/ControlRecepcion`), de modo que el sistema deja de
+entregarle el broadcast. Ni se arranca el proceso, ni hay que leer DataStore —que es asíncrono—
+en el hilo principal del broadcast, ni puede colarse un SMS por una carrera entre el ajuste y el
+mensaje. Corta la **entrada**: lo que ya estaba guardado y encolado se sigue reenviando. El
+estado del componente lo persiste el sistema y sobrevive a los reinicios; lo único que lo
+devuelve al valor del manifiesto es una reinstalación, y por eso `SmsToSmsApplication` lo vuelve
+a sincronizar con el ajuste guardado al arrancar.
+
+### Lo que el teléfono tiene que permitir
+
+Dos ajustes del sistema deciden si la aplicación funciona de verdad, y ninguno se puede conceder
+desde el código:
+
+| Ajuste | Se puede consultar | Qué pasa sin él | Dónde está en la app |
+|--------|--------------------|-----------------|----------------------|
+| Exención de batería (Doze) | Sí, `PowerManager` | Los reenvíos se retrasan horas con la pantalla apagada | Configuración → botón de batería (`util/OptimizacionBateria`) |
+| Inicio automático del fabricante | **No**, no hay API | Tras reiniciar el teléfono no se recibe nada hasta abrir la app a mano | Configuración → botón de inicio automático (`util/InicioAutomatico`) |
+
+El inicio automático es cosa de MIUI, HyperOS, EMUI, ColorOS y Funtouch: su lista viene vacía y
+lo que no esté en ella no recibe `BOOT_COMPLETED` ni despierta en segundo plano. Como no se puede
+consultar, la pantalla no pinta estado: explica para qué sirve y abre la pantalla del sistema.
+
+Hay un tercer caso que no es un ajuste sino una regla de Android: una aplicación **recién
+instalada que nadie ha abierto todavía**, o una que se ha forzado a detener, no recibe ningún
+broadcast —tampoco el de SMS— hasta que se abre una primera vez. Después de instalar el APK hay
+que abrirla una vez.
 
 ### Monitorización vía ADB
 
@@ -860,6 +928,13 @@ adb shell dumpsys jobscheduler | grep -A 5 capicua
 
 **Logs** → **Exportar** genera un fichero de texto en la caché y lo comparte mediante
 `FileProvider`. Incluye el tipo, el SMS, el destino y el detalle de cada entrada.
+
+Su autoridad se deriva del `applicationId` (`${applicationId}.provider` en el manifiesto y
+`BuildConfig.APPLICATION_ID + ".provider"` en `Constants`) y **no se escribe a mano**: una
+autoridad es única en todo el dispositivo, así que con el nombre fijo las variantes de
+depuración y de publicación declaraban la misma y Android se negaba a tener las dos instaladas
+(`INSTALL_FAILED_CONFLICTING_PROVIDER`), que es justo lo que el `applicationIdSuffix` pretendía
+evitar. Ese fallo no se ve al compilar: aparece al instalar.
 
 ---
 

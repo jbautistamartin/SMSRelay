@@ -1,5 +1,7 @@
 # SMStoSMS
 
+[![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/jbautistamartin)
+
 Aplicación Android que convierte un dispositivo con SIM en un **reenviador de SMS**: recibe los
 mensajes que llegan a su número y los reenvía automáticamente a otro teléfono, según reglas con
 expresiones regulares sobre el remitente y el texto.
@@ -39,9 +41,14 @@ otra, y el resto a ninguna parte.
   al propio remitente y limita los reenvíos por minuto, porque cada SMS cuesta dinero
 - **Reintentos automáticos** — WorkManager con backoff configurable, y rescate cada 30 segundos
   de lo que se quede atascado
-- **Arranque automático** — los workers se reactivan tras reiniciar el dispositivo
+- **Arranque automático** — los workers se reactivan tras reiniciar el dispositivo, y Ajustes
+  lleva al permiso de inicio automático del fabricante, que es lo que lo impide en Xiaomi,
+  Huawei, Oppo y Vivo
+- **Interruptor de recepción** — un ajuste apaga la lectura de SMS sin desinstalar ni
+  desconfigurar nada; lo que ya estuviera en cola se termina de enviar
 - **Registro de auditoría** — cada paso queda anotado, con filtros y exportación a fichero
-- **Exportar e importar reglas** — en JSON, para clonar la configuración en otro dispositivo
+- **Copia de seguridad** — ajustes y reglas en un solo fichero JSON, desde la pestaña
+  Configuración, para restaurarlos o clonarlos en otro dispositivo
 - **Doble SIM** — se puede elegir con qué tarjeta se envía
 
 ---
@@ -338,6 +345,17 @@ y sin base de datos en memoria.
 3. Respeta las convenciones de nombres del proyecto, descritas en [`CLAUDE.md`](CLAUDE.md)
 4. Realiza tus cambios y añade tests
 5. Abre un Pull Request con una descripción clara del cambio
+
+---
+
+## Apoyar el proyecto
+
+SMStoSMS es gratuito y de código abierto. Si te resulta útil, puedes invitarme a un café:
+
+[![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/jbautistamartin)
+
+El enlace también está dentro de la aplicación, en la pestaña **Acerca de** («Invitar a un café»).
+Es completamente opcional: la aplicación no muestra avisos ni limita ninguna función.
 
 ---
 

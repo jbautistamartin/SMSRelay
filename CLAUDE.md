@@ -16,10 +16,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew installDebug
 
 # Release build (requiere las siguientes claves en local.properties):
-#   KEYSTORE_PATH=<ruta absoluta al .keystore>
+#   KEYSTORE_PATH=<ruta al almacén, absoluta o relativa al módulo app/>
 #   KEYSTORE_PASSWORD=<contraseña del almacén>
 #   KEY_ALIAS=<alias de la clave>
 #   KEY_PASSWORD=<contraseña de la clave>
+# El almacén está fuera del repositorio y se comparte con las demás aplicaciones de
+# la casa, así que KEYSTORE_PATH va relativa (`../../Claves/capicua.jks`): el file()
+# de app/build.gradle.kts la resuelve desde el módulo, no desde la raíz.
 # Sin las cuatro claves el build NO falla: el APK sale sin firmar.
 # El APK resultante se genera como smstosms-<versionName>.apk
 ./gradlew assembleRelease
@@ -155,6 +158,65 @@ Number comparison goes through `NormalizadorTelefono`, which strips non-digits a
 last 9, so `+34600112233` and `600112233` are recognised as the same subscriber. Alphanumeric
 senders never compare equal to anything — you cannot forward to them, so they cannot form loops.
 
+### Tab navigation
+
+The five top-level screens — Panel, Reglas, Logs, Ajustes, Acerca de — are **pages of a
+`ViewPager2`**, not destinations of the navigation graph, so each is reachable both by tapping the
+Bottom Navigation and by swiping left or right.
+
+`nav_graph.xml` therefore holds only three destinations: `homeFragment`, which hosts the pager,
+plus the two rule sub-screens `editarReglaFragment` and `probarReglasFragment`. Both actions hang
+off `homeFragment`, because when `ReglasFragment` navigates, the NavController's current
+destination is the one hosting the pager and not the rules list. `findNavController()` still
+resolves from inside a page: it walks up the parent-fragment chain.
+
+`Pestana` (`presentation/home/Pestana.kt`) is the single source of truth tying together three
+things that used to have to agree by hand — pager position, Bottom Navigation menu id and
+Fragment. Declaration order **is** page order, and `bottom_nav_menu.xml` must list its items in
+that same order or the bar reads differently from the way it swipes.
+
+`setupWithNavController` is gone. The bar belongs to `MainActivity` and the pager to
+`HomeFragment`, and they do not share a lifetime — the pager is destroyed the moment you navigate
+to the rule editor — so they coordinate through `PestanasViewModel`, an activity-scoped
+`StateFlow` of the current tab. Re-selecting the tab that is already active emits nothing, and
+that is what keeps the two-way sync (bar → pager, swipe → bar) from feeding back on itself.
+
+Back on any tab other than Panel returns to Panel instead of closing the app; on Panel the gesture
+keeps its normal meaning. The NavController back stack used to give that for free by undoing
+visited tabs — a pager has no stack, so `HomeFragment` defines the behaviour explicitly.
+
+**The master switch for reception lives in Ajustes**, at the top because everything below it is
+moot while it is off. `recepcionActiva` is persisted like any other setting, but turning it off
+does more than store a flag: `ControlRecepcion` disables the `SmsReceiver` **component** through
+the `PackageManager`. An `if` at the top of `onReceive` would wake the app for every message that
+reaches the phone just to drop it, and would force an async DataStore read on the main thread
+inside the broadcast's ten-second budget. Disabling the component means the system stops
+delivering the broadcast at all — nothing to race, nothing to decide. It stops the **inbound**
+side only: whatever was already queued still gets forwarded, because discarding it would lose
+messages the app had already accepted. The component state is persisted by the system and
+survives reboots, so `SmsToSmsApplication.sincronizarRecepcion()` only matters after a
+**reinstall**, where the component reverts to its manifest value and the saved setting has to win
+again.
+
+**«Acerca de» is where the donation link lives**, and the only screen that mentions it: a card
+with an *Invitar a un café* button that opens `https://paypal.me/jbautistamartin` in the browser
+(`URL_DONATIVO`, a private const in `AboutFragment`). The button's heart (`drawable/ic_corazon.xml`)
+is the same four-Bézier path and the same gold as the one SilentRunner draws in its tray menu, so
+the icon reads the same across the house; it carries `app:iconTint="@null"`, because tinting it with
+the theme colour would throw away the only thing that identifies it. The intent is fired and
+`ActivityNotFoundException` caught instead of asking the `PackageManager` first — same reasoning as
+`OptimizacionBateria`: since Android 11 package visibility can claim there is no browser when there
+is one. If nothing resolves, a Snackbar says so rather than leaving a dead button. It is optional
+end to end: the app never nags and no feature depends on it.
+
+**A horizontally scrollable child inside the pager needs `NestedScrollableHost`**
+(`presentation/common/NestedScrollableHost.kt`, the AndroidX sample class adapted to this
+codebase). Otherwise the two gestures are the same gesture and the pager wins: the filter carousel
+on the Logs screen would stop scrolling, and dragging across it would change screens. The host
+arbitrates — the child keeps the gesture while it still has travel in that direction and hands it
+over at its edge. `fragment_logs.xml` is the only layout that needs it today; any new horizontal
+scroller, carousel or slider placed on a tab needs the same wrapper.
+
 ### Key files
 
 | File | Role |
@@ -171,6 +233,9 @@ senders never compare equal to anything — you cannot forward to them, so they 
 | `data/rules/ReglasJson.kt` | Versioned rule export/import format |
 | `data/local/db/Migraciones.kt` | Hand-written Room migrations, registered by `DatabaseModule` |
 | `util/OptimizacionBateria.kt` | Doze exemption: status query + the Settings screen's button |
+| `util/InicioAutomatico.kt` | OEM autostart screen (MIUI/EMUI/ColorOS/Funtouch) + the Settings button |
+| `util/ControlRecepcion.kt` | Enables/disables the `SmsReceiver` component — the reception kill switch |
+| `data/config/ConfigBackup.kt` | Export/import of the whole configuration: settings **and** rules |
 
 ### Why SmsSender suspends
 
@@ -316,12 +381,37 @@ use the closest match:
 ## Important notes
 
 - `libs.versions.toml` is the single source of truth for all dependency versions. Retrofit and
-  OkHttp were removed when the HTTP layer went away; do not re-add them.
+  OkHttp were removed when the HTTP layer went away; do not re-add them. `navigation-ui` went
+  the same way when the five tabs stopped being navigation destinations: nothing calls
+  `setupWithNavController` any more.
   `kotlinx.serialization` **is** used, by the rule export/import format.
 - `SEND_SMS` is a restricted permission. Irrelevant for APK distribution, but it closes the door
   to Google Play without an approved declaration.
+- **Nothing starting after a reboot is usually not a bug in `BootReceiver`.** The SMS receiver is
+  declared in the manifest, so the system starts it on its own — the receiver only reschedules
+  the background workers. Two things outside the app's reach break that: the OEM **autostart**
+  list (MIUI, HyperOS, EMUI, ColorOS and Funtouch ship it empty, and the permission can neither
+  be granted nor queried from code — `InicioAutomatico` opens that screen and Ajustes explains
+  it), and Android's **stopped state**: a freshly installed app that nobody has opened yet
+  receives no broadcasts at all, SMS included, until someone launches it once. After installing
+  the APK, open the app once.
+- **Rules are configuration, so their backup lives in Ajustes, not in the Reglas tab.** One file
+  carries both blocks (`ConfigBackup` + format version 3): settings are **replaced** on import,
+  rules are **appended** — importing never deletes, because a mistaken import that emptied the
+  list would leave the phone forwarding nothing. The SIM id does not travel in the file: it
+  identifies a card in *this* phone and would misroute forwards on another one.
+- **«Acerca de» carries a liability disclaimer** next to the privacy notice: the app ships as-is
+  and whoever installs and configures it is solely responsible for its use and for the law that
+  applies to them. In an app that forwards other people's SMS, that is not boilerplate.
 - Debug variant uses `applicationId = com.capicua.smstosms.debug`, so it can coexist with the
   release build on the same device. They do **not** share a database.
+- **Anything scoped per-install must derive from `applicationId`, never be typed out.** The
+  FileProvider authority was hardcoded as `com.capicua.smstosms.provider`, so both variants
+  declared the *same* authority — and an authority is unique device-wide, so Android refused to
+  have both installed (`INSTALL_FAILED_CONFLICTING_PROVIDER`), defeating the very point of the
+  `applicationIdSuffix`. It now reads `${applicationId}.provider` in the manifest and
+  `BuildConfig.APPLICATION_ID + ".provider"` in `Constants`; the two have to stay in step. The
+  symptom is misleading — it surfaces at install time, never at build time.
 - **Edge-to-edge is mandatory here.** With `targetSdk 35`, Android 15 draws the window under the
   status and navigation bars and ignores `fitsSystemWindows`; there is no opt-out. `MainActivity`
   distributes the insets (`systemBars or displayCutout`) and is the only place that does, so any

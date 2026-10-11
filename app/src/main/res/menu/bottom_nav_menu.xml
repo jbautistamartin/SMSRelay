@@ -1,28 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Los ids ya no son destinos del nav_graph: las cinco pantallas son páginas de un ViewPager2
+    y la correspondencia item ↔ página la define el enum Pestana. Los items tienen que estar
+    en el mismo orden que ese enum.
+-->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/dashboardFragment"
+        android:id="@+id/tab_panel"
         android:icon="@android:drawable/ic_dialog_email"
         android:title="@string/nav_dashboard" />
 
     <item
-        android:id="@+id/reglasFragment"
+        android:id="@+id/tab_reglas"
         android:icon="@android:drawable/ic_menu_sort_by_size"
         android:title="@string/nav_reglas" />
 
     <item
-        android:id="@+id/logsFragment"
+        android:id="@+id/tab_logs"
         android:icon="@android:drawable/ic_menu_recent_history"
         android:title="@string/nav_logs" />
 
     <item
-        android:id="@+id/settingsFragment"
+        android:id="@+id/tab_ajustes"
         android:icon="@android:drawable/ic_menu_preferences"
         android:title="@string/nav_settings" />
 
     <item
-        android:id="@+id/aboutFragment"
+        android:id="@+id/tab_acerca_de"
         android:icon="@android:drawable/ic_menu_info_details"
         android:title="@string/nav_about" />
 

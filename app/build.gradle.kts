@@ -102,11 +102,11 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.viewpager2)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.navigation.fragment)
-    implementation(libs.androidx.navigation.ui)
 
     // Hilt
     implementation(libs.hilt.android)
