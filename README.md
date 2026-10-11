@@ -128,7 +128,7 @@ Por ADB, `adb install smstosms-1.1.0.apk`.
 
 > El APK está firmado con la clave de Capicua. Las futuras actualizaciones se firman con la
 > misma: un APK de otra procedencia no se instalará encima, habrá que desinstalar primero y se
-> perderán las reglas. Expórtalas antes desde **Reglas → ⋮ → Exportar**.
+> perderán las reglas. Haz antes una copia desde **Config → Copia de seguridad → Exportar**.
 
 ---
 
@@ -284,8 +284,8 @@ no supone ningún problema.
 ```
 app/src/main/java/com/capicua/smstosms/
 ├── data/
-│   ├── config/          # AppConfig, ConfigDataStore
-│   ├── local/db/        # Room: entidades, DAOs, relaciones, SmsDatabase
+│   ├── config/          # AppConfig, ConfigDataStore, ConfigBackup
+│   ├── local/db/        # Room: entidades, DAOs, relaciones, SmsDatabase, Migraciones
 │   ├── repository/      # Sms, Regla, Reenvio y Log + sus implementaciones
 │   ├── rules/           # ReglasJson: formato de exportación
 │   └── sms/             # SmsSender, ProveedorDeSims, ResultadoEnvio
@@ -295,14 +295,17 @@ app/src/main/java/com/capicua/smstosms/
 │   ├── rules/           # EvaluadorDeReglas, NormalizadorTelefono
 │   └── usecase/         # ProcesarSmsEntranteUseCase, ObtenerListaSmsUseCase
 ├── presentation/
+│   ├── home/            # Pestana, HomeFragment y el ViewPager2 de las cinco pestañas
+│   ├── common/          # NestedScrollableHost: reparte el gesto dentro del pager
 │   ├── dashboard/       # Inicio: SMS recibidos y qué se hizo con ellos
 │   ├── rules/           # Lista de reglas, editor y panel de prueba
 │   ├── logs/            # Registro con filtros y exportación
-│   ├── settings/        # Protecciones, reintentos y SIM
+│   ├── settings/        # Recepción, protecciones, reintentos, SIM y copia de seguridad
 │   └── about/           # Acerca de
 ├── receiver/            # SmsReceiver, BootReceiver
 ├── service/             # SmsIngestionService
-├── util/                # Constants, Extensions
+├── util/                # Constants, Extensions, OptimizacionBateria, InicioAutomatico,
+│                       # ControlRecepcion
 ├── worker/              # SmsDispatchWorker, ColaDeEnvios, OrphanRescue, HealthMonitor
 └── SmsToSmsApplication.kt
 app/schemas/             # Esquemas Room exportados (versionados)
