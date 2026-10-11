@@ -5,12 +5,18 @@
 
 package com.capicua.smstosms.data.rules
 
+import com.capicua.smstosms.data.config.AppConfig
 import com.capicua.smstosms.domain.model.Regla
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Formato de intercambio del juego de reglas, para clonar la configuración entre dispositivos.
+ * Formato de intercambio de la configuración completa, para clonarla entre dispositivos.
+ *
+ * **Las reglas son parte de la configuración, no una cosa aparte.** El fichero lleva los dos
+ * bloques: los ajustes generales y el juego de reglas. Separarlos obligaría a exportar e
+ * importar dos ficheros que solo tienen sentido juntos —unos reintentos sin las reglas a las
+ * que se aplican no configuran nada— y a acertar con el orden al restaurarlos.
  *
  * El fichero lleva [version] por delante: si algún día cambia la forma de una regla, una
  * importación podrá reconocer el formato antiguo en lugar de fallar con un error de parseo
@@ -24,16 +30,22 @@ import kotlinx.serialization.Serializable
 data class ReglasExportadas(
     @SerialName("version") val version: Int = VERSION_ACTUAL,
     @SerialName("exportado") val exportado: String,
+    /**
+     * Ajustes generales. Es nulo en los ficheros del formato 1 y 2, que solo llevaban reglas:
+     * al importar uno de aquellos se dejan los ajustes del dispositivo como estén.
+     */
+    @SerialName("configuracion") val configuracion: ConfiguracionJson? = null,
     @SerialName("reglas") val reglas: List<ReglaJson>
 ) {
     companion object {
         /**
          * Versión del formato.
          *
-         * | Versión | Cambio                                  |
-         * |---------|-----------------------------------------|
-         * | 1       | Formato inicial.                        |
-         * | 2       | La regla gana `ignorar_mayusculas`.     |
+         * | Versión | Cambio                                       |
+         * |---------|----------------------------------------------|
+         * | 1       | Formato inicial.                             |
+         * | 2       | La regla gana `ignorar_mayusculas`.          |
+         * | 3       | El fichero gana el bloque `configuracion`.   |
          *
          * Subir la versión al añadir un campo opcional puede parecer excesivo, porque un
          * fichero de la 1 se sigue importando sin problema. Lo que evita es el caso contrario:
@@ -42,9 +54,51 @@ data class ReglasExportadas(
          * entraría distinguiendo mayúsculas sin avisar. Con la versión por delante, esa
          * importación se rechaza con un mensaje que explica lo que pasa.
          */
-        const val VERSION_ACTUAL = 2
+        const val VERSION_ACTUAL = 3
     }
 }
+
+/**
+ * Los ajustes generales tal como viajan en el fichero.
+ *
+ * **La SIM no se exporta.** El `subscriptionId` identifica una tarjeta en *este* teléfono; en
+ * otro apunta a otra SIM o a ninguna, y restaurarlo mandaría los reenvíos por donde no es. Al
+ * importar, la SIM se queda como esté en el dispositivo de destino.
+ */
+@Serializable
+data class ConfiguracionJson(
+    @SerialName("max_reintentos") val maxReintentos: Int,
+    @SerialName("intervalo_reintento_segundos") val intervaloReintentoSegundos: Int,
+    @SerialName("timeout_envio_segundos") val timeoutEnvioSegundos: Int,
+    @SerialName("max_reenvios_por_minuto") val maxReenviosPorMinuto: Int,
+    @SerialName("proteger_bucles") val protegerBucles: Boolean,
+    @SerialName("recepcion_activa") val recepcionActiva: Boolean = true
+)
+
+/** Convierte los ajustes a su forma exportable, dejando fuera lo que es de este teléfono. */
+fun AppConfig.aJson() = ConfiguracionJson(
+    maxReintentos = maxReintentos,
+    intervaloReintentoSegundos = intervaloReintentoSegundos,
+    timeoutEnvioSegundos = timeoutEnvioSegundos,
+    maxReenviosPorMinuto = maxReenviosPorMinuto,
+    protegerBucles = protegerBucles,
+    recepcionActiva = recepcionActiva
+)
+
+/**
+ * Convierte los ajustes importados al dominio.
+ *
+ * [simActual] es la SIM que ya tenía el dispositivo: no viene en el fichero y no se toca.
+ */
+fun ConfiguracionJson.aDominio(simActual: Int) = AppConfig(
+    maxReintentos = maxReintentos,
+    intervaloReintentoSegundos = intervaloReintentoSegundos,
+    timeoutEnvioSegundos = timeoutEnvioSegundos,
+    maxReenviosPorMinuto = maxReenviosPorMinuto,
+    protegerBucles = protegerBucles,
+    subscriptionId = simActual,
+    recepcionActiva = recepcionActiva
+)
 
 /** Una regla tal como viaja en el fichero. */
 @Serializable

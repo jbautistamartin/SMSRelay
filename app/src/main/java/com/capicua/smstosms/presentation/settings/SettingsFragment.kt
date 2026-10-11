@@ -5,10 +5,12 @@
 
 package com.capicua.smstosms.presentation.settings
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -19,9 +21,12 @@ import android.view.View.VISIBLE
 import android.widget.ArrayAdapter
 import com.capicua.smstosms.R
 import com.capicua.smstosms.data.config.AppConfig
+import com.capicua.smstosms.data.config.ResultadoCopia
 import com.capicua.smstosms.data.sms.SimDisponible
 import com.capicua.smstosms.databinding.FragmentSettingsBinding
+import com.capicua.smstosms.util.InicioAutomatico
 import com.capicua.smstosms.util.OptimizacionBateria
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -47,6 +52,19 @@ class SettingsFragment : Fragment() {
     /** SIM seleccionada en el formulario. */
     private var simElegida = AppConfig.SIM_POR_DEFECTO
 
+    // ── Selectores de fichero del sistema ─────────────────────────────────────
+    //
+    // La copia se escribe y se lee sobre el fichero que elige el operador, así que no hace
+    // falta ningún permiso de almacenamiento.
+
+    private val crearFichero = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? -> uri?.let { viewModel.exportar(it) } }
+
+    private val abrirFichero = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? -> uri?.let { viewModel.importar(it) } }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -61,7 +79,10 @@ class SettingsFragment : Fragment() {
 
         configurarSelectorSim()
         configurarBateria()
+        configurarAutoinicio()
+        configurarCopia()
         observarConfiguracion()
+        observarCopias()
         configurarBotonGuardar()
     }
 
@@ -145,6 +166,81 @@ class SettingsFragment : Fragment() {
         )
     }
 
+    // ── Inicio automático ─────────────────────────────────────────────────────
+
+    /**
+     * No hay estado que pintar: el permiso de inicio automático de los fabricantes no se puede
+     * consultar desde la aplicación. Solo queda llevar al operador a la pantalla correcta.
+     */
+    private fun configurarAutoinicio() {
+        binding.buttonAutoinicio.setOnClickListener {
+            if (!InicioAutomatico.abrirAjuste(requireContext())) {
+                Snackbar.make(
+                    binding.root,
+                    R.string.settings_autoinicio_sin_pantalla,
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    // ── Copia de seguridad ────────────────────────────────────────────────────
+
+    private fun configurarCopia() {
+        binding.buttonExportar.setOnClickListener {
+            crearFichero.launch(viewModel.nombreFicheroCopia())
+        }
+        // Importar cambia los ajustes y añade reglas: se avisa antes de qué va a pasar, porque
+        // desde fuera «importar» puede entenderse como «sustituir».
+        binding.buttonImportar.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.settings_importar)
+                .setMessage(R.string.settings_importar_confirmar)
+                .setNegativeButton(R.string.cancelar, null)
+                .setPositiveButton(R.string.settings_importar) { _, _ ->
+                    abrirFichero.launch(arrayOf("application/json", "text/plain"))
+                }
+                .show()
+        }
+    }
+
+    private fun observarCopias() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.copias.collect { resultado ->
+                    val mensaje = when (resultado) {
+                        is ResultadoCopia.Exportada ->
+                            getString(R.string.settings_copia_exportada, resultado.reglas)
+
+                        is ResultadoCopia.Importada -> when {
+                            resultado.rechazadas > 0 -> getString(
+                                R.string.settings_copia_importada_con_rechazos,
+                                resultado.aceptadas, resultado.rechazadas
+                            )
+                            else -> getString(
+                                R.string.settings_copia_importada, resultado.aceptadas
+                            )
+                        }
+
+                        is ResultadoCopia.Fallo ->
+                            getString(R.string.settings_copia_fallo, resultado.motivo)
+                    }
+                    Snackbar.make(binding.root, mensaje, Snackbar.LENGTH_LONG).show()
+
+                    // Los campos en pantalla son los de antes de importar: hay que repintarlos
+                    // con lo que acaba de entrar, o el siguiente «Guardar» desharía la copia.
+                    //
+                    // No se leen aquí: DataStore emite su valor nuevo cuando termina de
+                    // escribir, y en este instante `config` puede seguir siendo el de antes.
+                    // Rearmando la carga inicial, el repintado lo hace la emisión que llegue.
+                    if (resultado is ResultadoCopia.Importada && resultado.conAjustes) {
+                        cargaInicial = true
+                    }
+                }
+            }
+        }
+    }
+
     private fun observarConfiguracion() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -169,6 +265,7 @@ class SettingsFragment : Fragment() {
                 false
             )
         }
+        binding.switchRecepcion.isChecked = config.recepcionActiva
         binding.switchProtegerBucles.isChecked = config.protegerBucles
         binding.editTextMaxReenviosMinuto.setText(config.maxReenviosPorMinuto.toString())
         binding.editTextTimeoutEnvio.setText(config.timeoutEnvioSegundos.toString())
@@ -194,10 +291,21 @@ class SettingsFragment : Fragment() {
                     timeoutEnvioSegundos = timeoutEnvio,
                     maxReenviosPorMinuto = maxPorMinuto,
                     protegerBucles = binding.switchProtegerBucles.isChecked,
-                    subscriptionId = simElegida
+                    subscriptionId = simElegida,
+                    recepcionActiva = binding.switchRecepcion.isChecked
                 )
             )
-            Snackbar.make(binding.root, R.string.settings_guardado, Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(
+                binding.root,
+                if (binding.switchRecepcion.isChecked) {
+                    R.string.settings_guardado
+                } else {
+                    // Apagar la recepción no es un ajuste más: la aplicación deja de hacer su
+                    // trabajo y eso tiene que quedar dicho, no deducido.
+                    R.string.settings_guardado_sin_recepcion
+                },
+                Snackbar.LENGTH_SHORT
+            ).show()
         }
     }
 

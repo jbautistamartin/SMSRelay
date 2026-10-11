@@ -11,24 +11,31 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.setupWithNavController
 import com.capicua.smstosms.databinding.ActivityMainBinding
+import com.capicua.smstosms.presentation.home.Pestana
+import com.capicua.smstosms.presentation.home.PestanasViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
  * Activity principal y única de la aplicación.
  *
  * Responsabilidades:
- * 1. Configurar la navegación por fragmentos (Bottom Navigation + NavController).
+ * 1. Atar la barra inferior al ViewPager2 de pestañas que vive en HomeFragment.
  * 2. Repartir los insets del sistema, porque con `targetSdk 35` Android 15 dibuja la ventana
  *    de borde a borde y no hay forma de desactivarlo.
  * 3. Solicitar los permisos en tiempo de ejecución necesarios para recibir y reenviar SMS.
@@ -44,6 +51,23 @@ import timber.log.Timber
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var navController: NavController
+
+    /** Pestaña visible. La barra la escribe al pulsar y la lee cuando el usuario desliza. */
+    private val pestanasViewModel: PestanasViewModel by viewModels()
+
+    /**
+     * true mientras [observarPestana] está marcando un item por código.
+     *
+     * La barra inferior no distingue una pulsación de un `selectedItemId =`: avisa igual en los
+     * dos casos. Esta bandera es lo que diferencia «el usuario ha pulsado una pestaña», que sí
+     * debe abandonar la subpantalla en la que esté, de «la barra se está poniendo al día», que
+     * no debe tocar la pila de navegación. Sin ella, restaurar la aplicación tras una muerte de
+     * proceso cerraría el editor de reglas que estuviera abierto: el ViewModel vuelve a la
+     * primera pestaña mientras la barra restaura la que tenía guardada, y el ajuste resultante
+     * se leería como una pulsación.
+     */
+    private var sincronizandoBarra = false
 
     // ── Launcher de permisos ──────────────────────────────────────────────────
 
@@ -126,11 +150,60 @@ class MainActivity : AppCompatActivity() {
 
     // ── Navegación ────────────────────────────────────────────────────────────
 
+    /**
+     * Ata la barra inferior a las pestañas.
+     *
+     * Ya no se usa `setupWithNavController`: las cinco pantallas de primer nivel no son
+     * destinos del grafo, sino páginas del `ViewPager2` de `HomeFragment`, y el grafo solo
+     * conserva ese destino y las dos subpantallas de reglas. La barra y el pager se comunican
+     * a través de [PestanasViewModel] porque no viven lo mismo: la barra pertenece a esta
+     * Activity y el pager se destruye al navegar al editor.
+     */
     private fun configurarNavegacion() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        val navController = navHostFragment.navController
-        binding.bottomNavigation.setupWithNavController(navController)
+        navController = navHostFragment.navController
+
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            val pestana = Pestana.porIdMenu(item.itemId)
+                ?: return@setOnItemSelectedListener false
+
+            // Pulsar una pestaña desde el editor de reglas o el probador tiene que volver
+            // primero al pager: estando en una subpantalla, cambiar de página no se vería.
+            if (!sincronizandoBarra && navController.currentDestination?.id != R.id.homeFragment) {
+                navController.popBackStack(R.id.homeFragment, false)
+            }
+            pestanasViewModel.seleccionar(pestana)
+            true
+        }
+
+        observarPestana()
+    }
+
+    /**
+     * Refleja en la barra la pestaña activa, que es lo que mantiene el icono marcado en su
+     * sitio cuando el cambio viene de un deslizamiento y no de una pulsación.
+     *
+     * Escribir `selectedItemId` vuelve a disparar el listener de arriba, pero eso no se
+     * realimenta: `seleccionar` recibiría la pestaña que ya está y un `StateFlow` no reemite un
+     * valor igual al actual. Lo que sí hay que neutralizar es el salto a la pila de navegación,
+     * y de eso se encarga [sincronizandoBarra]. La primera emisión es la que deja el panel
+     * marcado al arrancar.
+     */
+    private fun observarPestana() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                pestanasViewModel.pestanaActual.collect { pestana ->
+                    if (binding.bottomNavigation.selectedItemId == pestana.idMenu) return@collect
+
+                    // El listener se ejecuta dentro de la asignación, de forma sincrónica, así
+                    // que basta con rodearla para que vea la bandera levantada.
+                    sincronizandoBarra = true
+                    binding.bottomNavigation.selectedItemId = pestana.idMenu
+                    sincronizandoBarra = false
+                }
+            }
+        }
     }
 
     // ── Permisos ──────────────────────────────────────────────────────────────

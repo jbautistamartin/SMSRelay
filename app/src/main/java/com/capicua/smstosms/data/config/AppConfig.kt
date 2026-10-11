@@ -45,7 +45,18 @@ data class AppConfig(
      * Id de suscripción de la SIM con la que enviar, en dispositivos con más de una.
      * [SIM_POR_DEFECTO] deja que el sistema elija la SIM de SMS predeterminada.
      */
-    val subscriptionId: Int = SIM_POR_DEFECTO
+    val subscriptionId: Int = SIM_POR_DEFECTO,
+
+    /**
+     * Interruptor general de la recepción. En false la aplicación deja de leer los SMS que
+     * llegan: no se guardan, no se evalúan reglas y no se reenvía nada.
+     *
+     * No es una comprobación que se haga al procesar cada mensaje: lo que se apaga es el
+     * propio receptor del sistema (ver `util/ControlRecepcion`), de modo que el SMS ni
+     * siquiera despierta a la aplicación. Lo que ya estuviera encolado se termina de enviar;
+     * esto corta la entrada, no la salida.
+     */
+    val recepcionActiva: Boolean = true
 ) {
     companion object {
         /** La aplicación no fuerza ninguna SIM: envía con la predeterminada del sistema. */

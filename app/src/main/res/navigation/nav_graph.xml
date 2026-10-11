@@ -1,26 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    El grafo solo contiene tres destinos. Las cinco pantallas de primer nivel (panel, reglas,
+    logs, ajustes y acerca de) dejaron de ser destinos cuando pasaron a ser páginas del
+    ViewPager2 de HomeFragment, que es lo que permite recorrerlas deslizando. Por eso las dos
+    acciones de reglas cuelgan ahora de homeFragment: cuando ReglasFragment navega, el destino
+    actual del NavController es el que aloja el pager, no la lista de reglas.
+-->
 <navigation
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/dashboardFragment">
+    app:startDestination="@id/homeFragment">
 
     <fragment
-        android:id="@+id/dashboardFragment"
-        android:name="com.capicua.smstosms.presentation.dashboard.DashboardFragment"
-        android:label="@string/nav_dashboard" />
-
-    <fragment
-        android:id="@+id/reglasFragment"
-        android:name="com.capicua.smstosms.presentation.rules.ReglasFragment"
-        android:label="@string/nav_reglas">
+        android:id="@+id/homeFragment"
+        android:name="com.capicua.smstosms.presentation.home.HomeFragment"
+        android:label="@string/app_name">
 
         <action
-            android:id="@+id/action_reglas_a_editar"
+            android:id="@+id/action_home_a_editar"
             app:destination="@id/editarReglaFragment" />
 
         <action
-            android:id="@+id/action_reglas_a_probar"
+            android:id="@+id/action_home_a_probar"
             app:destination="@id/probarReglasFragment" />
 
     </fragment>
@@ -42,20 +44,5 @@
         android:id="@+id/probarReglasFragment"
         android:name="com.capicua.smstosms.presentation.rules.ProbarReglasFragment"
         android:label="@string/probar_title" />
-
-    <fragment
-        android:id="@+id/logsFragment"
-        android:name="com.capicua.smstosms.presentation.logs.LogsFragment"
-        android:label="@string/nav_logs" />
-
-    <fragment
-        android:id="@+id/settingsFragment"
-        android:name="com.capicua.smstosms.presentation.settings.SettingsFragment"
-        android:label="@string/nav_settings" />
-
-    <fragment
-        android:id="@+id/aboutFragment"
-        android:name="com.capicua.smstosms.presentation.about.AboutFragment"
-        android:label="@string/nav_about" />
 
 </navigation>

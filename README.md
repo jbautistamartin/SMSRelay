@@ -1,10 +1,12 @@
 # SMStoSMS
 
+[![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/jbautistamartin)
+
 Aplicación Android que convierte un dispositivo con SIM en un **reenviador de SMS**: recibe los
 mensajes que llegan a su número y los reenvía automáticamente a otro teléfono, según reglas con
 expresiones regulares sobre el remitente y el texto.
 
-**Versión actual: [v1.0.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.0.0)** —
+**Versión actual: [v1.1.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.1.0)** —
 descarga el APK firmado desde la [página de releases](https://github.com/jbautistamartin/SMStoSMS/releases).
 No está en Google Play: `SEND_SMS` es un permiso restringido y su publicación exige una
 declaración aprobada.
@@ -39,9 +41,14 @@ otra, y el resto a ninguna parte.
   al propio remitente y limita los reenvíos por minuto, porque cada SMS cuesta dinero
 - **Reintentos automáticos** — WorkManager con backoff configurable, y rescate cada 30 segundos
   de lo que se quede atascado
-- **Arranque automático** — los workers se reactivan tras reiniciar el dispositivo
+- **Arranque automático** — los workers se reactivan tras reiniciar el dispositivo, y Ajustes
+  lleva al permiso de inicio automático del fabricante, que es lo que lo impide en Xiaomi,
+  Huawei, Oppo y Vivo
+- **Interruptor de recepción** — un ajuste apaga la lectura de SMS sin desinstalar ni
+  desconfigurar nada; lo que ya estuviera en cola se termina de enviar
 - **Registro de auditoría** — cada paso queda anotado, con filtros y exportación a fichero
-- **Exportar e importar reglas** — en JSON, para clonar la configuración en otro dispositivo
+- **Copia de seguridad** — ajustes y reglas en un solo fichero JSON, desde la pestaña
+  Configuración, para restaurarlos o clonarlos en otro dispositivo
 - **Doble SIM** — se puede elegir con qué tarjeta se envía
 
 ---
@@ -110,14 +117,14 @@ No hay ninguna dependencia de red: la aplicación no necesita internet y no decl
 
 La vía corta si no vas a tocar el código:
 
-1. Descarga `smstosms-1.0.0.apk` de la
-   [release v1.0.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.0.0).
+1. Descarga `smstosms-1.1.0.apk` de la
+   [release v1.1.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.1.0).
 2. Pásalo al teléfono e instálalo, aceptando «instalar de orígenes desconocidos» cuando lo pida.
 3. Concede los permisos que la app solicita al arrancar.
 4. **Ajustes → Fiabilidad en segundo plano → Desactivar ahorro de batería.** Sin esto el modo
    Doze puede retrasar los reenvíos horas con la pantalla apagada.
 
-Por ADB, `adb install smstosms-1.0.0.apk`.
+Por ADB, `adb install smstosms-1.1.0.apk`.
 
 > El APK está firmado con la clave de Capicua. Las futuras actualizaciones se firman con la
 > misma: un APK de otra procedencia no se instalará encima, habrá que desinstalar primero y se
@@ -338,6 +345,17 @@ y sin base de datos en memoria.
 3. Respeta las convenciones de nombres del proyecto, descritas en [`CLAUDE.md`](CLAUDE.md)
 4. Realiza tus cambios y añade tests
 5. Abre un Pull Request con una descripción clara del cambio
+
+---
+
+## Apoyar el proyecto
+
+SMStoSMS es gratuito y de código abierto. Si te resulta útil, puedes invitarme a un café:
+
+[![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/jbautistamartin)
+
+El enlace también está dentro de la aplicación, en la pestaña **Acerca de** («Invitar a un café»).
+Es completamente opcional: la aplicación no muestra avisos ni limita ninguna función.
 
 ---
 

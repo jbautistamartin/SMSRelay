@@ -5,12 +5,10 @@
 
 package com.capicua.smstosms.presentation.rules
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -21,6 +19,7 @@ import androidx.navigation.fragment.findNavController
 import com.capicua.smstosms.R
 import com.capicua.smstosms.databinding.FragmentReglasBinding
 import com.capicua.smstosms.domain.model.Regla
+import com.capicua.smstosms.presentation.home.HomeFragmentDirections
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,16 +41,6 @@ class ReglasFragment : Fragment() {
 
     /** Última lista emitida: la reordenación necesita saber el orden actual en pantalla. */
     private var reglasEnPantalla: List<Regla> = emptyList()
-
-    // ── Selectores de fichero del sistema ─────────────────────────────────────
-
-    private val crearFichero = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri: Uri? -> uri?.let { viewModel.exportar(it) } }
-
-    private val abrirFichero = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? -> uri?.let { viewModel.importar(it) } }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -87,14 +76,18 @@ class ReglasFragment : Fragment() {
             abrirEditor(EditarReglaViewModel.NUEVA)
         }
         binding.buttonProbar.setOnClickListener {
-            findNavController().navigate(R.id.action_reglas_a_probar)
+            findNavController().navigate(R.id.action_home_a_probar)
         }
-        binding.buttonMas.setOnClickListener { mostrarMenuPantalla(it) }
     }
 
+    /**
+     * Las acciones cuelgan de `homeFragment`, no de esta pantalla: la lista de reglas es una
+     * página del ViewPager2, así que el destino actual del NavController es el que aloja el
+     * pager. `findNavController()` lo encuentra subiendo por los fragments padre.
+     */
     private fun abrirEditor(reglaId: Long) {
         findNavController().navigate(
-            ReglasFragmentDirections.actionReglasAEditar(reglaId)
+            HomeFragmentDirections.actionHomeAEditar(reglaId)
         )
     }
 
@@ -124,20 +117,8 @@ class ReglasFragment : Fragment() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.avisos.collect { aviso ->
                     val mensaje = when (aviso) {
-                        is AvisoReglas.Exportadas ->
-                            getString(R.string.reglas_exportadas, aviso.cuantas)
-                        is AvisoReglas.Importadas -> if (aviso.rechazadas > 0) {
-                            getString(
-                                R.string.reglas_importadas_con_rechazos,
-                                aviso.aceptadas, aviso.rechazadas
-                            )
-                        } else {
-                            getString(R.string.reglas_importadas, aviso.aceptadas)
-                        }
                         is AvisoReglas.Eliminada ->
                             getString(R.string.reglas_eliminada, aviso.nombre)
-                        is AvisoReglas.Fallo ->
-                            getString(R.string.reglas_fallo, aviso.motivo)
                     }
                     Snackbar.make(binding.root, mensaje, Snackbar.LENGTH_LONG).show()
                 }
@@ -163,20 +144,6 @@ class ReglasFragment : Fragment() {
         }.show()
     }
 
-    private fun mostrarMenuPantalla(ancla: View) {
-        PopupMenu(requireContext(), ancla).apply {
-            menu.add(0, MENU_EXPORTAR, 0, R.string.reglas_exportar)
-            menu.add(0, MENU_IMPORTAR, 1, R.string.reglas_importar)
-            setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    MENU_EXPORTAR -> crearFichero.launch(viewModel.nombreFicheroExportacion())
-                    MENU_IMPORTAR -> abrirFichero.launch(arrayOf("application/json", "text/plain"))
-                }
-                true
-            }
-        }.show()
-    }
-
     private fun confirmarBorrado(regla: Regla) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.reglas_eliminar)
@@ -196,7 +163,5 @@ class ReglasFragment : Fragment() {
         const val MENU_EDITAR = 1
         const val MENU_DUPLICAR = 2
         const val MENU_ELIMINAR = 3
-        const val MENU_EXPORTAR = 4
-        const val MENU_IMPORTAR = 5
     }
 }

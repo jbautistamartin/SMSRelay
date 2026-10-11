@@ -49,14 +49,6 @@
                 android:layout_height="wrap_content"
                 android:text="@string/reglas_probar" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/button_mas"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:contentDescription="@string/reglas_mas_opciones"
-                app:icon="@android:drawable/ic_menu_more" />
-
         </LinearLayout>
 
         <TextView
