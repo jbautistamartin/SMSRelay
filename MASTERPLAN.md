@@ -106,8 +106,6 @@ fuera de `.git`.
 - `assembleDebug` → **BUILD SUCCESSFUL**. Manifest fusionado verificado:
   `package="com.capicua.smstosms.debug"`, `SmsToSmsApplication`, authority
   `com.capicua.smstosms.provider`.
-- Grep limpio en todo el repositorio: no queda ninguna ocurrencia del nombre de paquete
-  anterior fuera de la historia de Git.
 - Los 44 ficheros se movieron con `git mv`, así que Git los registra como *rename* y la historia
   se sigue hasta el commit inicial.
 
