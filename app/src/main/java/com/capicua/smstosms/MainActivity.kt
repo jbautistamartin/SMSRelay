@@ -23,6 +23,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
+import com.capicua.smstosms.data.update.ComprobadorDeActualizaciones
+import com.capicua.smstosms.data.update.ResultadoActualizacion
 import com.capicua.smstosms.databinding.ActivityMainBinding
 import com.capicua.smstosms.presentation.home.Pestana
 import com.capicua.smstosms.presentation.home.PestanasViewModel
@@ -30,6 +32,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
 /**
  * Activity principal y única de la aplicación.
@@ -52,6 +55,13 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
+
+    /**
+     * El comprobador de versiones. Se usa aquí, y no solo en «Acerca de», para que enterarse de
+     * que hay una versión nueva no dependa de que alguien entre en esa pantalla.
+     */
+    @Inject
+    lateinit var comprobadorDeActualizaciones: ComprobadorDeActualizaciones
 
     /** Pestaña visible. La barra la escribe al pulsar y la lee cuando el usuario desliza. */
     private val pestanasViewModel: PestanasViewModel by viewModels()
@@ -98,6 +108,28 @@ class MainActivity : AppCompatActivity() {
         configurarIconosDeBarras()
         configurarNavegacion()
         verificarYSolicitarPermisos()
+        comprobarSiHayVersionNueva()
+    }
+
+    // ── Versión nueva ─────────────────────────────────────────────────────────
+
+    /**
+     * Pregunta —como mucho una vez al día, y solo si el aviso está encendido— si hay publicada
+     * una versión más nueva, y lo enseña como un punto en la pestaña de «Acerca de», que es
+     * donde está la tarjeta que lo cuenta y deja instalarla.
+     *
+     * Un punto y nada más: **ni diálogo ni notificación**. Esto corre en un teléfono que reenvía
+     * SMS sin que nadie lo mire, y un aviso que se pone delante al arrancar taparía justo lo que
+     * se viene a ver. Si no hay red o no toca preguntar, no pasa nada y no se dice nada.
+     */
+    private fun comprobarSiHayVersionNueva() {
+        lifecycleScope.launch {
+            val resultado = comprobadorDeActualizaciones.comprobar(forzar = false)
+            if (resultado !is ResultadoActualizacion.Disponible) return@launch
+
+            Timber.i("Versión nueva publicada: ${resultado.etiqueta}")
+            binding.bottomNavigation.getOrCreateBadge(Pestana.ACERCA_DE.idMenu)
+        }
     }
 
     // ── Insets ────────────────────────────────────────────────────────────────
