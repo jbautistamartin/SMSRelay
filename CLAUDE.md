@@ -59,6 +59,21 @@ adb logcat -s "SmsReceiver" "SmsIngestionService" "SmsSender" "SmsDispatchWorker
 adb emu sms send +34600112233 "Tu codigo es 4821"
 ```
 
+## Releases
+
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts` (they go together: Android
+   refuses to install an APK whose `versionCode` is not higher than the installed one).
+2. **Write the entry in `CHANGELOG.md`**: what sits under `[No publicado]` becomes the new version
+   with its date. That file is the summary of *what* changed; the GitHub release notes are the long
+   form — how to install it, how to update from the previous version — and may repeat it.
+3. `./gradlew assembleRelease` → `app/build/outputs/apk/release/smstosms-<versionName>.apk`, signed
+   with the shared keystore (see the build commands above).
+4. Tag on `main` and publish: `gh release create vX.Y.Z --notes-file <notes> <apk>`.
+
+The APK keeps the same signing key release after release. That is what lets a user install the new
+one on top without losing rules, settings or history — and also why an APK of a *different* key
+(a debug build, say) cannot be upgraded in place.
+
 ## Architecture
 
 Clean Architecture with strict 3-layer separation and MVVM in the presentation layer. Dependency injection throughout via Hilt.
@@ -209,6 +224,57 @@ the theme colour would throw away the only thing that identifies it. The intent 
 is one. If nothing resolves, a Snackbar says so rather than leaving a dead button. It is optional
 end to end: the app never nags and no feature depends on it.
 
+**The same screen carries a *Código abierto* card** with a *Ver el proyecto en GitHub* button
+(`URL_PROYECTO`, beside `URL_DONATIVO` in `AboutFragment`), and it sits immediately above the
+donation card because it is what gives the donation its context: the code is published, and the
+card says where. Its icon (`drawable/ic_codigo.xml`) is the opposite case to the heart — there is
+no colour that identifies it, so it is left to be tinted by the theme. Both buttons go through the
+same `abrirEnlace(url)`, and they share the Snackbar for a device with no browser: that string was
+renamed from `about_donativo_sin_navegador` to `about_sin_navegador` when the second link arrived,
+because it never said anything about donating.
+
+**«Acerca de» also checks for new versions**, and that is why **`INTERNET` is back in the
+manifest**. Read this before assuming it is a leftover: the app forwards SMS over the phone's
+radio and **no message content ever travels over the network**. The permission is there so
+`data/update/ComprobadorDeActualizaciones` can ask `api.github.com` for the latest release and so
+`DescargaDeApk` can download the APK when someone presses the button. Retrofit and OkHttp did
+**not** come back with it — the request is a dozen lines of `HttpURLConnection`, and the response is
+parsed with `kotlinx.serialization`, which was already here for the rule export.
+
+How it behaves, and why:
+
+- **`MainActivity` asks at startup** and, if there is a newer version, puts a **badge on the
+  «Acerca de» tab** — no dialog and no notification. This runs on a phone that forwards SMS with
+  nobody looking at it; anything that puts itself in front at startup hides exactly what you came
+  to see. The card in «Acerca de» is where it is explained, with the switch that turns the
+  automatic question off and a *Buscar ahora* that ignores the daily interval.
+- **One question a day, with `If-None-Match`.** The unauthenticated API allows 60 requests an hour
+  per IP and a 304 does not count. The timestamp and the ETag live in `EstadoActualizacion`, in the
+  **same DataStore** as the settings but with their own keys — deliberately **not** in `AppConfig`:
+  that is forwarding configuration, it travels in the backup file, and whether this phone wants
+  update notices has nothing to do with how another phone should forward SMS.
+- **What was found is remembered, not just when it was asked.** `EstadoActualizacion` also stores
+  the tag, the page and the APK of the release that was found, and `comprobar()` returns it from
+  there while it still beats the installed version. Without that the notice lived only in the
+  process that discovered it: the badge showed on the first launch of the day and was gone on the
+  second, because the daily gate answered `SinPreguntar` and nothing remembered the finding. It is
+  also the right answer to a **304** — «the latest release has not changed» does not mean it is the
+  one installed — and it clears itself, because once the update is installed the comparison stops
+  holding and `olvidarNovedad()` runs.
+- **Versions are compared as numbers** (`VersionPublicada`), never as text: `"1.10.0" < "1.9.0"`
+  alphabetically, which would silently stop the notice at the tenth release. It is the one piece of
+  this that can be unit-tested without a network, and `VersionPublicadaTest` covers it.
+- **A 404 means there are no releases yet**, not an error. No network means say nothing.
+- **Installing is the system's job.** `DownloadManager` downloads the APK into the app's private
+  external dir (no storage permission) and `REQUEST_INSTALL_PACKAGES` lets the app open Android's
+  own installer dialog — silent installs need a device owner, which this is not. Since Android 8
+  the manifest permission is not enough either: the user has to authorise *this* app in Settings,
+  and that is checked **before** downloading three megabytes for nothing.
+- **The signature is the security model.** Android only upgrades an APK signed with the same key,
+  so nobody can slip a forged APK over this one and there are no hashes to verify here. The flip
+  side is that it cannot install over a debug build (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), which
+  is why the card says the update keeps rules, settings and history.
+
 **A horizontally scrollable child inside the pager needs `NestedScrollableHost`**
 (`presentation/common/NestedScrollableHost.kt`, the AndroidX sample class adapted to this
 codebase). Otherwise the two gestures are the same gesture and the pager wins: the filter carousel
@@ -236,6 +302,10 @@ scroller, carousel or slider placed on a tab needs the same wrapper.
 | `util/InicioAutomatico.kt` | OEM autostart screen (MIUI/EMUI/ColorOS/Funtouch) + the Settings button |
 | `util/ControlRecepcion.kt` | Enables/disables the `SmsReceiver` component — the reception kill switch |
 | `data/config/ConfigBackup.kt` | Export/import of the whole configuration: settings **and** rules |
+| `data/update/ComprobadorDeActualizaciones.kt` | Asks GitHub for the latest release and decides whether it beats the installed one |
+| `data/update/VersionPublicada.kt` | SemVer comparison — the only part of the check with unit tests |
+| `data/update/DescargaDeApk.kt` | `DownloadManager` download plus the system installer intent |
+| `data/update/EstadoActualizacion.kt` | Notice switch, last check and ETag, in their own DataStore keys |
 
 ### Why SmsSender suspends
 
@@ -423,6 +493,9 @@ use the closest match:
   about APIs that disappear in Gradle 10 — among them `android.applicationVariants.all`, the
   block that renames the release APK. Before moving to Gradle 10, either raise AGP or pin the
   wrapper to Gradle 8.x. Nothing is broken today, so this was deliberately left alone.
+- **`INTERNET` is declared again**, only for the version check (see «Acerca de» above). If that
+  feature ever goes away, the permission goes with it: this app not needing the network is part of
+  what it is.
 - Three unit test suites cover the parts worth covering, all pure Kotlin with no Android
   dependencies: `EvaluadorDeReglasTest` (45), `NormalizadorTelefonoTest` (18) and
   `ReglasJsonTest` (10). The `SmsRepositoryTest` placeholder that never compiled is gone.

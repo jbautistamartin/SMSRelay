@@ -200,7 +200,7 @@ presentation/
 ├── rules/          Lista ordenada, editor con validación en vivo, panel de prueba
 ├── logs/           Registro con filtros por tipo y exportación a fichero
 ├── settings/       Exención de batería, protecciones, reintentos, timeout y selector de SIM
-└── about/          Versión, autoría, licencia
+└── about/          Versión, autoría, página del proyecto, licencia
 
 domain/
 ├── model/          SmsMessage · Regla · Reenvio · SmsConReenvios

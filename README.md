@@ -1,15 +1,17 @@
 # SMStoSMS
 
+[![Última versión](https://img.shields.io/github/v/release/jbautistamartin/SMStoSMS?label=descargar&color=2E7D32)](https://github.com/jbautistamartin/SMStoSMS/releases/latest)
+[![Licencia](https://img.shields.io/badge/licencia-LGPL--2.1-blue)](LICENSE)
 [![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/jbautistamartin)
 
 Aplicación Android que convierte un dispositivo con SIM en un **reenviador de SMS**: recibe los
 mensajes que llegan a su número y los reenvía automáticamente a otro teléfono, según reglas con
 expresiones regulares sobre el remitente y el texto.
 
-**Versión actual: [v1.1.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.1.0)** —
+**Versión actual: [v1.2.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.2.0)** —
 descarga el APK firmado desde la [página de releases](https://github.com/jbautistamartin/SMStoSMS/releases).
 No está en Google Play: `SEND_SMS` es un permiso restringido y su publicación exige una
-declaración aprobada.
+declaración aprobada. Lo que cambia en cada versión está en [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -50,6 +52,8 @@ otra, y el resto a ninguna parte.
 - **Copia de seguridad** — ajustes y reglas en un solo fichero JSON, desde la pestaña
   Configuración, para restaurarlos o clonarlos en otro dispositivo
 - **Doble SIM** — se puede elegir con qué tarjeta se envía
+- **Aviso de versión nueva** — comprueba una vez al día si hay un release más reciente, lo marca
+  con un punto en la pestaña **Acerca de** y desde ahí se descarga e instala; se puede apagar
 
 ---
 
@@ -117,14 +121,14 @@ No hay ninguna dependencia de red: la aplicación no necesita internet y no decl
 
 La vía corta si no vas a tocar el código:
 
-1. Descarga `smstosms-1.1.0.apk` de la
-   [release v1.1.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.1.0).
+1. Descarga `smstosms-1.2.0.apk` de la
+   [release v1.2.0](https://github.com/jbautistamartin/SMStoSMS/releases/tag/v1.2.0).
 2. Pásalo al teléfono e instálalo, aceptando «instalar de orígenes desconocidos» cuando lo pida.
 3. Concede los permisos que la app solicita al arrancar.
 4. **Ajustes → Fiabilidad en segundo plano → Desactivar ahorro de batería.** Sin esto el modo
    Doze puede retrasar los reenvíos horas con la pantalla apagada.
 
-Por ADB, `adb install smstosms-1.1.0.apk`.
+Por ADB, `adb install smstosms-1.2.0.apk`.
 
 > El APK está firmado con la clave de Capicua. Las futuras actualizaciones se firman con la
 > misma: un APK de otra procedencia no se instalará encima, habrá que desinstalar primero y se

@@ -27,6 +27,20 @@
     <!-- Battery optimization: permite solicitar exención para el foreground service -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!--
+        Comprobador de versiones. INTERNET volvió aquí **solo** para esto: preguntar a
+        api.github.com si hay publicada una versión más nueva y bajar su APK si se pide. El
+        reenvío de SMS no usa la red —sale por la radio del teléfono, no por datos— y ningún
+        contenido de los mensajes viaja por aquí; «Acerca de» lo dice y se puede apagar desde
+        esa misma pantalla.
+
+        REQUEST_INSTALL_PACKAGES permite abrir el instalador del sistema con el APK descargado.
+        No instala en silencio: Android enseña igualmente su diálogo, y desde Android 8 además
+        hay que autorizar a esta aplicación en los ajustes.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
 
     <application
         android:name=".SmsToSmsApplication"
