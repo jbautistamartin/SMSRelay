@@ -5,7 +5,6 @@
 
 package com.capicua.smstotelegram.presentation.rules
 
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -188,7 +187,7 @@ class ProbarReglasFragment : Fragment() {
                             binding.buttonEnviarPrueba.isEnabled = true
                             resultado.text =
                                 getString(R.string.probar_envio_correcto, estado.destino)
-                            resultado.setTextColor(Color.parseColor("#186A2E"))
+                            resultado.setTextColor(resources.getColor(R.color.status_delivered, null))
                             Snackbar.make(
                                 binding.root,
                                 getString(R.string.probar_envio_correcto_breve, estado.destino),
@@ -201,7 +200,7 @@ class ProbarReglasFragment : Fragment() {
                             binding.buttonEnviarPrueba.isEnabled = true
                             resultado.text =
                                 getString(R.string.probar_envio_fallido, estado.motivo)
-                            resultado.setTextColor(Color.parseColor("#BA1A1A"))
+                            resultado.setTextColor(resources.getColor(R.color.status_failed, null))
                         }
                     }
                 }

@@ -8,9 +8,9 @@
     <string name="sms_borrar_todos">Borrar</string>
     <string name="dashboard_resumen">%1$d SMS · %2$d reenvío(s) en curso · %3$d regla(s) activa(s)</string>
     <string name="dashboard_aviso_transporte">⚠ No se puede entregar nada: %1$s</string>
-    <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se reenvían a ningún número. Crea una regla en la pestaña Reglas.</string>
-    <string name="sms_ruta_sin_regla">Ninguna regla casó: no se reenvió</string>
-    <string name="sms_ruta_descartado">Descartado por una protección</string>
+    <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se entregan en ningún chat. Crea una regla en la pestaña Reglas.</string>
+    <string name="sms_ruta_sin_regla">Ninguna regla casó: no se entregó</string>
+    <string name="sms_ruta_descartado">Descartado: se superó el límite por minuto</string>
     <string name="sms_ruta_uno">%1$s → %2$s</string>
     <string name="sms_detalle_error">Error en %1$s: %2$s</string>
     <string name="sms_detalle_desglose">%1$d enviados · %2$d en curso · %3$d fallidos</string>
@@ -36,7 +36,7 @@
     <string name="settings_subtitulo">El bot de Telegram y los ajustes que afectan a todas las entregas. Las reglas que deciden en qué chat acaba cada SMS tienen su propia pantalla.</string>
     <string name="settings_guardar">Guardar configuración</string>
     <string name="settings_guardado">Configuración guardada</string>
-    <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se reenviará nada.</string>
+    <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se entregará nada.</string>
 
     <string name="settings_seccion_bot">Bot de Telegram</string>
     <string name="settings_token_bot">Token del bot</string>
@@ -51,13 +51,13 @@
 
     <string name="settings_seccion_recepcion">Recepción de SMS</string>
     <string name="settings_recepcion">Leer los SMS que llegan</string>
-    <string name="settings_recepcion_detalle">Al desactivarlo, la aplicación deja de leer los mensajes entrantes: no se guardan, no se evalúan reglas y no se reenvía nada. Lo que ya estuviera en cola sí se termina de enviar.</string>
+    <string name="settings_recepcion_detalle">Al desactivarlo, la aplicación deja de leer los mensajes entrantes: no se guardan, no se evalúan reglas y no se entrega nada. Lo que ya estuviera en cola sí se termina de entregar.</string>
 
     <string name="settings_seccion_bateria">Fiabilidad en segundo plano</string>
     <string name="settings_bateria_ok">✓ Sin restricciones de batería</string>
-    <string name="settings_bateria_ok_detalle">El sistema no suspende la aplicación: los SMS se reenvían en segundos aunque la pantalla esté apagada.</string>
+    <string name="settings_bateria_ok_detalle">El sistema no suspende la aplicación: los SMS se entregan en segundos aunque la pantalla esté apagada.</string>
     <string name="settings_bateria_pendiente">⚠ La optimización de batería está activa</string>
-    <string name="settings_bateria_pendiente_detalle">Con el ahorro de batería activo, Android puede retrasar los reenvíos horas mientras la pantalla está apagada. Concede la exención para que salgan al momento.</string>
+    <string name="settings_bateria_pendiente_detalle">Con el ahorro de batería activo, Android puede retrasar las entregas horas mientras la pantalla está apagada. Concede la exención para que salgan al momento.</string>
     <string name="settings_bateria_activar">Desactivar ahorro de batería</string>
     <string name="settings_bateria_revisar">Revisar en Ajustes del sistema</string>
     <string name="settings_bateria_sin_pantalla">Este teléfono no permite abrir ese ajuste desde la app. Búscalo en Ajustes → Batería → Optimización de batería.</string>
@@ -81,7 +81,7 @@
 
 
     <string name="settings_backup_titulo">Copia de seguridad</string>
-    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los destinos de los reenvíos: trátalo como información sensible. El token del bot no viaja en él.</string>
+    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los chats de destino: trátalo como información sensible. El token del bot no viaja en él.</string>
     <string name="settings_exportar">Exportar</string>
     <string name="settings_importar">Importar</string>
     <string name="settings_importar_confirmar">Los ajustes del fichero sustituyen a los actuales. Las reglas se añaden a las que ya hay, sin borrar ninguna.</string>
@@ -191,7 +191,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
 
     <!-- Reglas: panel de prueba -->
     <string name="probar_title">Probar reglas</string>
-    <string name="probar_subtitulo">Escribe un SMS de ejemplo y comprueba qué regla casa, a qué número iría y con qué texto. No se envía nada hasta que lo pidas.</string>
+    <string name="probar_subtitulo">Escribe un SMS de ejemplo y comprueba qué regla casa, a qué chat iría y con qué texto. No se entrega nada hasta que lo pidas.</string>
     <string name="probar_telefono">Remitente de ejemplo</string>
     <string name="probar_telefono_ayuda">Un número o una cabecera alfanumérica</string>
     <string name="probar_mensaje">Texto del SMS de ejemplo</string>

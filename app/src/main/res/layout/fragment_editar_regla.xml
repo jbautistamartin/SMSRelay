@@ -177,11 +177,14 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
             android:hint="@string/regla_destino"
-            app:helperText="@string/regla_destino_ayuda"
-            app:startIconDrawable="@android:drawable/ic_menu_call">
+            app:helperText="@string/regla_destino_ayuda">
 
-            <!-- inputType=text, no phone: el destino también admite el marcador {telefono},
-                 y el teclado numérico no tiene llaves. -->
+            <!-- Sin icono de teléfono: lo llevaba cuando el destino era un número, y aquí
+                 señalaría a lo que no es. Un destino es un chat de Telegram.
+
+                 inputType=text y no phone, por un motivo distinto al de antes: el teclado
+                 numérico no tiene arroba, y un @canal es un destino válido. El signo menos de
+                 los grupos sí lo tendría, pero no basta. -->
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edit_text_destino"
                 android:layout_width="match_parent"

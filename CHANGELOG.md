@@ -43,6 +43,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 - **El límite de reenvíos por minuto sigue, por otro motivo.** Era un cortafuegos económico;
   entregar por Telegram es gratis, así que ahora protege de los límites del Bot API: un mensaje
   por segundo y chat, y unos 20 por minuto en un grupo.
+- **Icono y color propios.** La aplicación tenía el icono de SMStoSMS, y como las dos pueden
+  convivir en el mismo teléfono eran indistinguibles en el lanzador. El bocadillo se mantiene
+  —la entrada sigue siendo un SMS— y lo que cambia es lo de dentro: donde SMStoSMS tenía una
+  flecha de reenvío, aquí hay un avión de papel calado. El color primario pasa del verde azulado
+  al azul, que es de donde sale el fondo del icono.
 - **El aviso de privacidad se ha reescrito entero.** El contenido de los SMS sale a internet y
   llega a los servidores de Telegram. Es el cambio más importante de esta aplicación respecto a
   SMStoSMS para quien la instala.

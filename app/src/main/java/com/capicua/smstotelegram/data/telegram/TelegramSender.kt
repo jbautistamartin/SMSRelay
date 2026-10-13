@@ -96,16 +96,68 @@ class TelegramSender @Inject constructor(
             Timber.d("TelegramSender: el texto va en ${trozos.size} mensajes por longitud")
         }
 
-        val plazoMs = TimeUnit.SECONDS.toMillis(timeoutSegundos.toLong())
+        // El plazo configurado gobierna los timeouts del socket, y el de la corrutina es solo
+        // un respaldo con margen por encima. El orden importa y está explicado en el KDoc de
+        // [plazos]: invertirlo abandona peticiones que siguen en vuelo y pueden entregarse.
+        val plazos = Plazos.de(timeoutSegundos)
+        val respaldoMs = plazos.totalMs * trozos.size + MARGEN_RESPALDO_MS
 
-        return withTimeoutOrNull(plazoMs) {
-            enviarTrozos(token, destino, trozos)
+        return withTimeoutOrNull(respaldoMs) {
+            enviarTrozos(token, destino, trozos, plazos)
         } ?: ResultadoEnvio.ErrorTransitorio(
-            "Telegram no contestó en $timeoutSegundos s"
+            "Telegram no contestó en ${respaldoMs / 1000} s"
         )
     }
 
     // ── Interno ───────────────────────────────────────────────────────────────
+
+    /**
+     * Reparto del plazo configurado entre conectar y leer.
+     *
+     * ## Por qué el timeout del socket tiene que saltar antes que el de la corrutina
+     * `withTimeoutOrNull` **no puede interrumpir una lectura de socket bloqueante**. Cancela la
+     * corrutina, sí, pero el hilo de `Dispatchers.IO` sigue dentro de `HttpURLConnection` hasta
+     * que el propio socket se rinde. Lo que devuelve, por tanto, no es «la petición se ha
+     * abortado» sino «he dejado de esperarla»: la petición puede completarse después, Telegram
+     * puede entregar el mensaje, y el worker —que ya recibió un `ErrorTransitorio`— lo reintenta.
+     * El resultado es un **mensaje duplicado en el chat de alguien**.
+     *
+     * El timeout del socket sí aborta de verdad. Así que es él quien debe gobernar el plazo, y
+     * el de la corrutina queda como respaldo con margen por encima, para lo que el socket no
+     * cubre.
+     *
+     * La primera versión de esta clase tenía los dos plazos como constantes independientes —15 s
+     * para conectar y 20 s para leer— mientras el ajuste de la pantalla admitía valores **desde
+     * 10 s**. Con el ajuste por debajo de 35 s, el respaldo saltaba siempre primero y el fallo
+     * descrito arriba dejaba de ser teórico.
+     */
+    private data class Plazos(val conexionMs: Int, val lecturaMs: Int) {
+        val totalMs: Long get() = (conexionMs + lecturaMs).toLong()
+
+        companion object {
+            /**
+             * Reparte [segundos] en un tercio para conectar y dos tercios para leer.
+             *
+             * Conectar es lo rápido —un `SYN` y un saludo TLS— y leer es lo que puede tardar, así
+             * que el reparto no es a la mitad. Los topes evitan los dos extremos: con el mínimo
+             * del ajuste (10 s) conectar tendría 3 s, que es poco para TLS en una red móvil mala,
+             * y con el máximo (300 s) tendría 100 s, que no sirve de nada porque una conexión que
+             * no se establece en medio minuto no se va a establecer.
+             */
+            fun de(segundos: Int): Plazos {
+                val totalMs = TimeUnit.SECONDS.toMillis(segundos.toLong()).toInt()
+                val conexion = (totalMs / 3).coerceIn(MIN_CONEXION_MS, MAX_CONEXION_MS)
+                return Plazos(
+                    conexionMs = conexion,
+                    lecturaMs = (totalMs - conexion).coerceAtLeast(MIN_LECTURA_MS)
+                )
+            }
+
+            private const val MIN_CONEXION_MS = 5_000
+            private const val MAX_CONEXION_MS = 30_000
+            private const val MIN_LECTURA_MS = 5_000
+        }
+    }
 
     /**
      * Envía los trozos en orden y se detiene en el primero que falle.
@@ -118,10 +170,11 @@ class TelegramSender @Inject constructor(
     private suspend fun enviarTrozos(
         token: String,
         destino: String,
-        trozos: List<String>
+        trozos: List<String>,
+        plazos: Plazos
     ): ResultadoEnvio {
         for (trozo in trozos) {
-            val resultado = enviarUno(token, destino, trozo)
+            val resultado = enviarUno(token, destino, trozo, plazos)
             if (resultado !is ResultadoEnvio.Enviado) return resultado
         }
         return ResultadoEnvio.Enviado
@@ -130,7 +183,8 @@ class TelegramSender @Inject constructor(
     private suspend fun enviarUno(
         token: String,
         destino: String,
-        texto: String
+        texto: String,
+        plazos: Plazos
     ): ResultadoEnvio = withContext(Dispatchers.IO) {
 
         var conexion: HttpURLConnection? = null
@@ -147,8 +201,8 @@ class TelegramSender @Inject constructor(
             conexion = (URL("$BASE$token/sendMessage").openConnection() as HttpURLConnection)
                 .apply {
                     requestMethod = "POST"
-                    connectTimeout = TIMEOUT_CONEXION_MS
-                    readTimeout = TIMEOUT_LECTURA_MS
+                    connectTimeout = plazos.conexionMs
+                    readTimeout = plazos.lecturaMs
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     setRequestProperty("Accept", "application/json")
@@ -202,8 +256,14 @@ class TelegramSender @Inject constructor(
     private companion object {
         /** El token se concatena aquí. Esta constante nunca se registra con el token pegado. */
         const val BASE = "https://api.telegram.org/bot"
-        const val TIMEOUT_CONEXION_MS = 15_000
-        const val TIMEOUT_LECTURA_MS = 20_000
+        /**
+         * Margen del respaldo de la corrutina sobre la suma de los plazos del socket.
+         *
+         * Existe para que el respaldo no pre-empte nunca una petición que el socket todavía
+         * está esperando legítimamente. Solo entra en juego si algo se queda colgado fuera de
+         * lo que el socket vigila.
+         */
+        const val MARGEN_RESPALDO_MS = 10_000L
 
         val json = Json { ignoreUnknownKeys = true }
     }

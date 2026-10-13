@@ -1,21 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Paleta de la aplicación.
+
+    El primario pasó del verde azulado de SMStoSMS (#006874) a la familia azul por el mismo
+    motivo por el que aquel dejó el azul de SMSGateway: las dos aplicaciones pueden convivir en
+    el mismo teléfono y hay que distinguirlas sin leer el nombre. Aquí el azul además dice a
+    dónde entrega.
+
+    **El fondo del icono adaptativo se deriva del primario** (ver `ic_launcher_background.xml`).
+    Cambiar uno sin el otro deja el icono contradiciendo a la aplicación que abre.
+
+    Los tonos son los de la paleta azul de Material 3 —primario en el tono 40, el contenedor en
+    el 90 y su contenido en el 10—, no el hexadecimal de marca de Telegram: lo que hace falta es
+    la familia de color, no reproducir una identidad ajena.
+-->
 <resources>
-    <color name="md_theme_primary">#006874</color>
+    <color name="md_theme_primary">#0061A4</color>
     <color name="md_theme_on_primary">#FFFFFF</color>
-    <color name="md_theme_primary_container">#97F0FF</color>
-    <color name="md_theme_on_primary_container">#001F24</color>
-    <color name="md_theme_secondary">#4A6267</color>
+    <color name="md_theme_primary_container">#D1E4FF</color>
+    <color name="md_theme_on_primary_container">#001D36</color>
+    <color name="md_theme_secondary">#535F70</color>
     <color name="md_theme_on_secondary">#FFFFFF</color>
-    <color name="md_theme_background">#FAFDFD</color>
-    <color name="md_theme_surface">#FAFDFD</color>
+    <color name="md_theme_background">#FDFCFF</color>
+    <color name="md_theme_surface">#FDFCFF</color>
     <color name="md_theme_error">#BA1A1A</color>
+
+    <!--
+        Colores de estado. Son semánticos y **no** siguen al primario: verde es correcto, ámbar
+        es «aún no» y rojo es error en cualquier paleta, y atarlos al color de marca haría que
+        un cambio de identidad cambiara el significado de la interfaz.
+    -->
     <color name="status_delivered">#186A2E</color>
     <color name="status_pending">#7B5800</color>
     <color name="status_failed">#BA1A1A</color>
-    <color name="status_dispatching">#006874</color>
+    <color name="status_dispatching">#0061A4</color>
+
     <!-- Indicadores de color por tipo de entrada del registro -->
-    <color name="log_recibido">#006874</color>
-    <color name="log_regla">#4A6267</color>
+    <color name="log_recibido">#0061A4</color>
+    <color name="log_regla">#535F70</color>
     <color name="log_reenviado">#186A2E</color>
     <color name="log_sin_regla">#7B5800</color>
     <color name="log_limite">#8A5000</color>
