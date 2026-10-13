@@ -284,11 +284,26 @@ class EvaluadorDeReglasTest {
 
     // ── Plantillas ────────────────────────────────────────────────────────────
 
+    /**
+     * La plantilla por defecto dejó de ser `{mensaje}` al cambiar el medio.
+     *
+     * Con el SMS bastaba el cuerpo, porque el reenvío llegaba como un SMS más y el teléfono ya
+     * enseñaba de quién era. Por Telegram todo llega del mismo bot: cuatro avisos seguidos
+     * serían cuatro mensajes indistinguibles. El remitente y la fecha delante son el contexto
+     * que el SMS daba gratis y que ahora hay que poner a mano.
+     */
     @Test
-    fun `la plantilla por defecto reenvia el cuerpo tal cual`() {
-        val resultado = evaluar(listOf(regla()), mensaje = "Tu codigo es 4821")
+    fun `la plantilla por defecto lleva remitente y fecha delante del mensaje`() {
+        val resultado = evaluar(
+            listOf(regla()),
+            telefono = "BANCO",
+            mensaje = "Tu codigo es 4821"
+        )
 
-        assertEquals("Tu codigo es 4821", resultado.coincidencias.single().textoFinal)
+        assertEquals(
+            "BANCO · 07/10/2026 19:30:00\nTu codigo es 4821",
+            resultado.coincidencias.single().textoFinal
+        )
     }
 
     @Test
@@ -455,66 +470,56 @@ class EvaluadorDeReglasTest {
         assertEquals(1, resultado.reglasInvalidas.size)
     }
 
-    // ── Destino: contestar al remitente ──────────────────────────────────────
+    // ── Destino: se usa tal cual ─────────────────────────────────────────────
+
+    /**
+     * Esta sección sustituye a la que probaba `{telefono}` como destino.
+     *
+     * Con el SMS, escribir `{telefono}` en el destino significaba «contesta a quien me
+     * escribió». Con Telegram no hay forma de convertir el remitente de un SMS en un chat, y la
+     * consecuencia directa es que **en el destino no se resuelve ningún marcador**. Lo que estos
+     * tests fijan es justamente eso, porque es una propiedad de seguridad y no solo una
+     * simplificación: si algún día se resolviera `{mensaje}` ahí, el cuerpo de un SMS ajeno
+     * decidiría a dónde se entrega.
+     */
+    @Test
+    fun `el destino se usa tal cual, sin resolver marcadores`() {
+        val coincidencia = evaluar(
+            listOf(regla(destino = "-1001234567890")),
+            telefono = "+34611111111"
+        ).coincidencias.single()
+
+        assertEquals("-1001234567890", coincidencia.destino)
+    }
 
     @Test
-    fun `el marcador telefono en el destino resuelve al remitente`() {
-        val resultado = evaluar(
+    fun `el marcador de telefono en el destino no se sustituye`() {
+        val coincidencia = evaluar(
             listOf(regla(destino = "{telefono}")),
             telefono = "+34611111111"
-        )
+        ).coincidencias.single()
 
-        val coincidencia = resultado.coincidencias.single()
-        assertEquals("+34611111111", coincidencia.destino)
-        assertTrue(coincidencia.respondeAlRemitente)
+        assertEquals("{telefono}", coincidencia.destino)
     }
 
     @Test
-    fun `un destino fijo no se marca como respuesta al remitente`() {
-        val coincidencia = evaluar(listOf(regla(destino = "+34600000001")))
-            .coincidencias.single()
-
-        assertEquals("+34600000001", coincidencia.destino)
-        assertFalse(coincidencia.respondeAlRemitente)
-    }
-
-    @Test
-    fun `el destino solo resuelve el marcador de telefono`() {
-        // {mensaje} y {fecha} no tienen sentido como destino: dejarlos sin resolver impide que
-        // el cuerpo del SMS influya en a dónde se envía algo.
+    fun `el cuerpo del SMS no puede influir en el destino`() {
+        // Si {mensaje} se resolviera aquí, un tercero decidiria a donde se entrega su propio
+        // mensaje escribiendo un chat_id en el texto del SMS.
         val coincidencia = evaluar(
             listOf(regla(destino = "{mensaje}")),
-            mensaje = "+34699999999"
+            mensaje = "-1009999999999"
         ).coincidencias.single()
 
         assertEquals("{mensaje}", coincidencia.destino)
-        assertFalse(coincidencia.respondeAlRemitente)
     }
 
     @Test
-    fun `contestar a un remitente alfanumerico deja el destino sin digitos`() {
-        // El evaluador no decide si se puede enviar; solo resuelve. Quien tramita el SMS
-        // comprueba después que el destino sea enviable.
-        val coincidencia = evaluar(
-            listOf(regla(destino = "{telefono}")),
-            telefono = "BANCO"
-        ).coincidencias.single()
+    fun `el destino se recorta`() {
+        val coincidencia = evaluar(listOf(regla(destino = "  123456789  ")))
+            .coincidencias.single()
 
-        assertEquals("BANCO", coincidencia.destino)
-        assertTrue(coincidencia.respondeAlRemitente)
-        assertFalse(NormalizadorTelefono.esDestinoEnviable(coincidencia.destino))
-    }
-
-    @Test
-    fun `respondeAlRemitente reconoce el marcador para la validacion del formulario`() {
-        assertTrue(evaluador.respondeAlRemitente("{telefono}"))
-        assertFalse(evaluador.respondeAlRemitente("+34600000001"))
-        assertFalse(evaluador.respondeAlRemitente(null))
-    }
-
-    @Test
-    fun `resolverDestino recorta los espacios alrededor del marcador`() {
-        assertEquals("+34600000001", evaluador.resolverDestino(" {telefono} ", "+34600000001"))
+        assertEquals("123456789", coincidencia.destino)
     }
 
     // ── resolverPlantilla como API pública ────────────────────────────────────

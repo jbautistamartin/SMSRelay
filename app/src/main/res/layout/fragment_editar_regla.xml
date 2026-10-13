@@ -191,16 +191,17 @@
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Atajo para el caso «contesta a quien me escribió»: teclear {telefono} a mano exige
-             saber que el marcador existe. -->
+        <!-- Nadie se sabe su chat_id: es un numero que Telegram no muestra en ninguna
+             pantalla. Esto pregunta al bot quien le ha escrito y ofrece la lista. Sin este
+             boton, configurar una regla exige salir de la aplicacion a buscar el dato. -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_destino_remitente"
+            android:id="@+id/button_descubrir_chats"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="-8dp"
             android:layout_marginBottom="8dp"
-            android:text="@string/regla_destino_remitente" />
+            android:text="@string/regla_descubrir_chats" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_plantilla"

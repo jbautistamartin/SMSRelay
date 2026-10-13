@@ -124,7 +124,7 @@ class ReglasJsonTest {
         )
 
         assertTrue(serializado.contains("\"version\""))
-        assertEquals(3, ReglasExportadas.VERSION_ACTUAL)
+        assertEquals(4, ReglasExportadas.VERSION_ACTUAL)
     }
 
     // ── La configuración viaja con las reglas ─────────────────────────────────
@@ -137,7 +137,6 @@ class ReglasJsonTest {
             intervaloReintentoSegundos = 45,
             timeoutEnvioSegundos = 90,
             maxReenviosPorMinuto = 3,
-            protegerBucles = false,
             recepcionActiva = false
         )
 

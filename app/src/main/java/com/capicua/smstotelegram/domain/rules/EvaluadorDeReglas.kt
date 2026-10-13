@@ -32,10 +32,18 @@ import javax.inject.Singleton
  * que aplica [RegexOption.IGNORE_CASE] a las dos a la vez.
  *
  * ## Destino
- * [Regla.destino] es normalmente un número fijo, pero admite el marcador [MARCADOR_TELEFONO]
- * para devolver el mensaje **al propio remitente**. Es el único marcador que se resuelve en el
- * destino, y marca la coincidencia con [Coincidencia.respondeAlRemitente] para que la
- * protección antibucle sepa que esa circularidad es intencionada.
+ * [Regla.destino] es un chat de Telegram —un `chat_id` o un `@usuario` de canal— y se usa **tal
+ * cual**, sin resolver marcadores.
+ *
+ * Esto cambió al cambiar el medio. Cuando el destino era un número de teléfono, se admitía
+ * `{telefono}` para devolver el mensaje al propio remitente; con Telegram no hay forma de
+ * convertir el remitente de un SMS en un chat, porque son dos identidades sin relación. El
+ * marcador se fue de aquí, pero **no de la plantilla**, donde ahora importa más que antes: todo
+ * llega del mismo bot, así que sin `{telefono}` en el texto se pierde el contexto que el SMS
+ * daba gratis.
+ *
+ * Que ningún marcador se resuelva en el destino tiene además una consecuencia que conviene no
+ * perder: **el cuerpo del SMS no puede influir en a dónde se envía nada**.
  */
 @Singleton
 class EvaluadorDeReglas @Inject constructor() {
@@ -88,9 +96,8 @@ class EvaluadorDeReglas @Inject constructor() {
             coincidencias += Coincidencia(
                 reglaId = regla.id,
                 nombreRegla = regla.nombre,
-                destino = resolverDestino(regla.destino, telefono),
-                textoFinal = resolverPlantilla(regla.plantilla, telefono, mensaje, fecha),
-                respondeAlRemitente = respondeAlRemitente(regla.destino)
+                destino = regla.destino.trim(),
+                textoFinal = resolverPlantilla(regla.plantilla, telefono, mensaje, fecha)
             )
 
             if (!regla.continuar) break
@@ -115,27 +122,6 @@ class EvaluadorDeReglas @Inject constructor() {
         .replace(MARCADOR_TELEFONO, telefono)
         .replace(MARCADOR_FECHA, fecha)
         .replace(MARCADOR_MENSAJE, mensaje)
-
-    /**
-     * Resuelve el destino de una regla, que puede ser un número fijo o el marcador
-     * `{telefono}` para devolver el mensaje al propio remitente.
-     *
-     * Solo se sustituye `{telefono}`: `{mensaje}` y `{fecha}` no tienen sentido como destino y
-     * dejarlos fuera evita que el cuerpo del SMS —contenido ajeno— pueda influir en a dónde
-     * se envía nada.
-     */
-    fun resolverDestino(destino: String, telefono: String): String =
-        destino.replace(MARCADOR_TELEFONO, telefono).trim()
-
-    /**
-     * true si el destino de la regla es el propio remitente.
-     *
-     * Quien llama lo necesita para saber que la circularidad es **intencionada**: escribir
-     * `{telefono}` en el destino es la forma explícita de pedir «contesta a quien me escribió»,
-     * y la protección antibucle no debe bloquear lo que se ha pedido a propósito.
-     */
-    fun respondeAlRemitente(destino: String?): Boolean =
-        destino?.contains(MARCADOR_TELEFONO) == true
 
     /**
      * Comprueba si un patrón es utilizable.

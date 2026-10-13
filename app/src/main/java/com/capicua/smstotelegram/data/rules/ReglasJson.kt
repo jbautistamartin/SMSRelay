@@ -41,20 +41,39 @@ data class ReglasExportadas(
         /**
          * Versión del formato.
          *
-         * | Versión | Cambio                                       |
-         * |---------|----------------------------------------------|
-         * | 1       | Formato inicial.                             |
-         * | 2       | La regla gana `ignorar_mayusculas`.          |
-         * | 3       | El fichero gana el bloque `configuracion`.   |
+         * | Versión | Cambio                                                     | App |
+         * |---------|------------------------------------------------------------|-----|
+         * | 1       | Formato inicial.                                           | SMStoSMS |
+         * | 2       | La regla gana `ignorar_mayusculas`.                        | SMStoSMS |
+         * | 3       | El fichero gana el bloque `configuracion`.                 | SMStoSMS |
+         * | 4       | **`destino` es un chat de Telegram, no un teléfono.**      | SMStoTelegram |
          *
          * Subir la versión al añadir un campo opcional puede parecer excesivo, porque un
          * fichero de la 1 se sigue importando sin problema. Lo que evita es el caso contrario:
          * una versión antigua de la aplicación leyendo un fichero de la 2 descartaría
          * `ignorar_mayusculas` en silencio —`ignoreUnknownKeys` está activado— y la regla
-         * entraría distinguiendo mayúsculas sin avisar. Con la versión por delante, esa
-         * importación se rechaza con un mensaje que explica lo que pasa.
+         * entraría distinguiendo mayúsculas sin avisar.
+         *
+         * ## Por qué la 4 rompe la compatibilidad hacia atrás, y es la primera que lo hace
+         * Un fichero del formato 3 tiene **exactamente la misma forma** que uno del 4: ningún
+         * campo cambió de nombre ni de tipo. Lo que cambió es lo que significa `destino`. En la 3
+         * era un número de teléfono; en la 4 es un `chat_id` o un `@usuario` de Telegram.
+         *
+         * Eso lo convierte en el peor caso posible de importación: el fichero entraría sin un
+         * solo error de parseo y dejaría un juego de reglas cuyos destinos **no existen**, que
+         * fallarían uno por uno cuando llegara un SMS, horas después y sin que nada apuntase al
+         * fichero importado. Por eso [MINIMA_ACEPTADA] es 4 y la importación de un fichero
+         * anterior se rechaza explicando el motivo, en lugar de aceptarlo y romperse luego.
          */
-        const val VERSION_ACTUAL = 3
+        const val VERSION_ACTUAL = 4
+
+        /**
+         * Versión más antigua que se puede importar.
+         *
+         * Es la única del proyecto que no es 1, y el KDoc de [VERSION_ACTUAL] explica por qué:
+         * los ficheros anteriores llevan números de teléfono donde ahora van chats.
+         */
+        const val MINIMA_ACEPTADA = 4
     }
 }
 
@@ -74,7 +93,6 @@ data class ConfiguracionJson(
     @SerialName("intervalo_reintento_segundos") val intervaloReintentoSegundos: Int,
     @SerialName("timeout_envio_segundos") val timeoutEnvioSegundos: Int,
     @SerialName("max_reenvios_por_minuto") val maxReenviosPorMinuto: Int,
-    @SerialName("proteger_bucles") val protegerBucles: Boolean,
     @SerialName("recepcion_activa") val recepcionActiva: Boolean = true
 )
 
@@ -85,7 +103,6 @@ fun AppConfig.aJson() = ConfiguracionJson(
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,
     maxReenviosPorMinuto = maxReenviosPorMinuto,
-    protegerBucles = protegerBucles,
     recepcionActiva = recepcionActiva
 )
 
@@ -103,7 +120,6 @@ fun ConfiguracionJson.aDominio(tokenActual: String) = AppConfig(
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,
     maxReenviosPorMinuto = maxReenviosPorMinuto,
-    protegerBucles = protegerBucles,
     recepcionActiva = recepcionActiva
 )
 

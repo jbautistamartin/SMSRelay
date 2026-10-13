@@ -10,7 +10,9 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smstotelegram.data.repository.ReglaRepository
 import com.capicua.smstotelegram.domain.model.Regla
 import com.capicua.smstotelegram.domain.rules.EvaluadorDeReglas
-import com.capicua.smstotelegram.domain.rules.NormalizadorTelefono
+import com.capicua.smstotelegram.data.telegram.DescubridorDeChats
+import com.capicua.smstotelegram.data.telegram.DestinoDeTelegram
+import com.capicua.smstotelegram.data.telegram.ResultadoDescubrimiento
 import com.capicua.smstotelegram.domain.transport.EnviadorDeMensajes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +37,7 @@ data class ErroresRegla(
 class EditarReglaViewModel @Inject constructor(
     private val reglaRepository: ReglaRepository,
     private val evaluador: EvaluadorDeReglas,
+    private val descubridorDeChats: DescubridorDeChats,
     enviador: EnviadorDeMensajes
 ) : ViewModel() {
 
@@ -47,6 +50,32 @@ class EditarReglaViewModel @Inject constructor(
 
     private val _errores = MutableStateFlow(ErroresRegla())
     val errores: StateFlow<ErroresRegla> = _errores.asStateFlow()
+
+    /** En qué punto está la búsqueda de chats del bot. */
+    sealed interface EstadoDescubrimiento {
+        data object Inactivo : EstadoDescubrimiento
+        data object Buscando : EstadoDescubrimiento
+        data class Terminado(val resultado: ResultadoDescubrimiento) : EstadoDescubrimiento
+    }
+
+    private val _descubrimiento =
+        MutableStateFlow<EstadoDescubrimiento>(EstadoDescubrimiento.Inactivo)
+    val descubrimiento: StateFlow<EstadoDescubrimiento> = _descubrimiento.asStateFlow()
+
+    /** Pregunta al bot quién le ha escrito, para poder elegir el destino de una lista. */
+    fun descubrirChats() {
+        if (_descubrimiento.value == EstadoDescubrimiento.Buscando) return
+        viewModelScope.launch {
+            _descubrimiento.value = EstadoDescubrimiento.Buscando
+            _descubrimiento.value =
+                EstadoDescubrimiento.Terminado(descubridorDeChats.descubrir())
+        }
+    }
+
+    /** Devuelve el estado a reposo tras atender el resultado, para que no se repinte solo. */
+    fun descubrimientoAtendido() {
+        _descubrimiento.value = EstadoDescubrimiento.Inactivo
+    }
 
     private val _guardada = MutableStateFlow(false)
     /** Pasa a true cuando la regla se ha persistido, para que la pantalla pueda cerrarse. */
@@ -99,17 +128,37 @@ class EditarReglaViewModel @Inject constructor(
         nombre = if (regla.nombre.isBlank()) "Pon un nombre para reconocer la regla" else null,
         regexTelefono = evaluador.validarPatron(regla.regexTelefono),
         regexMensaje = evaluador.validarPatron(regla.regexMensaje),
-        destino = when {
-            regla.destino.isBlank() -> "El número destino es obligatorio"
-            // {telefono} como destino significa «contesta a quien me escribió»: no es un
-            // número y no se puede validar como tal.
-            evaluador.respondeAlRemitente(regla.destino) -> null
-            regla.destino.count { it.isDigit() } < NormalizadorTelefono.DIGITOS_MINIMOS_DESTINO ->
-                "No parece un número de teléfono"
-            else -> null
-        },
+        destino = validarDestino(regla.destino),
         plantilla = if (regla.plantilla.isBlank()) "La plantilla no puede estar vacía" else null
     )
+
+    /**
+     * Valida el destino y, sobre todo, **explica el error correcto**.
+     *
+     * El caso probable no es un destino con una letra de más: es que alguien escriba un número
+     * de teléfono, porque viene de SMStoSMS o porque es lo que uno supone que va en un campo
+     * llamado «destino». Decirle «no parece un chat de Telegram» es verdad y no le sirve de
+     * nada; decirle «esto es un teléfono, aquí va un chat, usa el botón» le resuelve el
+     * problema. Por eso hay tres mensajes y no uno.
+     *
+     * Los textos van literales aquí, como los de los demás campos de [ErroresRegla]: es la
+     * convención que ya tenía la pantalla y mezclar literales con recursos sería peor que
+     * cualquiera de las dos cosas por separado.
+     */
+    private fun validarDestino(destino: String): String? = when {
+        destino.isBlank() ->
+            "El chat de destino es obligatorio"
+
+        DestinoDeTelegram.pareceValido(destino) -> null
+
+        DestinoDeTelegram.pareceTelefono(destino) ->
+            "Esto es un número de teléfono. Aquí va un chat de Telegram: usa «Elegir de los " +
+                "chats del bot» para seleccionarlo"
+
+        else ->
+            "No parece un chat de Telegram. Un chat_id son solo dígitos, con un signo menos " +
+                "delante si es un grupo o un canal"
+    }
 
     companion object {
         /** Id que indica que se está creando una regla, no editando una existente. */

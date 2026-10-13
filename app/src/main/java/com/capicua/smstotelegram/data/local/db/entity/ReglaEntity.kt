@@ -19,7 +19,7 @@ import androidx.room.PrimaryKey
  * - [regexTelefono]   Expresión regular sobre el remitente. Null = no filtra por teléfono.
  * - [regexMensaje]    Expresión regular sobre el cuerpo. Null = no filtra por mensaje.
  * - [ignorarMayusculas] true = las dos expresiones se aplican sin distinguir mayúsculas.
- * - [destino]         Número al que se reenvía.
+ * - [destino]         Chat de Telegram al que se entrega: `chat_id` o `@usuario`.
  * - [plantilla]       Texto a enviar, con marcadores `{mensaje}`, `{telefono}` y `{fecha}`.
  * - [activa]          false = la regla se ignora sin borrarla.
  * - [continuar]       true = tras casar, sigue evaluando las reglas siguientes.
@@ -55,8 +55,21 @@ data class ReglaEntity(
     @ColumnInfo(name = "destino")
     val destino: String,
 
-    @ColumnInfo(name = "plantilla", defaultValue = "'{mensaje}'")
-    val plantilla: String = "{mensaje}",
+    /**
+     * Sin `defaultValue` y sin valor por defecto en Kotlin, a propósito.
+     *
+     * Antes tenía `'{mensaje}'` en los dos sitios, y eso significaba que la plantilla por
+     * defecto estaba escrita dos veces: aquí y en `Regla.PLANTILLA_POR_DEFECTO`. Al cambiar la
+     * del dominio —el remitente y la fecha delante, porque en Telegram todo llega del mismo
+     * bot— las dos habrían dejado de coincidir, y la de aquí es la que se usaría si algún día
+     * alguien insertara una fila sin la columna.
+     *
+     * Ninguna inserción lo hace: toda fila viene de un `Regla`, que ya trae su plantilla
+     * resuelta. Así que el valor por defecto sobra, y quitarlo deja una sola fuente de verdad
+     * en lugar de dos que hay que acordarse de sincronizar.
+     */
+    @ColumnInfo(name = "plantilla")
+    val plantilla: String,
 
     @ColumnInfo(name = "activa", defaultValue = "1")
     val activa: Boolean = true,

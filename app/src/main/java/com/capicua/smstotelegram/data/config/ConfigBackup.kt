@@ -118,6 +118,15 @@ class ConfigBackup @Inject constructor(
                 "el fichero usa el formato ${fichero.version} y esta versión " +
                     "entiende hasta el ${ReglasExportadas.VERSION_ACTUAL}"
             )
+        } else if (fichero.version < ReglasExportadas.MINIMA_ACEPTADA) {
+            // Un fichero de SMStoSMS tiene la misma forma que uno de aquí, pero sus destinos
+            // son números de teléfono. Entraría sin un error de parseo y dejaría un juego de
+            // reglas que falla cuando llegue un SMS, sin que nada apunte al fichero importado.
+            ResultadoCopia.Fallo(
+                "el fichero usa el formato ${fichero.version}, de una versión en la que los " +
+                    "destinos eran números de teléfono. En Telegram un destino es un chat, " +
+                    "así que esas reglas no servirían: hay que crearlas de nuevo"
+            )
         } else {
             // El token no viaja en el fichero y los ajustes se reemplazan: hay que
             // devolverle el que ya tenía este teléfono o la importación lo borraría.

@@ -68,8 +68,6 @@
     <string name="settings_autoinicio_sin_pantalla">Este teléfono no permite abrir esa pantalla desde la app. Búscala en Ajustes → Aplicaciones → SMStoTelegram → Inicio automático.</string>
 
     <string name="settings_seccion_protecciones">Protecciones</string>
-    <string name="settings_proteger_bucles">Evitar bucles de reenvío</string>
-    <string name="settings_proteger_bucles_detalle">Descarta los SMS cuyo remitente sea un destino configurado y los reenvíos dirigidos al propio remitente. Desactívalo solo en pruebas controladas.</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
     <string name="settings_max_reenvios_ayuda">Cortafuegos de coste: el exceso se descarta y queda en el registro. Recomendado: 10</string>
 
@@ -173,11 +171,16 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_ignorar_mayusculas">Ignorar mayúsculas</string>
     <string name="regla_ignorar_mayusculas_ayuda">Aplica las dos expresiones sin distinguir mayúsculas de minúsculas: «hola» casa con «HOLA». Equivale a escribir (?i) en ambas.</string>
 
-    <string name="regla_destino">Número destino</string>
-    <string name="regla_destino_ayuda">Un número, o {telefono} para contestar a quien envió el SMS</string>
-    <string name="regla_destino_remitente">Contestar al remitente ({telefono})</string>
+    <string name="regla_destino">Chat de destino</string>
+    <string name="regla_destino_ayuda">El chat_id de la persona, grupo o canal. Los grupos y canales lo tienen negativo. También vale un @canal público.</string>
+    <string name="regla_descubrir_chats">Elegir de los chats del bot</string>
+    <string name="regla_chats_buscando">Preguntando al bot…</string>
+    <string name="regla_chats_titulo">Chats que han escrito al bot</string>
+    <string name="regla_chats_ninguno">Nadie ha escrito al bot todavía. Un bot no puede escribir primero: pídele a quien va a recibir los avisos que abra el bot en Telegram y le mande /start. Después vuelve aquí.</string>
+    <string name="regla_chats_sin_token">Configura primero el token del bot en Ajustes</string>
+    <string name="regla_chats_error">No se pudo preguntar al bot: %1$s</string>
     <string name="regla_plantilla">Plantilla del texto</string>
-    <string name="regla_plantilla_ayuda">Marcadores: {mensaje}, {telefono}, {fecha}</string>
+    <string name="regla_plantilla_ayuda">Marcadores: {mensaje}, {telefono}, {fecha}. Conviene dejar {telefono}: en Telegram todo llega del mismo bot, y sin el remitente no se sabe de quién era el SMS.</string>
     <string name="regla_previsualizacion">Así saldría</string>
     <string name="regla_previsualizacion_vacia">Escribe una plantilla para ver el resultado</string>
     <string name="regla_activa">Activa</string>

@@ -76,12 +76,4 @@ interface ReglaDao {
     /** Mayor `orden` en uso, o -1 si la tabla está vacía. Para añadir al final de la lista. */
     @Query("SELECT COALESCE(MAX(orden), -1) FROM reglas")
     suspend fun ordenMaximo(): Int
-
-    /**
-     * Números destino de las reglas activas, sin repetir.
-     * Base de la protección antibucle: un SMS cuyo remitente sea uno de estos números
-     * viene de un destino nuestro y no debe reenviarse otra vez.
-     */
-    @Query("SELECT DISTINCT destino FROM reglas WHERE activa = 1")
-    suspend fun obtenerDestinosActivos(): List<String>
 }

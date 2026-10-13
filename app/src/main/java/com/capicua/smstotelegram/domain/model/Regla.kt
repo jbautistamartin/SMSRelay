@@ -25,8 +25,7 @@ package com.capicua.smstotelegram.domain.model
  *
  * ## Plantilla
  * [plantilla] define el texto que se envía al destino, con tres marcadores opcionales:
- * `{mensaje}`, `{telefono}` y `{fecha}`. El valor por defecto es [PLANTILLA_POR_DEFECTO],
- * que reenvía el cuerpo original sin añadir nada.
+ * `{mensaje}`, `{telefono}` y `{fecha}`. El valor por defecto es [PLANTILLA_POR_DEFECTO].
  */
 data class Regla(
     /** 0 mientras la regla no se ha persistido; Room asigna el valor real al insertar. */
@@ -53,7 +52,14 @@ data class Regla(
      */
     val ignorarMayusculas: Boolean = false,
 
-    /** Número de teléfono al que se reenvía el mensaje si la regla casa. */
+    /**
+     * Chat de Telegram que recibe el mensaje si la regla casa.
+     *
+     * Un `chat_id` numérico —negativo si es un grupo o un canal— o un `@usuario` de canal
+     * público. **No admite marcadores:** cuando el destino era un teléfono se podía escribir
+     * `{telefono}` para contestar al remitente, pero el remitente de un SMS y un chat de
+     * Telegram son identidades sin relación y no hay forma de convertir uno en el otro.
+     */
     val destino: String,
 
     /** Plantilla del texto a enviar. Ver [PLANTILLA_POR_DEFECTO]. */
@@ -69,7 +75,15 @@ data class Regla(
     val continuar: Boolean = false
 ) {
     companion object {
-        /** Plantilla por defecto: reenvía el cuerpo original tal cual. */
-        const val PLANTILLA_POR_DEFECTO = "{mensaje}"
+        /**
+         * Plantilla por defecto: el remitente y la fecha en una línea, y debajo el mensaje.
+         *
+         * Con el SMS bastaba `{mensaje}`, porque el reenvío llegaba como un SMS más y el
+         * teléfono ya enseñaba quién lo mandaba. Por Telegram **todo llega del mismo bot**: sin
+         * el remitente en el texto, cuatro avisos seguidos son cuatro mensajes indistinguibles
+         * y hay que adivinar cuál era del banco. El contexto que el SMS daba gratis hay que
+         * ponerlo aquí a mano.
+         */
+        const val PLANTILLA_POR_DEFECTO = "{telefono} · {fecha}\n{mensaje}"
     }
 }

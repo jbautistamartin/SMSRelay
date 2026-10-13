@@ -16,7 +16,6 @@ import com.capicua.smstotelegram.domain.model.LogTipo
 import com.capicua.smstotelegram.domain.model.Reenvio
 import com.capicua.smstotelegram.domain.model.SmsMessage
 import com.capicua.smstotelegram.domain.rules.EvaluadorDeReglas
-import com.capicua.smstotelegram.domain.rules.NormalizadorTelefono
 import com.capicua.smstotelegram.util.toDisplayString
 import com.capicua.smstotelegram.worker.ColaDeEnvios
 import kotlinx.coroutines.flow.first
@@ -93,22 +92,6 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
 
         val config = configDataStore.config.first()
 
-        // ── Protección: el remitente es uno de nuestros destinos ──────────────
-        //
-        // Si contestan a un número al que reenviamos, ese SMS entra por el receptor como
-        // cualquier otro. Reenviarlo otra vez cierra el círculo y, con los reintentos
-        // automáticos detrás, convierte un error de configuración en una factura.
-        if (config.protegerBucles) {
-            val destinos = reglaRepository.obtenerDestinosActivos()
-            if (NormalizadorTelefono.estaEnLista(sms.telefono, destinos)) {
-                descartar(
-                    sms,
-                    "el remitente ${sms.telefono} es un destino configurado: posible bucle de reenvío"
-                )
-                return
-            }
-        }
-
         // ── Protección: límite de reenvíos por minuto ─────────────────────────
         val desde = Instant.now().minus(1, ChronoUnit.MINUTES)
         val recientes = reenvioRepository.contarCreadosDesde(desde)
@@ -159,73 +142,15 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
             return
         }
 
-        // ── Protección: no reenviar al propio remitente ───────────────────────
-        //
-        // Una regla con `{telefono}` en el destino pide explícitamente contestar a quien
-        // escribió, así que queda fuera de esta protección: lo que se bloquea es la
-        // circularidad accidental, no la que se ha configurado a propósito.
-        val (validas, circulares) = if (config.protegerBucles) {
-            resultado.coincidencias.partition { coincidencia ->
-                coincidencia.respondeAlRemitente ||
-                    !NormalizadorTelefono.mismoNumero(coincidencia.destino, sms.telefono)
-            }
-        } else {
-            resultado.coincidencias to emptyList()
-        }
-
-        circulares.forEach { coincidencia ->
-            logRepository.insertar(
-                LogEntry(
-                    tipo = LogTipo.BUCLE_EVITADO,
-                    smsId = sms.id,
-                    destino = coincidencia.destino,
-                    detalle = "Regla «${coincidencia.nombreRegla}» reenviaría al propio " +
-                        "remitente ${sms.telefono}: omitida. Si la intención era contestarle, " +
-                        "pon {telefono} como destino de la regla",
-                    timestamp = Instant.now()
-                )
-            )
-        }
-
-        // ── Protección: el remitente no es un número al que se pueda enviar ───
-        //
-        // Solo afecta a las reglas que contestan al remitente. Una cabecera alfanumérica
-        // (BANCO, AMAZON) no recibe SMS, así que el envío fallaría siempre y con reintentos
-        // detrás: mejor decirlo aquí.
-        val (enviables, inalcanzables) = validas.partition { coincidencia ->
-            !coincidencia.respondeAlRemitente ||
-                NormalizadorTelefono.esDestinoEnviable(coincidencia.destino)
-        }
-
-        inalcanzables.forEach { coincidencia ->
-            logRepository.insertar(
-                LogEntry(
-                    tipo = LogTipo.ERROR,
-                    smsId = sms.id,
-                    destino = coincidencia.destino,
-                    detalle = "Regla «${coincidencia.nombreRegla}» contesta al remitente, pero " +
-                        "«${sms.telefono}» no es un número al que se pueda enviar un SMS: omitida",
-                    timestamp = Instant.now()
-                )
-            )
-        }
-
-        if (enviables.isEmpty()) {
-            descartar(
-                sms,
-                if (circulares.isNotEmpty()) {
-                    "todas las reglas que casaron reenviaban al propio remitente"
-                } else {
-                    "las reglas que casaron contestaban a «${sms.telefono}», " +
-                        "que no es un número al que se pueda enviar"
-                }
-            )
-            return
-        }
-
         // ── Creación de los reenvíos ──────────────────────────────────────────
+        //
+        // Aquí ya no hay nada que filtrar. Las dos protecciones antibucle que vivían en este
+        // punto comparaban el destino de la regla con el remitente del SMS, y eso dejó de
+        // significar nada al cambiar el medio: un chat de Telegram y un número de teléfono son
+        // identidades sin relación, así que no pueden ser «el mismo» ni formar un círculo. El
+        // SMS que antes volvía por el receptor ahora llega a Telegram y se queda ahí.
         val ahora = Instant.now()
-        val reenvios = enviables.map { coincidencia ->
+        val reenvios = resultado.coincidencias.map { coincidencia ->
             Reenvio(
                 id = UUID.randomUUID().toString(),
                 smsId = sms.id,

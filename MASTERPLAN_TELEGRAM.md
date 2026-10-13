@@ -358,7 +358,7 @@ de teléfono**. Importarlo aquí crearía reglas cuyos destinos no son chats y q
 una sin explicación. La versión sube en la fase 5, que es donde `destino` cambia de significado,
 y la importación tiene que rechazar los ficheros anteriores.
 
-### Fase 5 — Reglas: el destino es un chat · `[ ]`
+### Fase 5 — Reglas: el destino es un chat · `[x]` completada el 12 oct 2026
 
 - `destino` deja de ser un número y pasa a ser un `chat_id` (numérico, negativo en grupos) o un
   `@usuario` de canal. Validación propia en vez de la de teléfonos.
@@ -374,6 +374,77 @@ y la importación tiene que rechazar los ficheros anteriores.
 - `ReglasJson` sube de versión y `ProbarReglasFragment` se ajusta.
 
 **Hecho cuando:** se crea una regla de principio a fin sin saber qué es un `chat_id`.
+
+#### Resultado real
+
+100 tests, 0 fallos. El recuento **baja** de 110 y eso es la noticia: se fueron los 18 de
+`NormalizadorTelefonoTest` junto con la clase que probaban, y entraron 10 de
+`DestinoDeTelegramTest` más los retoques del evaluador. Código que se borra es trabajo hecho.
+
+#### La fase absorbió las guardias de la fase 6
+
+No por adelantar trabajo, sino porque **no se podían separar**. Las dos protecciones antibucle
+comparaban el destino de la regla con el remitente del SMS, y en el momento en que el destino
+pasa a ser un `chat_id` esa comparación deja de significar nada: un chat de Telegram y un número
+de teléfono son identidades sin relación, no pueden ser «el mismo» ni cerrar un círculo. El SMS
+que antes volvía por el receptor ahora llega a Telegram y se queda ahí.
+
+Dejarlas una fase más habría significado mantener un `if` que no puede ser cierto y un
+interruptor en Ajustes que no apaga nada. Se fueron con ellas:
+
+- Las guardias 1 y 2 de `ProcesarSmsEntranteUseCase` y la comprobación de destino enviable.
+- `AppConfig.protegerBucles`, su clave en DataStore, su campo en el fichero y su tarjeta en
+  Ajustes, con la sección «Protecciones» que solo contenía ese interruptor.
+- `NormalizadorTelefono` **entero** y sus 18 tests.
+- `ReglaDao.obtenerDestinosActivos()` y su camino por el repositorio, que solo servía a la
+  guardia 1.
+
+Lo que queda para la fase 6 es lo que de verdad es suyo: el límite por minuto redocumentado, los
+tipos de log y los textos que todavía hablan de coste.
+
+#### Lo que entró
+
+| Pieza | Papel |
+|-------|-------|
+| `DestinoDeTelegram` | Qué puede escribirse en el destino. Sustituye a `NormalizadorTelefono` |
+| `DescubridorDeChats` | `getUpdates`: la lista de quién ha escrito al bot |
+
+**El descubrimiento no es un adorno.** Nadie se sabe su `chat_id`: es un número que Telegram no
+muestra en ninguna de sus pantallas, y obtenerlo «a mano» exige hablar con un bot de terceros o
+leer una URL de la API en el navegador. Es el mismo problema que resolvía el botón «Contestar al
+remitente», y la misma respuesta: un dato que hay que conocer de antemano no se usa.
+
+Y el caso vacío se explica en lugar de dejar una lista en blanco: **un bot no puede escribir
+primero**, así que si no aparece nadie lo que falta es un `/start` del otro lado. Es el problema
+de soporte número uno de cualquier aplicación con bot.
+
+#### Cuatro decisiones
+
+1. **El formato del fichero sube a 4 y rechaza los anteriores** — la primera vez en el proyecto
+   que una importación se rompe a propósito. Un fichero del formato 3 tiene *exactamente la misma
+   forma*: ningún campo cambió de nombre ni de tipo. Lo que cambió es lo que `destino` significa.
+   Entraría sin un solo error de parseo y dejaría reglas cuyos destinos no existen, fallando una
+   por una cuando llegase un SMS y sin nada que apuntase al fichero importado.
+2. **La plantilla por defecto pasa de `{mensaje}` a `{telefono} · {fecha}` + el mensaje.** Con el
+   SMS bastaba el cuerpo, porque el reenvío llegaba como un SMS y el teléfono ya enseñaba de
+   quién era. Por Telegram todo llega del mismo bot: cuatro avisos seguidos serían cuatro
+   mensajes indistinguibles.
+3. **`ReglaEntity` pierde su `defaultValue` de la plantilla.** Estaba escrita dos veces —ahí y en
+   `Regla.PLANTILLA_POR_DEFECTO`— y al cambiar una habrían dejado de coincidir. Ninguna inserción
+   usa la de la entidad, así que sobra, y quitarla deja una sola fuente de verdad.
+4. **La validación del destino da tres mensajes y no uno.** El error probable no es una letra de
+   más: es escribir un número de teléfono, porque uno viene de SMStoSMS o porque es lo que se
+   supone que va en un campo llamado «destino». «No parece un chat» es verdad y no sirve de nada.
+
+#### Una ambigüedad que encontró el propio test
+
+`600112233` son nueve dígitos seguidos: es a la vez un móvil español escrito a pelo y un `chat_id`
+de persona perfectamente legítimo. No hay forma de distinguirlos. El test lo dio por teléfono, el
+código por chat, y **el código tenía razón**: rechazar un `chat_id` válido rompe una configuración
+correcta con un mensaje de error que además es falso, mientras que un teléfono que se cuele acaba
+en un `400 chat not found` con su motivo en el registro. `pareceTelefono` solo reconoce lo que *no
+puede* ser un chat —lo que lleva `+`, espacios, paréntesis o guiones— y hay un test con su KDoc
+fijando la ambigüedad para que nadie la «arregle» al revés.
 
 ### Fase 6 — Guardias y límites · `[ ]`
 

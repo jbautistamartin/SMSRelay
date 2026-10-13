@@ -9,8 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.capicua.smstotelegram.data.config.ConfigDataStore
 import com.capicua.smstotelegram.data.repository.ReglaRepository
+import com.capicua.smstotelegram.data.telegram.DestinoDeTelegram
 import com.capicua.smstotelegram.domain.rules.EvaluadorDeReglas
-import com.capicua.smstotelegram.domain.rules.NormalizadorTelefono
 import com.capicua.smstotelegram.domain.rules.ResultadoEvaluacion
 import com.capicua.smstotelegram.domain.transport.EnviadorDeMensajes
 import com.capicua.smstotelegram.domain.transport.ResultadoEnvio
@@ -96,7 +96,7 @@ class ProbarReglasViewModel @Inject constructor(
                         textoFinal = coincidencia.textoFinal
                     )
                 },
-                avisos = construirAvisos(resultado, telefono)
+                avisos = construirAvisos(resultado)
             )
             _envio.value = EstadoEnvioPrueba.Inactivo
         }
@@ -143,10 +143,7 @@ class ProbarReglasViewModel @Inject constructor(
      * Avisos que explican por qué el resultado es el que es. Son más útiles que el propio
      * resultado cuando una regla no casa y no se entiende el motivo.
      */
-    private suspend fun construirAvisos(
-        resultado: ResultadoEvaluacion,
-        telefono: String
-    ): List<String> =
+    private suspend fun construirAvisos(resultado: ResultadoEvaluacion): List<String> =
         buildList {
             resultado.reglasInvalidas.forEach { invalida ->
                 add(
@@ -155,32 +152,22 @@ class ProbarReglasViewModel @Inject constructor(
                         "(${invalida.motivo})"
                 )
             }
-            if (telefono.count { it.isDigit() } < 9 && telefono.isNotBlank()) {
-                add(
-                    "«$telefono» no tiene dígitos suficientes para ser un número: se tratará " +
-                        "como remitente alfanumérico, igual que BANCO o AMAZON"
-                )
-            }
-
-            // Las reglas que contestan al remitente quedan exentas de la protección antibucle,
-            // y eso hay que decirlo donde se está comprobando la regla, no solo en la ayuda.
-            val contestanAlRemitente = resultado.coincidencias.filter { it.respondeAlRemitente }
-            if (contestanAlRemitente.isNotEmpty()) {
-                val nombres = contestanAlRemitente.joinToString(", ") { "«${it.nombreRegla}»" }
-                if (NormalizadorTelefono.esDestinoEnviable(telefono)) {
+            // Un destino mal escrito no lo detecta la evaluación —casa igual— y el reenvío
+            // solo falla cuando llega un SMS de verdad. Aquí hay un momento mejor para decirlo.
+            resultado.coincidencias
+                .filterNot { DestinoDeTelegram.pareceValido(it.destino) }
+                .forEach { coincidencia ->
                     add(
-                        "$nombres contesta al propio remitente ($telefono). La protección " +
-                            "antibucle no la bloquea porque es intencionada: el límite de " +
-                            "reenvíos por minuto es la única red si el otro extremo también " +
-                            "responde automáticamente"
-                    )
-                } else {
-                    add(
-                        "$nombres contesta al remitente, pero a «$telefono» no se le puede " +
-                            "enviar un SMS: ese reenvío se omitirá"
+                        "La regla «${coincidencia.nombreRegla}» apunta a «${coincidencia.destino}», " +
+                            if (DestinoDeTelegram.pareceTelefono(coincidencia.destino)) {
+                                "que es un número de teléfono. El destino tiene que ser un chat " +
+                                    "de Telegram, así que ese reenvío fallará"
+                            } else {
+                                "que no tiene forma de chat de Telegram: ese reenvío fallará"
+                            }
                     )
                 }
-            }
+
             enviador.motivoNoDisponible()?.let { motivo ->
                 add("La prueba real no funcionará: $motivo")
             }

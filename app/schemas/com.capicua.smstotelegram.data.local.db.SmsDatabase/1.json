@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "661ce7b1d3bd18b428cecd80eb1ca580",
+    "identityHash": "0ff286b359adf1399ee92a1851f21345",
     "entities": [
       {
         "tableName": "sms",
@@ -75,7 +75,7 @@
       },
       {
         "tableName": "reglas",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `orden` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `regex_telefono` TEXT, `regex_mensaje` TEXT, `ignorar_mayusculas` INTEGER NOT NULL DEFAULT 0, `destino` TEXT NOT NULL, `plantilla` TEXT NOT NULL DEFAULT '{mensaje}', `activa` INTEGER NOT NULL DEFAULT 1, `continuar` INTEGER NOT NULL DEFAULT 0)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `orden` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `regex_telefono` TEXT, `regex_mensaje` TEXT, `ignorar_mayusculas` INTEGER NOT NULL DEFAULT 0, `destino` TEXT NOT NULL, `plantilla` TEXT NOT NULL, `activa` INTEGER NOT NULL DEFAULT 1, `continuar` INTEGER NOT NULL DEFAULT 0)",
         "fields": [
           {
             "fieldPath": "id",
@@ -124,8 +124,7 @@
             "fieldPath": "plantilla",
             "columnName": "plantilla",
             "affinity": "TEXT",
-            "notNull": true,
-            "defaultValue": "'{mensaje}'"
+            "notNull": true
           },
           {
             "fieldPath": "activa",
@@ -372,7 +371,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '661ce7b1d3bd18b428cecd80eb1ca580')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0ff286b359adf1399ee92a1851f21345')"
     ]
   }
 }

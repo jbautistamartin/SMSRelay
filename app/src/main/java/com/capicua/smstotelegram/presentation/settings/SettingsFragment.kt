@@ -299,7 +299,6 @@ class SettingsFragment : Fragment() {
     private fun rellenarCampos(config: AppConfig) {
         binding.editTextTokenBot.setText(config.tokenBot)
         binding.switchRecepcion.isChecked = config.recepcionActiva
-        binding.switchProtegerBucles.isChecked = config.protegerBucles
         binding.editTextMaxReenviosMinuto.setText(config.maxReenviosPorMinuto.toString())
         binding.editTextTimeoutEnvio.setText(config.timeoutEnvioSegundos.toString())
         binding.editTextMaxReintentos.setText(config.maxReintentos.toString())
@@ -325,7 +324,6 @@ class SettingsFragment : Fragment() {
                     intervaloReintentoSegundos = intervalo,
                     timeoutEnvioSegundos = timeoutEnvio,
                     maxReenviosPorMinuto = maxPorMinuto,
-                    protegerBucles = binding.switchProtegerBucles.isChecked,
                     recepcionActiva = binding.switchRecepcion.isChecked
                 )
             )

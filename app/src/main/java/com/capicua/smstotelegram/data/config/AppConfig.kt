@@ -52,13 +52,6 @@ data class AppConfig(
     val maxReenviosPorMinuto: Int = 10,
 
     /**
-     * Si true, se descartan los SMS cuyo remitente sea uno de los destinos configurados y los
-     * reenvíos dirigidos al propio remitente. Desactivarlo solo tiene sentido en pruebas
-     * controladas.
-     */
-    val protegerBucles: Boolean = true,
-
-    /**
      * Interruptor general de la recepción. En false la aplicación deja de leer los SMS que
      * llegan: no se guardan, no se evalúan reglas y no se reenvía nada.
      *

@@ -49,7 +49,4 @@ interface ReglaRepository {
     suspend fun obtenerTodas(): List<Regla>
 
     suspend fun obtenerPorId(id: Long): Regla?
-
-    /** Destinos de las reglas activas, sin repetir. Para la protección antibucle. */
-    suspend fun obtenerDestinosActivos(): List<String>
 }

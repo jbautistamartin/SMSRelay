@@ -72,9 +72,6 @@ class ReglaRepositoryImpl @Inject constructor(
     override suspend fun obtenerPorId(id: Long): Regla? =
         reglaDao.obtenerPorId(id)?.aDominio()
 
-    override suspend fun obtenerDestinosActivos(): List<String> =
-        reglaDao.obtenerDestinosActivos()
-
     // ── Mappers ───────────────────────────────────────────────────────────────
 
     private fun Regla.aEntidad() = ReglaEntity(

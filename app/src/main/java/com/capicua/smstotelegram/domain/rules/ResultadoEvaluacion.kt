@@ -28,17 +28,10 @@ data class Coincidencia(
     val reglaId: Long,
     val nombreRegla: String,
 
-    /** Destino final: el número literal de la regla, o el remitente si la regla le responde. */
+    /** Chat de destino, tal como lo escribió la regla. No se resuelve ningún marcador aquí. */
     val destino: String,
 
-    val textoFinal: String,
-
-    /**
-     * true si la regla declaraba `{telefono}` como destino, es decir, si el reenvío vuelve al
-     * remitente **a propósito**. La protección antibucle usa este campo para no bloquear una
-     * circularidad que se ha pedido explícitamente.
-     */
-    val respondeAlRemitente: Boolean = false
+    val textoFinal: String
 )
 
 /** Una regla descartada porque su expresión regular no compila. */
