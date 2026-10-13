@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.capicua.smstotelegram.R
 import com.capicua.smstotelegram.data.config.AppConfig
 import com.capicua.smstotelegram.data.config.ResultadoCopia
+import com.capicua.smstotelegram.data.telegram.ResultadoDelBot
 import com.capicua.smstotelegram.data.telegram.TokenDeBot
 import com.capicua.smstotelegram.databinding.FragmentSettingsBinding
 import com.capicua.smstotelegram.util.InicioAutomatico
@@ -71,7 +72,9 @@ class SettingsFragment : Fragment() {
         configurarBateria()
         configurarAutoinicio()
         configurarCopia()
+        configurarComprobacionDelBot()
         observarConfiguracion()
+        observarComprobacionDelBot()
         observarCopias()
         configurarBotonGuardar()
     }
@@ -84,6 +87,79 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         pintarEstadoBateria()
+    }
+
+    // ── Comprobación del bot ──────────────────────────────────────────────────
+
+    private fun configurarComprobacionDelBot() {
+        binding.buttonValidarBot.setOnClickListener {
+            // Se comprueba lo que hay escrito, no lo guardado: la gracia es saberlo antes de
+            // guardar un token que no sirve.
+            viewModel.comprobarBot(binding.editTextTokenBot.text?.toString().orEmpty())
+        }
+    }
+
+    private fun observarComprobacionDelBot() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.comprobacion.collect { estado ->
+                    val vista = binding.textViewResultadoBot
+                    binding.buttonValidarBot.isEnabled =
+                        estado != SettingsViewModel.EstadoComprobacion.Comprobando
+
+                    when (estado) {
+                        SettingsViewModel.EstadoComprobacion.Inactivo ->
+                            vista.visibility = View.GONE
+
+                        SettingsViewModel.EstadoComprobacion.Comprobando -> {
+                            vista.visibility = View.VISIBLE
+                            vista.setText(R.string.settings_bot_comprobando)
+                            vista.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
+                        }
+
+                        is SettingsViewModel.EstadoComprobacion.Terminada -> {
+                            vista.visibility = View.VISIBLE
+                            pintarResultadoDelBot(vista, estado.resultado)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun pintarResultadoDelBot(vista: android.widget.TextView, resultado: ResultadoDelBot) {
+        when (resultado) {
+            is ResultadoDelBot.Correcto -> {
+                // Enseñar de qué bot se trata es lo que hace la respuesta comprobable: quien
+                // la pidió puede reconocer su bot, o ver que ha pegado el de otro.
+                vista.text = getString(
+                    R.string.settings_bot_correcto, resultado.nombre, resultado.usuario
+                )
+                vista.setTextColor(resources.getColor(R.color.status_delivered, null))
+            }
+
+            is ResultadoDelBot.Rechazado -> {
+                vista.text = getString(R.string.settings_bot_rechazado, resultado.motivo)
+                vista.setTextColor(resources.getColor(R.color.status_failed, null))
+            }
+
+            is ResultadoDelBot.NoSePudo -> {
+                // Sin red no se sabe si el token vale: decir que está mal sería mentir.
+                vista.text = getString(R.string.settings_bot_sin_red, resultado.motivo)
+                vista.setTextColor(resources.getColor(R.color.status_pending, null))
+            }
+
+            ResultadoDelBot.SinToken -> {
+                vista.setText(R.string.settings_bot_sin_token)
+                vista.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
+            }
+        }
+    }
+
+    private fun colorDe(atributo: Int): Int {
+        val valor = android.util.TypedValue()
+        requireContext().theme.resolveAttribute(atributo, valor, true)
+        return valor.data
     }
 
     // ── Exención de batería ───────────────────────────────────────────────────

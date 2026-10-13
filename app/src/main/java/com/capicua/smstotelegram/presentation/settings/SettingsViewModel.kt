@@ -12,15 +12,19 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smstotelegram.data.config.AppConfig
 import com.capicua.smstotelegram.data.config.ConfigBackup
 import com.capicua.smstotelegram.data.config.ConfigDataStore
-import com.capicua.smstotelegram.data.telegram.EstadoDelBot
 import com.capicua.smstotelegram.data.config.ResultadoCopia
+import com.capicua.smstotelegram.data.telegram.ComprobadorDelBot
+import com.capicua.smstotelegram.data.telegram.EstadoDelBot
+import com.capicua.smstotelegram.data.telegram.ResultadoDelBot
 import com.capicua.smstotelegram.util.ControlRecepcion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -31,8 +35,33 @@ class SettingsViewModel @Inject constructor(
     application: Application,
     private val configDataStore: ConfigDataStore,
     private val configBackup: ConfigBackup,
-    private val estadoDelBot: EstadoDelBot
+    private val estadoDelBot: EstadoDelBot,
+    private val comprobadorDelBot: ComprobadorDelBot
 ) : AndroidViewModel(application) {
+
+    /** En qué punto está la comprobación del token. */
+    sealed interface EstadoComprobacion {
+        data object Inactivo : EstadoComprobacion
+        data object Comprobando : EstadoComprobacion
+        data class Terminada(val resultado: ResultadoDelBot) : EstadoComprobacion
+    }
+
+    private val _comprobacion = MutableStateFlow<EstadoComprobacion>(EstadoComprobacion.Inactivo)
+    val comprobacion: StateFlow<EstadoComprobacion> = _comprobacion.asStateFlow()
+
+    /**
+     * Pregunta a Telegram por [token] sin guardarlo.
+     *
+     * Se comprueba el texto que hay en el campo, no lo guardado: quien acaba de pegar un token
+     * quiere saber si sirve **antes** de comprometerse.
+     */
+    fun comprobarBot(token: String) {
+        if (_comprobacion.value == EstadoComprobacion.Comprobando) return
+        viewModelScope.launch {
+            _comprobacion.value = EstadoComprobacion.Comprobando
+            _comprobacion.value = EstadoComprobacion.Terminada(comprobadorDelBot.comprobar(token))
+        }
+    }
 
     /**
      * Estado actual de la configuración.

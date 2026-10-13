@@ -161,6 +161,29 @@ class ReglasJsonTest {
     }
 
     /**
+     * El token es la única credencial de la aplicación, y este fichero es JSON en claro que se
+     * guarda donde el operador diga y se lleva a otro teléfono. Que no viaje no es una
+     * preferencia: es lo que impide que una copia de seguridad reparta permiso para escribir en
+     * nombre del bot.
+     */
+    @Test
+    fun `el token del bot no aparece en el fichero exportado`() {
+        val config = AppConfig(tokenBot = "123456789:AAEhBOweik6ad9r_QXZ2Ql3n1xWcCOPvj8s")
+
+        val serializado = json.encodeToString(
+            ReglasExportadas.serializer(),
+            ReglasExportadas(
+                exportado = "2026-10-12T20:00:00Z",
+                configuracion = config.aJson(),
+                reglas = listOf(regla().aJson())
+            )
+        )
+
+        assertFalse("el token no debe aparecer", serializado.contains("AAEhBOweik"))
+        assertFalse("ni su nombre de campo", serializado.contains("token"))
+    }
+
+    /**
      * Los ficheros de los formatos 1 y 2 solo llevaban reglas. Tienen que seguir entrando, y
      * dejar los ajustes del dispositivo como estén en lugar de pisarlos con valores por
      * defecto.

@@ -41,6 +41,12 @@
     <string name="settings_seccion_bot">Bot de Telegram</string>
     <string name="settings_token_bot">Token del bot</string>
     <string name="settings_token_bot_ayuda">Crea un bot escribiendo a @BotFather en Telegram y pega aquí el token que te dé. Sin token no se puede entregar nada. El token no se incluye en la copia de seguridad.</string>
+    <string name="settings_validar_bot">Comprobar el token</string>
+    <string name="settings_bot_comprobando">Preguntando a Telegram…</string>
+    <string name="settings_bot_correcto">✓ El token sirve · %1$s (@%2$s)</string>
+    <string name="settings_bot_rechazado">✗ Telegram no acepta este token: %1$s</string>
+    <string name="settings_bot_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>
+    <string name="settings_bot_sin_token">Escribe primero un token para poder comprobarlo</string>
     <string name="settings_token_bot_invalido">El token no tiene la forma que entrega @BotFather (números, dos puntos y una cadena larga)</string>
 
     <string name="settings_seccion_recepcion">Recepción de SMS</string>

@@ -292,7 +292,7 @@ aquí». Ahora dice lo contrario, que es la verdad, y además dice que **hasta l
 frase era la otra y se mantuvo escrita mientras fue cierta**. El aviso de privacidad de «Acerca
 de» sigue siendo de la fase 7.
 
-### Fase 4 — El bot, bien tratado · `[ ]`
+### Fase 4 — El bot, bien tratado · `[x]` completada el 12 oct 2026
 
 Lo que no es «que funcione», que ya lo hizo la fase 3, sino «que la credencial esté bien»:
 
@@ -305,6 +305,58 @@ Lo que no es «que funcione», que ya lo hizo la fase 3, sino «que la credencia
 
 **Hecho cuando:** exportar e importar funciona, el token no aparece en el JSON exportado ni en
 `adb logcat`, y la pantalla dice de qué bot se trata.
+
+#### Resultado real
+
+110 tests, 0 fallos. `ComprobadorDelBot` es la pieza nueva, y hace `getMe`.
+
+**La validación no contesta «sí» o «no»: contesta de qué bot se trata.** Enseñar el nombre y el
+`@usuario` es lo que convierte la respuesta en algo comprobable por quien la pidió, que puede
+reconocer su bot —o darse cuenta de que ha pegado el de otro, que con dos bots en la misma cuenta
+es un error fácil—. Un «✓ correcto» a secas obliga a creerse la pantalla.
+
+Cuatro resultados y no dos, porque «no se pudo preguntar» no es «el token está mal»:
+
+| Resultado | Cuándo | Color |
+|-----------|--------|-------|
+| `Correcto(nombre, usuario)` | `getMe` contestó | Verde |
+| `Rechazado(motivo)` | 401/404, o la forma ni siquiera cuadra | Rojo |
+| `NoSePudo(motivo)` | Sin red, Telegram caído, respuesta ilegible | Ámbar |
+| `SinToken` | El campo está vacío | Neutro |
+
+Decir «el token está mal» cuando lo que pasa es que no hay cobertura mandaría a cambiar un token
+que funciona.
+
+#### Tres decisiones
+
+1. **Se valida el texto del campo, no lo guardado.** Obligar a guardar primero para poder
+   comprobar significaría dejar guardado un token que no vale. `comprobar(tokenCandidato)` acepta
+   el candidato y el parámetro es opcional para cuando se quiera comprobar el que ya está.
+2. **Un `Correcto` borra el aviso de «token rechazado»; un `Rechazado` no lo enciende.** Ese aviso
+   habla del token que la aplicación *está usando*, y lo pone quien intenta usarlo de verdad
+   —`TelegramSender`—, no una comprobación sobre un candidato que a lo mejor ni se guarda.
+3. **`endIconMode="password_toggle"` en vez de un campo oculto sin más.** Enmascarado por defecto
+   porque es una credencial y no debe quedarse legible en pantalla, pero con el ojo para
+   comprobarlo: esconderlo sin poder verlo haría imposible detectar un pegado a medias, que es el
+   error más frecuente.
+
+#### Un apaño que duró diez minutos
+
+La primera versión de `ComprobadorDelBot` quería borrar el flag desde `interpretar()`, que no es
+`suspend`, y lo resolvía con un `@Volatile` más un `aplicarPendientes()` que quien llama tenía que
+acordarse de invocar. Un contrato así se incumple la primera vez que alguien añade una llamada.
+Se sustituyó por hacerlo en `comprobar()`, donde sí se puede suspender; `interpretar()` se queda
+siendo una función sin efectos, que es lo que debía ser.
+
+#### Lo que se movió a la fase 5
+
+**El formato del fichero no subió a 4 aquí.** `ConfiguracionJson` no cambió de campos —el token
+nunca estuvo— así que subir la versión no habría descrito ningún cambio. Pero al revisarlo apareció
+algo peor que merece la fase en la que de verdad ocurre: un fichero del **formato 3** escrito por
+SMStoSMS tiene exactamente la misma forma que uno de esta aplicación, y sus `destino` son **números
+de teléfono**. Importarlo aquí crearía reglas cuyos destinos no son chats y que fallarían una por
+una sin explicación. La versión sube en la fase 5, que es donde `destino` cambia de significado,
+y la importación tiene que rechazar los ficheros anteriores.
 
 ### Fase 5 — Reglas: el destino es un chat · `[ ]`
 
