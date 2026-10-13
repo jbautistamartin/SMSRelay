@@ -24,36 +24,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # la casa, así que KEYSTORE_PATH va relativa (`../../Claves/capicua.jks`): el file()
 # de app/build.gradle.kts la resuelve desde el módulo, no desde la raíz.
 # Sin las cuatro claves el build NO falla: el APK sale sin firmar.
-# El APK resultante se genera como smstosms-<versionName>.apk
+# El APK resultante se genera como smstotelegram-<versionName>.apk
 ./gradlew assembleRelease
 
 # Unit tests
 ./gradlew test
 
 # Single test class
-./gradlew test --tests "com.capicua.smstosms.domain.rules.EvaluadorDeReglasTest"
+./gradlew test --tests "com.capicua.smstotelegram.domain.rules.EvaluadorDeReglasTest"
 
 # Grant runtime permissions on a dedicated device (run after install)
-adb shell pm grant com.capicua.smstosms android.permission.RECEIVE_SMS
-adb shell pm grant com.capicua.smstosms android.permission.READ_SMS
-adb shell pm grant com.capicua.smstosms android.permission.SEND_SMS
-adb shell pm grant com.capicua.smstosms android.permission.READ_PHONE_STATE
-adb shell pm grant com.capicua.smstosms android.permission.POST_NOTIFICATIONS
+# There is no SEND_SMS and no READ_PHONE_STATE: this app receives over the radio and
+# delivers over the network. See "Permissions" below.
+adb shell pm grant com.capicua.smstotelegram android.permission.RECEIVE_SMS
+adb shell pm grant com.capicua.smstotelegram android.permission.READ_SMS
+adb shell pm grant com.capicua.smstotelegram android.permission.POST_NOTIFICATIONS
 
 # Exempt the app from Doze mode / battery optimization (REQUIRED for reliable dispatch)
 # Without this, WorkManager may be deferred indefinitely when the screen is off.
 # See "Device setup" section below for the on-device UI alternative.
-adb shell dumpsys deviceidle whitelist +com.capicua.smstosms
+adb shell dumpsys deviceidle whitelist +com.capicua.smstotelegram
 
 # Verify the app is in the whitelist
 adb shell dumpsys deviceidle whitelist
-# Expected: a line containing "com.capicua.smstosms"
+# Expected: a line containing "com.capicua.smstotelegram"
 
 # Remove from whitelist (if needed)
-adb shell dumpsys deviceidle whitelist -com.capicua.smstosms
+adb shell dumpsys deviceidle whitelist -com.capicua.smstotelegram
 
 # Real-time log monitoring
-adb logcat -s "SmsReceiver" "SmsIngestionService" "SmsSender" "SmsDispatchWorker" "OrphanRescueWorker" "HealthMonitorWorker"
+adb logcat -s "SmsReceiver" "SmsIngestionService" "TelegramSender" "DispatchWorker" "OrphanRescueWorker" "HealthMonitorWorker"
 
 # Simulate an incoming SMS on an emulator (no SIM required)
 adb emu sms send +34600112233 "Tu codigo es 4821"
@@ -66,8 +66,8 @@ adb emu sms send +34600112233 "Tu codigo es 4821"
 2. **Write the entry in `CHANGELOG.md`**: what sits under `[No publicado]` becomes the new version
    with its date. That file is the summary of *what* changed; the GitHub release notes are the long
    form — how to install it, how to update from the previous version — and may repeat it.
-3. `./gradlew assembleRelease` → `app/build/outputs/apk/release/smstosms-<versionName>.apk`, signed
-   with the shared keystore (see the build commands above).
+3. `./gradlew assembleRelease` → `app/build/outputs/apk/release/smstotelegram-<versionName>.apk`,
+   signed with the shared keystore (see the build commands above).
 4. Tag on `main` and publish: `gh release create vX.Y.Z --notes-file <notes> <apk>`.
 
 The APK keeps the same signing key release after release. That is what lets a user install the new
@@ -94,14 +94,20 @@ SIM → SmsReceiver.onReceive()           ← BroadcastReceiver (main thread, < 
       SmsIngestionService               ← ForegroundService (must call startForeground() < 5 s)
         ↓ ProcesarSmsEntranteUseCase
       Room INSERT (SmsEntity)           ← outbox: persists BEFORE doing anything else
-        ↓ loop / rate protections
+        ↓ rate limit
         ↓ EvaluadorDeReglas
-      Room INSERT (ReenvioEntity × N)   ← one row per destination
+      Room INSERT (ReenvioEntity × N)   ← one row per destination chat
         ↓ ColaDeEnvios.encolar()
-      SmsDispatchWorker.doWork()        ← one worker per reenvío, with linear backoff
-        ↓ SmsSender → SmsManager.sendMultipartTextMessage()
-      sentIntent broadcast → update Room
+      DispatchWorker.doWork()           ← one worker per reenvío, with linear backoff
+        ↓ EnviadorDeMensajes.enviar()   ← the interface; TelegramSender implements it
+      POST api.telegram.org/bot<token>/sendMessage → update Room
 ```
+
+**Everything above the interface is medium-agnostic, and that is the point.** The outbox, the
+client-side idempotency, the orphan rescue, the retry policy and the history were written for an
+HTTP gateway, survived the move to `SmsManager`, and survived the move to Telegram without being
+touched. `TransportModule` is the only class in the project that names a concrete transport, so
+changing the medium is changing one `@Binds`.
 
 `OrphanRescueWorker` self-chains every 30 s and rescues **two** things: SMS left in `PENDIENTE`
 whose rule evaluation never completed, and `PENDIENTE` reenvíos with no live WorkManager job.
@@ -114,8 +120,8 @@ whose rule evaluation never completed, and `PENDIENTE` reenvíos with no live Wo
 
 ### Forwarding mechanism
 
-There is no HTTP. The operator configures an ordered list of **rules** on the Reglas screen;
-each rule decides, for a given incoming SMS, which phone number receives it and with what text.
+The operator configures an ordered list of **rules** on the Reglas screen; each rule decides,
+for a given incoming SMS, **which Telegram chat** receives it and with what text.
 
 A rule matches when **both** criteria hold. An empty criterion always holds, so a rule with both
 empty matches every SMS:
@@ -133,14 +139,27 @@ Rules are evaluated in ascending `orden`. The first match wins and evaluation st
 the rule has `continuar = true`, in which case evaluation carries on and the same SMS can reach
 several destinations.
 
-The rule's `destino` is normally a fixed phone number, but it also accepts the `{telefono}`
-marker, which resolves to **the sender of the incoming SMS**. That is how you reply to whoever
-wrote in. It is the only marker resolved in the destination — `{mensaje}` and `{fecha}` are left
-untouched there, so the SMS body (third-party content) can never influence where anything is
-sent. The rule editor offers it as a button ("Contestar al remitente"), because a marker nobody
-knows about is not a feature.
+The rule's `destino` is a Telegram chat, used **verbatim**, and **no marker is resolved in it**.
+`DestinoDeTelegram` accepts the three forms the Bot API takes: a positive `chat_id` (a person), a
+negative one (a group or channel, `-100…` for supergroups and channels), or an `@username` of a
+**public channel**. A bot cannot address a person by `@username` — it needs the numeric id, which
+only exists once that person has written to the bot.
 
-The forwarded text comes from the rule's `plantilla`, with three optional markers:
+That no marker is resolved there is a security property, not a simplification: **the SMS body can
+never influence where anything is sent**. SMStoSMS did resolve `{telefono}` in the destination, to
+reply to whoever wrote in; with Telegram there is no way to turn an SMS sender into a chat — they
+are unrelated identities — so the marker left the destination and the "Contestar al remitente"
+button went with it.
+
+**Nobody knows their own `chat_id`.** Telegram does not show it in any of its screens, so the rule
+editor has a *Elegir de los chats del bot* button that calls `getUpdates` and offers the list
+(`DescubridorDeChats`). It is the direct replacement for the old reply-to-sender button, and for
+the same reason: a value you have to know in advance does not get used. Two things that button
+cannot hide, and that the screen therefore says out loud: **a bot cannot write first** (an empty
+list means someone needs to send it a `/start`), and Telegram only keeps those updates for 24
+hours.
+
+The delivered text comes from the rule's `plantilla`, with three optional markers:
 
 - `{mensaje}` — the received SMS body
 - `{telefono}` — the sender's number
@@ -150,28 +169,35 @@ The forwarded text comes from the rule's `plantilla`, with three optional marker
 `{mensaje}` is substituted **last** on purpose, so the SMS body — third-party content — is never
 re-scanned and cannot inject markers.
 
-### Loop and cost protections
+**The default template is `{telefono} · {fecha}\n{mensaje}`, not `{mensaje}`.** With SMS the body
+was enough: the forward arrived as another SMS and the phone already showed who sent it. Over
+Telegram everything arrives from the same bot, so four alerts in a row without the sender inside
+are four indistinguishable messages. The context SMS gave for free has to be put there by hand.
 
-Forwarding SMS costs money and can feed back on itself, which HTTP never did. Three guards, the
-first two controlled by `AppConfig.protegerBucles`:
+### The rate limit, and the two guards that no longer exist
 
-1. An SMS whose **sender is one of the configured destinations** is discarded: it came back from
-   a number we forward to.
-2. A matched rule whose **destination equals the sender** is skipped — *unless* the rule declared
-   `{telefono}` as its destination. Writing that marker is an explicit request to reply to the
-   sender, so what guard 2 blocks is accidental circularity, not configured circularity. A
-   reply-to-sender rule therefore has only the rate limit behind it: keep its `regexMensaje`
-   specific if the other end might also auto-reply.
-3. `AppConfig.maxReenviosPorMinuto` caps how many reenvíos can be created per minute. The excess
-   is discarded and logged. This one is always active.
+SMStoSMS had three protections. **Two of them are gone, and deleting them was correct** — read
+this before "restoring" anything that looks missing:
 
-A fourth check applies only to reply-to-sender rules: if the sender is an alphanumeric header
-(`BANCO`, `AMAZON`), it cannot receive an SMS, so the reenvío is skipped and logged as `ERROR`
-rather than attempted and retried. `NormalizadorTelefono.esDestinoEnviable()` decides.
+1. *An SMS whose sender is one of the configured destinations is discarded.*
+2. *A matched rule whose destination equals the sender is skipped.*
 
-Number comparison goes through `NormalizadorTelefono`, which strips non-digits and compares the
-last 9, so `+34600112233` and `600112233` are recognised as the same subscriber. Alphanumeric
-senders never compare equal to anything — you cannot forward to them, so they cannot form loops.
+Both compared a rule's `destino` against the SMS sender. The moment `destino` became a `chat_id`
+that comparison stopped meaning anything: a Telegram chat and a phone number are unrelated
+identities, so they cannot be "the same" and cannot close a circle. **A Telegram message never
+comes back as an SMS** — it is delivered and it stays there. `AppConfig.protegerBucles`,
+`NormalizadorTelefono` and `ReglaDao.obtenerDestinosActivos()` went with them.
+
+What survives is `AppConfig.maxReenviosPorMinuto`, and **not for the original reason**. It used to
+be a cost firewall: a forwarding loop with automatic retries behind it turned a misconfiguration
+into a phone bill. Delivering over Telegram is free, so it now protects against the *recipient's*
+limits — the Bot API takes roughly 30 messages per second overall, **one per second per chat**, and
+about 20 per minute in a group. Going over does not cost money, it costs `429 Too Many Requests`,
+and with a group as the destination that arrives quickly. The default of 10 per minute sits
+comfortably under all three ceilings.
+
+The excess is discarded and logged as `LogTipo.LIMITE_ALCANZADO` — renamed from `BUCLE_EVITADO`,
+which was named after a protection that no longer exists.
 
 ### Tab navigation
 
@@ -233,13 +259,18 @@ same `abrirEnlace(url)`, and they share the Snackbar for a device with no browse
 renamed from `about_donativo_sin_navegador` to `about_sin_navegador` when the second link arrived,
 because it never said anything about donating.
 
-**«Acerca de» also checks for new versions**, and that is why **`INTERNET` is back in the
-manifest**. Read this before assuming it is a leftover: the app forwards SMS over the phone's
-radio and **no message content ever travels over the network**. The permission is there so
-`data/update/ComprobadorDeActualizaciones` can ask `api.github.com` for the latest release and so
-`DescargaDeApk` can download the APK when someone presses the button. Retrofit and OkHttp did
-**not** come back with it — the request is a dozen lines of `HttpURLConnection`, and the response is
-parsed with `kotlinx.serialization`, which was already here for the rule export.
+**«Acerca de» also checks for new versions**, over the same `INTERNET` permission the delivery
+uses. That permission used to carry a disclaimer here — *the app forwards SMS over the phone's
+radio and no message content ever travels over the network* — and **that sentence is now false**.
+It was true of SMStoSMS and it was kept written down for exactly as long as it was true. In this
+app the SMS body goes out over the network by design, to Telegram's servers, and the privacy
+notice in «Acerca de» says so in plain words because whoever installs it needs to know.
+
+What the version check adds on top of that is `data/update/ComprobadorDeActualizaciones` asking
+`api.github.com` for the latest release, and `DescargaDeApk` downloading the APK when someone
+presses the button. Retrofit and OkHttp are still **not** here — both that request and the Bot API
+calls are a dozen lines of `HttpURLConnection` each, with `kotlinx.serialization` for the
+responses, which was already present for the rule export.
 
 How it behaves, and why:
 
@@ -287,15 +318,22 @@ scroller, carousel or slider placed on a tab needs the same wrapper.
 
 | File | Role |
 |------|------|
+| `domain/transport/EnviadorDeMensajes.kt` | **The seam.** The only thing the pipeline knows about the medium |
+| `domain/transport/ResultadoEnvio.kt` | `Enviado` / `ErrorTransitorio` / `ErrorPermanente` — the whole retry policy |
+| `di/TransportModule.kt` | The only class that names a concrete transport |
+| `data/telegram/TelegramSender.kt` | The `POST` to `sendMessage`; implements the interface |
+| `data/telegram/MapeoDeRespuestas.kt` | **Pure** (HTTP code, body) → `ResultadoEnvio`, plus chunking. Tested |
+| `data/telegram/DestinoDeTelegram.kt` | What may be written as a destination. Replaces `NormalizadorTelefono` |
+| `data/telegram/TokenDeBot.kt` | What can be said about a token without asking Telegram |
+| `data/telegram/ComprobadorDelBot.kt` | `getMe`: the Settings button that says *which* bot it is |
+| `data/telegram/DescubridorDeChats.kt` | `getUpdates`: the list of chats that wrote to the bot |
+| `data/telegram/EstadoDelBot.kt` | Remembers a rejected token, so the Panel can say so |
 | `domain/rules/EvaluadorDeReglas.kt` | Matching engine, template resolution, pattern validation |
-| `domain/rules/NormalizadorTelefono.kt` | Phone comparison for the loop guards |
-| `domain/usecase/ProcesarSmsEntranteUseCase.kt` | Guards → evaluate → create reenvíos → enqueue |
-| `data/sms/SmsSender.kt` | `SmsManager` wrapper that **waits** for the `sentIntent` |
-| `data/sms/ProveedorDeSims.kt` | Lists active SIMs for the dual-SIM selector |
+| `domain/usecase/ProcesarSmsEntranteUseCase.kt` | Rate limit → evaluate → create reenvíos → enqueue |
 | `worker/ColaDeEnvios.kt` | The only place that enqueues a dispatch job |
-| `worker/SmsDispatchWorker.kt` | Sends one reenvío; handles retry/failure logic |
+| `worker/DispatchWorker.kt` | Delivers one reenvío; handles retry/failure logic |
 | `worker/OrphanRescueWorker.kt` | Rescues stalled SMS and reenvíos every 30 s |
-| `data/config/AppConfig.kt` | Retries, timeout, rate limit, guards, SIM |
+| `data/config/AppConfig.kt` | Bot token, retries, timeout, rate limit |
 | `data/rules/ReglasJson.kt` | Versioned rule export/import format |
 | `data/local/db/Migraciones.kt` | Hand-written Room migrations, registered by `DatabaseModule` |
 | `util/OptimizacionBateria.kt` | Doze exemption: status query + the Settings screen's button |
@@ -307,21 +345,52 @@ scroller, carousel or slider placed on a tab needs the same wrapper.
 | `data/update/DescargaDeApk.kt` | `DownloadManager` download plus the system installer intent |
 | `data/update/EstadoActualizacion.kt` | Notice switch, last check and ETag, in their own DataStore keys |
 
-### Why SmsSender suspends
+### Delivery: what the transport owes the worker
 
-`SmsManager.sendMultipartTextMessage()` returns immediately, before the message leaves the
-device. The outcome arrives later as a broadcast to a `PendingIntent` supplied per part. If the
-worker did not wait for it, every send would look successful and real failures would vanish.
+`EnviadorDeMensajes.enviar()` **waits for the outcome**, and that requirement outlived two
+transports. With `SmsManager` it meant suspending until the per-part `sentIntent` broadcast
+arrived, because the send call returned before the message left the device; with Telegram it means
+waiting for the HTTP response. The reason is the same either way: if the call returned before the
+outcome was known, every delivery would look successful and real failures would vanish.
 
-`SmsSender.enviar()` therefore registers a `RECEIVER_NOT_EXPORTED` receiver on a per-send
-UUID action, hands one `FLAG_IMMUTABLE` `PendingIntent` per part to the radio, and suspends
-until all parts report or `AppConfig.timeoutEnvioSegundos` expires.
+**No `parse_mode`. This is the mistake that would be easiest to make.** With `Markdown` or `HTML`,
+any SMS containing a `_`, a `*`, a `[` or a `<` — a bank's link, an emoticon — makes Telegram
+answer `400 Bad Request: can't parse entities`, and the reenvío is closed as a permanent failure:
+the message **is not delivered** because someone wanted it in bold. The SMS body is third-party
+content and is never interpreted, which is the same rule the evaluator already applies by
+substituting `{mensaje}` last.
 
-Result mapping: `RESULT_OK` → success; `NO_SERVICE`, `RADIO_OFF`, `GENERIC_FAILURE` and timeout
-→ retry; `NULL_PDU`, invalid destination and missing permission → permanent failure.
+**Error mapping** lives in `MapeoDeRespuestas.interpretarEnvio()`, deliberately separated from the
+code that makes the request so it can be unit-tested without a network:
 
-**Multipart:** if one part fails and another succeeds, the whole reenvío is retried, accepting a
-possible duplicate at the destination. Treating a truncated message as delivered is worse.
+| Response | Result |
+|----------|--------|
+| `200` with `ok:true` | `Enviado` |
+| `429` | `ErrorTransitorio`, **carrying `parameters.retry_after`** |
+| `5xx`, timeout, `IOException` | `ErrorTransitorio` |
+| `400` (chat not found, text empty or too long) | `ErrorPermanente` |
+| `401` / `404` | `ErrorPermanente` **and a credential failure** |
+| `403` (bot blocked, or kicked from the group) | `ErrorPermanente` |
+| anything else | `ErrorTransitorio`, out of caution |
+
+Two of those deserve their own note:
+
+- **A `404` is a bad token, not a missing chat.** The token sits *inside the Bot API URL*, so the
+  whole path depends on it and a "does not exist" there means the token does not exist.
+  `esFalloDeCredencial()` groups 401 and 404, and only those two light up the Panel warning via
+  `EstadoDelBot` — a 400 or a 403 is a problem with *that* destination, and pointing at the token
+  would send someone to look in the wrong place.
+- **`retry_after` is honoured by sleeping before returning `retry()`.** WorkManager counts its
+  backoff **from when the worker finishes**, so sleeping inside the worker is the only way it has
+  to delay the next attempt. Capped at 120 s: a worker has about ten minutes before the system
+  stops it, and blocking one for a quarter of an hour would trade one problem for a worse one.
+
+**Over 4.096 characters** the text is split rather than truncated (`MapeoDeRespuestas.trocear`),
+cutting at the last newline and failing over to the last space. It practically never happens — it
+takes a long concatenated SMS plus a generous template — but truncating would lose content
+silently, and letting Telegram answer `400` would turn a long message into a failed delivery. If
+one chunk fails and an earlier one succeeded, the whole reenvío is retried, accepting a possible
+duplicate: the same reasoning SMS multipart used.
 
 ### Idempotency
 
@@ -329,31 +398,37 @@ Client-side, at two levels:
 
 - `ProcesarSmsEntranteUseCase.procesar()` checks whether the SMS already has reenvíos before
   creating any. That is what makes the orphan rescue safe to run on a half-processed SMS.
-- `SmsDispatchWorker` checks `reenvio.estado` at the start of every attempt and returns success
-  without touching the radio if it is already `ENVIADO`.
+- `DispatchWorker` checks `reenvio.estado` at the start of every attempt and returns success
+  without touching the transport if it is already `ENVIADO`.
 
 `ColaDeEnvios` uses `ExistingWorkPolicy.KEEP`, so a reenvío never gets two concurrent jobs.
 
 ### Room database
 
-Four tables, schema version **2** (see the KDoc on `SmsDatabase` for why it restarted at 1):
+Four tables, schema version **1** (see the KDoc on `SmsDatabase`: it restarted at 1 for the
+second time, and for the same reason):
 
 - `sms` — one row per received SMS. Only what arrived plus `estado`
   (`PENDIENTE`/`PROCESADO`/`SIN_REGLA`/`DESCARTADO`) and `motivo_descarte`.
-- `reglas` — ordered forwarding rules, including `ignorar_mayusculas` (added in v2).
-- `reenvios` — the dispatch unit: one row per destination, with its own `estado`, `intentos`
+- `reglas` — ordered rules, `ignorar_mayusculas` included from the start. `destino` holds a
+  Telegram chat, and `plantilla` has **no** SQL default on purpose: it was written in two places
+  and the two would have drifted (see the KDoc on `ReglaEntity`).
+- `reenvios` — the dispatch unit: one row per destination chat, with its own `estado`, `intentos`
   and `ultimo_error`. FK to `sms` is CASCADE; FK to `reglas` is SET NULL, and `nombre_regla`
-  is denormalized so history survives rule deletion.
+  is denormalized so history survives rule deletion. There is no `partes` column: that counted
+  the fragments of a concatenated SMS.
 - `log_entries` — audit log. Types: `SMS_RECIBIDO`, `REGLA_APLICADA`, `SMS_REENVIADO`,
-  `SIN_REGLA`, `BUCLE_EVITADO`, `ERROR`, `SISTEMA`.
+  `SIN_REGLA`, `LIMITE_ALCANZADO`, `ERROR`, `SISTEMA`.
 
 WAL mode enabled. Schemas are exported to `app/schemas/` and versioned. No
 `fallbackToDestructiveMigration` — migrations must be explicit.
 
-> The schema stopped being editable in place the moment the app was installed on a phone with
-> rules in it: changing a version without migrating makes Room abort when opening the database.
-> Every change now bumps the version and writes its `Migration` in `data/local/db/Migraciones.kt`,
-> which `DatabaseModule` registers. Both `1.json` and `2.json` are versioned under `app/schemas/`.
+> **`Migraciones.TODAS` is empty, and that is the last time it can be.** The schema was collapsed
+> into a clean v1 because no device has this database: a new `applicationId` is a different app
+> with its own data directory. The moment the app is installed on a phone with rules in it the
+> schema stops being editable in place — changing v1 without migrating makes Room abort when
+> opening the database — so from then on every change bumps the version and writes its `Migration`
+> in `data/local/db/Migraciones.kt`, which `DatabaseModule` registers.
 
 ## Naming conventions
 
@@ -378,14 +453,14 @@ overrides. Do not "restore" English names — there were none to restore.
 
 ## Device setup (dedicated production phone)
 
-These steps must be completed once on the dedicated Android device that receives and forwards SMS.
-Skip any step already done.
+These steps must be completed once on the dedicated Android device that receives the SMS and
+delivers them to Telegram. Skip any step already done.
 
 ### Why battery optimization must be disabled
 
 Android's **Doze mode** suspends background processes when the screen is off for more than a few
-minutes. WorkManager respects Doze and may delay `SmsDispatchWorker` by hours. Exempting the app
-ensures every SMS is forwarded within seconds of arrival, regardless of screen or battery state.
+minutes. WorkManager respects Doze and may delay `DispatchWorker` by hours. Exempting the app
+ensures every SMS is delivered within seconds of arrival, regardless of screen or battery state.
 
 ### Option A — in the app (no USB, no manufacturer-specific path)
 
@@ -398,14 +473,14 @@ you are holding; the status refreshes when you come back to the screen.
 ### Option B — ADB command (fastest when the phone is already plugged in)
 
 ```bash
-adb shell dumpsys deviceidle whitelist +com.capicua.smstosms
+adb shell dumpsys deviceidle whitelist +com.capicua.smstotelegram
 ```
 
 Run once after install. To verify the app was added to the whitelist:
 
 ```bash
 adb shell dumpsys deviceidle whitelist
-# Expected output includes a line with: com.capicua.smstosms
+# Expected output includes a line with: com.capicua.smstotelegram
 ```
 
 ### Option C — On-device UI, by hand
@@ -414,37 +489,37 @@ Only needed if the in-app button cannot open anything. The exact path varies by 
 use the closest match:
 
 **Stock Android / Pixel**
-1. **Ajustes** → **Aplicaciones** → **SMStoSMS**
+1. **Ajustes** → **Aplicaciones** → **SMStoTelegram**
 2. **Batería** → seleccionar **Sin restricciones**
 
 **Samsung (One UI)**
 1. **Ajustes** → **Mantenimiento del dispositivo** → **Batería**
-2. **Límites de uso en segundo plano** → **Aplicaciones sin suspender** → **Añadir** → SMStoSMS
+2. **Límites de uso en segundo plano** → **Aplicaciones sin suspender** → **Añadir** → SMStoTelegram
 
 **Xiaomi / MIUI / HyperOS**
-1. **Ajustes** → **Aplicaciones** → **Administrar aplicaciones** → **SMStoSMS**
+1. **Ajustes** → **Aplicaciones** → **Administrar aplicaciones** → **SMStoTelegram**
 2. **Ahorro de batería** → **Sin restricciones**
 3. Volver a la ficha de la app → activar **Inicio automático**
 
 **Huawei / EMUI**
-1. **Ajustes** → **Aplicaciones** → **SMStoSMS** → **Consumo de batería**
+1. **Ajustes** → **Aplicaciones** → **SMStoTelegram** → **Consumo de batería**
 2. Desactivar **Gestión inteligente de energía** y seleccionar **Sin restricciones**
 
 **OnePlus / OxygenOS / ColorOS**
-1. **Ajustes** → **Aplicaciones** → **SMStoSMS** → **Batería**
+1. **Ajustes** → **Aplicaciones** → **SMStoTelegram** → **Batería**
 2. **Optimización de batería** → **No optimizar**
 
 > **Nota:** en cualquier fabricante también puedes buscar "Optimización de batería" directamente
-> en el buscador de Ajustes, seleccionar **Todas las aplicaciones** y cambiar SMStoSMS
+> en el buscador de Ajustes, seleccionar **Todas las aplicaciones** y cambiar SMStoTelegram
 > a **No optimizar**.
 
 ### Other recommended settings (all manufacturers)
 
 | Setting | Where | Value |
 |---------|-------|-------|
-| Inicio automático | Ajustes → Aplicaciones → SMStoSMS | **Activado** |
-| Ejecutar en segundo plano | Ajustes → Aplicaciones → SMStoSMS → Batería | **Permitido** |
-| Optimización de batería | Ajustes → Batería → Optimización → SMStoSMS | **No optimizar** |
+| Inicio automático | Ajustes → Aplicaciones → SMStoTelegram | **Activado** |
+| Ejecutar en segundo plano | Ajustes → Aplicaciones → SMStoTelegram → Batería | **Permitido** |
+| Optimización de batería | Ajustes → Batería → Optimización → SMStoTelegram | **No optimizar** |
 
 ---
 
@@ -455,8 +530,11 @@ use the closest match:
   the same way when the five tabs stopped being navigation destinations: nothing calls
   `setupWithNavController` any more.
   `kotlinx.serialization` **is** used, by the rule export/import format.
-- `SEND_SMS` is a restricted permission. Irrelevant for APK distribution, but it closes the door
-  to Google Play without an approved declaration.
+- **`SEND_SMS` is gone, and so is `READ_PHONE_STATE`.** The first went with the SMS transport —
+  this app never sends an SMS — and the second with the SIM selector that chose which card to send
+  from. Do not re-add either: nothing needs them, and `SEND_SMS` is a restricted permission.
+  That said, **this does not open Google Play**: `RECEIVE_SMS` and `READ_SMS` belong to the same
+  restricted group and still require an approved declaration. APK distribution is unaffected.
 - **Nothing starting after a reboot is usually not a bug in `BootReceiver`.** The SMS receiver is
   declared in the manifest, so the system starts it on its own — the receiver only reschedules
   the background workers. Two things outside the app's reach break that: the OEM **autostart**
@@ -466,17 +544,32 @@ use the closest match:
   receives no broadcasts at all, SMS included, until someone launches it once. After installing
   the APK, open the app once.
 - **Rules are configuration, so their backup lives in Ajustes, not in the Reglas tab.** One file
-  carries both blocks (`ConfigBackup` + format version 3): settings are **replaced** on import,
+  carries both blocks (`ConfigBackup` + format version **4**): settings are **replaced** on import,
   rules are **appended** — importing never deletes, because a mistaken import that emptied the
-  list would leave the phone forwarding nothing. The SIM id does not travel in the file: it
-  identifies a card in *this* phone and would misroute forwards on another one.
+  list would leave the phone delivering nothing.
+- **The bot token does not travel in the backup file**, and `ConfiguracionJson.aDominio()` takes
+  the current token as an argument so that importing does not wipe it. That argument is not
+  decoration: settings are *replaced* on import, so without it a file that has no token would
+  leave `tokenBot` empty and the app silent without anyone touching it. It inherits the role
+  `simActual` had when the transport was SMS, for a worse reason — the file is plain JSON and the
+  token is permission to write as the bot.
+- **Format 4 refuses to import files from format 3 or earlier**, and it is the first time an
+  import in this project breaks on purpose. A format-3 file written by SMStoSMS has *exactly the
+  same shape*: no field changed name or type. What changed is what `destino` means — a phone
+  number there, a `chat_id` here. It would import without a single parse error and leave a rule
+  set whose destinations do not exist, failing one by one when an SMS arrived, with nothing
+  pointing back at the imported file.
 - **«Acerca de» carries a liability disclaimer** next to the privacy notice: the app ships as-is
   and whoever installs and configures it is solely responsible for its use and for the law that
-  applies to them. In an app that forwards other people's SMS, that is not boilerplate.
-- Debug variant uses `applicationId = com.capicua.smstosms.debug`, so it can coexist with the
-  release build on the same device. They do **not** share a database.
+  applies to them. In an app that sends other people's SMS to a third-party service, that is not
+  boilerplate — and the privacy notice is the single most important piece of text in the project.
+  It states that the SMS body reaches Telegram's servers, that the message stays in the
+  destination chat (and on the device of everyone in it, if that chat is a group or a channel),
+  and that the original sender neither knows nor consented. Do not soften it.
+- Debug variant uses `applicationId = com.capicua.smstotelegram.debug`, so it can coexist with
+  the release build on the same device. They do **not** share a database.
 - **Anything scoped per-install must derive from `applicationId`, never be typed out.** The
-  FileProvider authority was hardcoded as `com.capicua.smstosms.provider`, so both variants
+  FileProvider authority was hardcoded as `com.capicua.smstotelegram.provider`, so both variants
   declared the *same* authority — and an authority is unique device-wide, so Android refused to
   have both installed (`INSTALL_FAILED_CONFLICTING_PROVIDER`), defeating the very point of the
   `applicationIdSuffix`. It now reads `${applicationId}.provider` in the manifest and
@@ -493,11 +586,17 @@ use the closest match:
   about APIs that disappear in Gradle 10 — among them `android.applicationVariants.all`, the
   block that renames the release APK. Before moving to Gradle 10, either raise AGP or pin the
   wrapper to Gradle 8.x. Nothing is broken today, so this was deliberately left alone.
-- **`INTERNET` is declared again**, only for the version check (see «Acerca de» above). If that
-  feature ever goes away, the permission goes with it: this app not needing the network is part of
-  what it is.
-- Three unit test suites cover the parts worth covering, all pure Kotlin with no Android
-  dependencies: `EvaluadorDeReglasTest` (45), `NormalizadorTelefonoTest` (18) and
-  `ReglasJsonTest` (10). The `SmsRepositoryTest` placeholder that never compiled is gone.
-- `MASTERPLAN.md` records the migration from SMSGateway phase by phase, including the decisions
-  taken and the deviations from the original plan. Read it before changing anything structural.
+- **`INTERNET` is now load-bearing.** It is how messages are delivered, not an extra for the
+  version check. The sentence that used to live here — *this app not needing the network is part
+  of what it is* — belonged to SMStoSMS and no longer applies.
+- **Six unit test suites, 100 tests**, all pure Kotlin with no Android dependencies:
+  `EvaluadorDeReglasTest` (43), `MapeoDeRespuestasTest` (18), `DestinoDeTelegramTest` (10),
+  `TokenDeBotTest` (6), `ReglasJsonTest` (13) and `VersionPublicadaTest` (10). Note the count went
+  *down* from SMStoSMS: `NormalizadorTelefonoTest` left with the class it tested.
+  `MapeoDeRespuestas` is kept separate from the code that makes the HTTP request **so that it can
+  be tested without a network** — it is the piece it matters most to get right, and the only one
+  testable at all without one. Keep that separation.
+- **`MASTERPLAN_TELEGRAM.md` records the move from SMStoSMS to Telegram** phase by phase, with the
+  decisions taken, the ones that were reshuffled mid-flight and why. `MASTERPLAN.md` records the
+  earlier migration from SMSGateway. Read both before changing anything structural: between them
+  they explain why several things that look like oversights are deliberate.

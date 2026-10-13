@@ -502,7 +502,7 @@ Queda **una** mención a «coste» en la interfaz, en el descargo de responsabil
 y esa se queda: habla de los costes de los que el autor no responde, no de lo que cuesta un
 reenvío.
 
-### Fase 7 — Documentación y privacidad · `[ ]`
+### Fase 7 — Documentación y privacidad · `[x]` completada el 12 oct 2026
 
 - `CLAUDE.md` y `docs/ARCHITECTURE.md`: la afirmación «no message content ever travels over the
   network» pasa a ser **falsa** y hay que reescribirla, no matizarla.
@@ -510,6 +510,64 @@ reenvío.
   Telegram. Con el descargo de responsabilidad que ya está al lado, ese párrafo es la parte más
   importante de la documentación de esta app.
 - `README.md` entero, `CHANGELOG.md` desde cero, `FUNDING.yml` y los enlaces de «Acerca de».
+
+#### Resultado real
+
+Cuatro documentos y la interfaz. Lo importante de la fase no es el volumen, es **una afirmación
+que había que retirar**: hasta aquí el proyecto decía, en el manifest, en `CLAUDE.md`, en el
+`README`, en `ARCHITECTURE.md` y en el aviso de privacidad de la aplicación, que el contenido de
+los mensajes no viajaba por la red. Era verdad y se mantuvo escrita mientras lo fue. Ya no lo es.
+
+#### El aviso de privacidad
+
+Es el texto más importante del proyecto y se reescribió entero. Lo que ahora dice, y no decía:
+
+- El contenido de los SMS **se envía por internet a los servidores de Telegram**, que es una
+  empresa ajena al proyecto. Ni Capicua ni el autor reciben esos mensajes; Telegram sí.
+- El mensaje **queda en el chat de destino**, y si ese chat es un grupo o un canal lo ve todo el
+  que esté dentro, ahora y en el futuro.
+- Lo que ya decía y sigue valiendo: el remitente original no lo sabe ni ha consentido, pueden ser
+  claves de un solo uso o avisos de un banco, y quien instala es el único responsable.
+
+El descargo de responsabilidad de al lado se amplió con la transferencia a un tercero, que esta
+aplicación hace **por diseño** y no como efecto colateral.
+
+#### Qué se tocó
+
+| Documento | Alcance |
+|-----------|---------|
+| `app/src/main/res/values/strings.xml` | Privacidad, descripción, marcadores, subtítulo de Ajustes |
+| `CHANGELOG.md` | **Desde cero**, con la nota de linaje y el aviso de incompatibilidad |
+| `README.md` | 22 bloques: cabecera, para qué sirve, características, flujo, permisos, estructura, reglas, ejemplos, tests y aviso legal |
+| `CLAUDE.md` | 30 bloques en dos pasadas |
+| `docs/ARCHITECTURE.md` | 36 bloques más la sección 11 reescrita entera |
+
+El `CHANGELOG` empieza de cero en lugar de continuar el de SMStoSMS porque son aplicaciones
+distintas, y lleva por delante la advertencia que más falta hará: **un fichero de copia de
+SMStoSMS no se puede importar aquí**, y la aplicación lo rechaza explicándolo.
+
+#### Lo que se añadió, no solo corrigió
+
+Documentar obligó a escribir cosas que no estaban en ninguna parte:
+
+- **Cómo encontrar un `chat_id`**, con los dos límites que el botón no puede esconder: que un bot
+  no puede escribir primero, y que Telegram guarda los updates 24 horas.
+- **Por qué `{telefono}` conviene dejarlo en la plantilla**: todo llega del mismo bot.
+- **Las tres formas de destino** del Bot API, con el aviso de que el signo menos de los grupos es
+  lo que más se copia mal.
+- **Cuatro incidencias nuevas** en `ARCHITECTURE.md` §14 —«chat not found», «bot was blocked»,
+  «Too Many Requests» y los errores de red— y la retirada de las tres que hablaban de cobertura,
+  saldo y fallos del operador.
+- **La sección 11 entera**, que ahora explica *por qué* dos de las tres protecciones ya no existen
+  en lugar de describir las tres. Mantener código que no puede ejecutarse es dejar una trampa
+  para quien lea el fichero el año que viene y dé por hecho que algo lo protege.
+
+#### Lo que se dejó a propósito
+
+Las menciones a SMStoSMS que quedan en el código y en los documentos **son linaje, no restos**:
+los KDoc de `SmsDatabase` y `Migraciones` explicando por qué el esquema nace otra vez en la v1, la
+nota de cabecera del `README` y del `CHANGELOG`, y las comparaciones de cada sección que cambió.
+Casi todas las decisiones de esta aplicación se entienden mejor sabiendo de qué vienen.
 
 ### Fase 8 — Dispositivo real y release 1.0.0 · `[ ]`
 
