@@ -58,7 +58,7 @@ class LogsFragment : Fragment() {
         binding.chipReenviados.setOnClickListener    { viewModel.aplicarFiltro(LogTipo.SMS_REENVIADO) }
         binding.chipReglas.setOnClickListener        { viewModel.aplicarFiltro(LogTipo.REGLA_APLICADA) }
         binding.chipSinRegla.setOnClickListener      { viewModel.aplicarFiltro(LogTipo.SIN_REGLA) }
-        binding.chipBucles.setOnClickListener        { viewModel.aplicarFiltro(LogTipo.BUCLE_EVITADO) }
+        binding.chipLimite.setOnClickListener        { viewModel.aplicarFiltro(LogTipo.LIMITE_ALCANZADO) }
         binding.chipErrores.setOnClickListener       { viewModel.aplicarFiltro(LogTipo.ERROR) }
         binding.chipSistema.setOnClickListener       { viewModel.aplicarFiltro(LogTipo.SISTEMA) }
     }

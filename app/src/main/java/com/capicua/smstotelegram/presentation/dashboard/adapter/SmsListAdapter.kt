@@ -54,7 +54,7 @@ class SmsListAdapter : ListAdapter<SmsConReenvios, SmsListAdapter.SmsViewHolder>
                 ResumenSms.REENVIADO -> R.string.status_procesado to R.color.status_delivered
                 ResumenSms.FALLIDO -> R.string.status_fallido to R.color.status_failed
                 ResumenSms.SIN_REGLA -> R.string.status_sin_regla to R.color.status_pending
-                ResumenSms.DESCARTADO -> R.string.status_descartado to R.color.log_bucle
+                ResumenSms.DESCARTADO -> R.string.status_descartado to R.color.log_limite
             }
 
             binding.chipStatus.text = ctx.getString(etiqueta)

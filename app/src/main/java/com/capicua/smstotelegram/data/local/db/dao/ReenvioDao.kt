@@ -84,7 +84,7 @@ interface ReenvioDao {
 
     /**
      * Número de reenvíos creados desde [desdeMs].
-     * Base del límite por minuto que evita que un bucle de reenvíos genere una factura.
+     * Base del límite por minuto, que protege de los límites de tasa del Bot API de Telegram.
      */
     @Query("SELECT COUNT(*) FROM reenvios WHERE fecha_creacion >= :desdeMs")
     suspend fun contarCreadosDesde(desdeMs: Long): Int

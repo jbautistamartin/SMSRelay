@@ -45,9 +45,21 @@ data class AppConfig(
     val timeoutEnvioSegundos: Int = 60,
 
     /**
-     * Tope de reenvíos creados por minuto. Es el cortafuegos económico del sistema: si una
-     * configuración desafortunada provoca un bucle de reenvíos, esto lo detiene antes de que
-     * se convierta en una factura. El exceso se descarta y queda registrado en el log.
+     * Tope de reenvíos creados por minuto. El exceso se descarta y queda registrado en el log.
+     *
+     * **Es la única de las tres protecciones originales que sigue viva, y ya no por el mismo
+     * motivo.** Cuando el transporte era el SMS, esto era un cortafuegos económico: un bucle de
+     * reenvíos con los reintentos detrás se convertía en una factura, y por eso había además dos
+     * guardias antibucle que comparaban destinos con remitentes.
+     *
+     * Entregar por Telegram es gratis y no puede formar bucles —un mensaje de Telegram no vuelve
+     * nunca como SMS—, así que aquellas dos guardias se fueron. Esta se queda porque los límites
+     * de quien recibe siguen existiendo: el Bot API admite del orden de 30 mensajes por segundo
+     * en total, **uno por segundo y chat** y unos 20 por minuto en un grupo. Pasarse no cuesta
+     * dinero, cuesta `429 Too Many Requests`, y con un grupo de destino eso llega enseguida.
+     *
+     * El valor por defecto —10 por minuto— queda holgadamente por debajo de cualquiera de esos
+     * techos y es más que suficiente para los SMS que recibe un teléfono real.
      */
     val maxReenviosPorMinuto: Int = 10,
 

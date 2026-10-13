@@ -446,7 +446,7 @@ en un `400 chat not found` con su motivo en el registro. `pareceTelefono` solo r
 puede* ser un chat —lo que lleva `+`, espacios, paréntesis o guiones— y hay un test con su KDoc
 fijando la ambigüedad para que nadie la «arregle» al revés.
 
-### Fase 6 — Guardias y límites · `[ ]`
+### Fase 6 — Guardias y límites · `[x]` completada el 12 oct 2026
 
 - Se borran las guardias 1 y 2 de `ProcesarSmsEntranteUseCase`, el ajuste `protegerBucles`, la
   comprobación de `esDestinoEnviable` y lo que queda sin uso de `NormalizadorTelefono`.
@@ -455,6 +455,52 @@ fijando la ambigüedad para que nadie la «arregle» al revés.
 - `LogTipo.BUCLE_EVITADO` desaparece o se reutiliza para los descartes por límite de tasa.
 
 **Hecho cuando:** no queda código inerte y ningún texto de la interfaz habla de facturas.
+
+#### Resultado real
+
+La fase 5 se llevó las guardias por delante, así que lo que quedaba aquí es lo que de verdad era
+suyo: **qué significa ahora el límite, y qué dice la interfaz**.
+
+`maxReenviosPorMinuto` se queda, y era la única de las tres protecciones originales que tenía
+sentido conservar — pero **no por el mismo motivo**, y eso es lo que había que reescribir. Era un
+cortafuegos económico: un bucle de reenvíos con los reintentos detrás se convertía en una factura.
+Entregar por Telegram es gratis, así que ahora protege de otra cosa, los límites de quien recibe:
+el Bot API admite del orden de 30 mensajes por segundo en total, **uno por segundo y chat** y unos
+20 por minuto en un grupo. Pasarse no cuesta dinero, cuesta `429`, y con un grupo de destino eso
+llega enseguida. El valor por defecto queda holgadamente por debajo de los tres techos.
+
+#### `BUCLE_EVITADO` → `LIMITE_ALCANZADO`
+
+El tipo de log se llamaba por la protección que ya no existe. Con las guardias fuera, el único
+descarte que queda es el del límite de frecuencia, así que el tipo pasa a llamarse por lo que de
+verdad registra, y con él el chip del filtro («Bucles» → «Descartados»), su color y la cadena.
+Renombrar un valor de enum que se guarda como texto en la base de datos sería una migración si
+hubiera datos; no los hay, y es la última ocasión de hacerlo gratis.
+
+#### La sección «Protecciones» pasa a llamarse «Límites»
+
+Contenía dos cosas y se quedó con una. Un encabezado en plural sobre un solo campo que además ya
+no protege de un bucle sino de un `429` describía mal lo que hay debajo.
+
+#### Código inerte encontrado al revisar
+
+`EvaluadorDeReglas.MARCADORES` —«los tres marcadores admitidos, para documentación y validación»—
+estaba declarado y **no lo usaba nadie**. Ni la pantalla de reglas, que escribe los marcadores en
+su texto de ayuda, ni la validación, que no valida marcadores. Fuera. Lo demás estaba limpio: una
+pasada buscando `esDestinoEnviable`, `estaEnLista`, `mismoNumero`, `respondeAlRemitente`,
+`resolverDestino` y `protegerBucles` no encontró ni una aparición.
+
+#### Textos corregidos
+
+| Antes | Ahora |
+|-------|-------|
+| «Cortafuegos de coste» | Los límites reales de Telegram, con las cifras |
+| «envía un SMS de verdad al primer destino, y se cobra como cualquier otro» | «entrega un mensaje de verdad en el primer chat de destino» |
+| «reenviar el mismo SMS a varios números» | «entregar el mismo SMS en varios chats» |
+
+Queda **una** mención a «coste» en la interfaz, en el descargo de responsabilidad de «Acerca de»,
+y esa se queda: habla de los costes de los que el autor no responde, no de lo que cuesta un
+reenvío.
 
 ### Fase 7 — Documentación y privacidad · `[ ]`
 

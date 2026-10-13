@@ -187,7 +187,7 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
         smsRepository.marcarDescartado(sms.id, motivo)
         logRepository.insertar(
             LogEntry(
-                tipo = LogTipo.BUCLE_EVITADO,
+                tipo = LogTipo.LIMITE_ALCANZADO,
                 smsId = sms.id,
                 detalle = "SMS descartado: $motivo",
                 timestamp = Instant.now()

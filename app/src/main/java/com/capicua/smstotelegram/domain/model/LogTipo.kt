@@ -13,14 +13,27 @@ enum class LogTipo {
     /** Una regla casó con el SMS y se creó su reenvío. */
     REGLA_APLICADA,
 
-    /** Reenvío confirmado por el operador: todas las partes dieron `RESULT_OK`. */
+    /**
+     * Reenvío confirmado por el transporte: el mensaje está entregado.
+     *
+     * Conserva el nombre que tenía cuando el transporte era el SMS porque sigue describiendo
+     * lo que pasó —un SMS se reenvió— y renombrarlo no aclararía nada.
+     */
     SMS_REENVIADO,
 
     /** Ninguna regla casó con el SMS. No hay nada que reenviar. */
     SIN_REGLA,
 
-    /** Reenvío bloqueado por una protección: bucle detectado o límite de frecuencia. */
-    BUCLE_EVITADO,
+    /**
+     * SMS descartado por el tope de reenvíos por minuto.
+     *
+     * Se llamaba `BUCLE_EVITADO` mientras existían las protecciones antibucle, que comparaban
+     * el destino de una regla con el remitente del SMS. Con el destino convertido en un chat de
+     * Telegram esa comparación dejó de significar nada y las guardias se fueron; el único
+     * descarte que queda es el del límite de frecuencia, así que el tipo se llama por lo que de
+     * verdad registra.
+     */
+    LIMITE_ALCANZADO,
 
     /** Error transitorio o permanente al intentar reenviar. */
     ERROR,

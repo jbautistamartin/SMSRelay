@@ -175,8 +175,5 @@ class EvaluadorDeReglas @Inject constructor() {
         const val MARCADOR_MENSAJE = "{mensaje}"
         const val MARCADOR_TELEFONO = "{telefono}"
         const val MARCADOR_FECHA = "{fecha}"
-
-        /** Los tres marcadores admitidos en una plantilla, para documentación y validación. */
-        val MARCADORES = listOf(MARCADOR_MENSAJE, MARCADOR_TELEFONO, MARCADOR_FECHA)
     }
 }

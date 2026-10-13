@@ -45,7 +45,7 @@ class LogsAdapter : ListAdapter<LogEntry, LogsAdapter.LogViewHolder>(DiffCallbac
                 LogTipo.REGLA_APLICADA -> Pair(R.color.log_regla,     android.R.drawable.ic_menu_sort_by_size)
                 LogTipo.SMS_REENVIADO  -> Pair(R.color.log_reenviado, android.R.drawable.ic_dialog_email)
                 LogTipo.SIN_REGLA      -> Pair(R.color.log_sin_regla, android.R.drawable.ic_menu_close_clear_cancel)
-                LogTipo.BUCLE_EVITADO  -> Pair(R.color.log_bucle,     android.R.drawable.ic_lock_idle_alarm)
+                LogTipo.LIMITE_ALCANZADO  -> Pair(R.color.log_limite,     android.R.drawable.ic_lock_idle_alarm)
                 LogTipo.ERROR          -> Pair(R.color.log_error,     android.R.drawable.ic_dialog_alert)
                 LogTipo.SISTEMA        -> Pair(R.color.log_sistema,   android.R.drawable.ic_menu_info_details)
             }

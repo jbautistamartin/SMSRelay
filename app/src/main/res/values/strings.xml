@@ -28,7 +28,7 @@
     <string name="logs_limpiar">Limpiar</string>
     <string name="logs_filtro_reglas">Reglas</string>
     <string name="logs_filtro_sin_regla">Sin regla</string>
-    <string name="logs_filtro_bucles">Bucles</string>
+    <string name="logs_filtro_limite">Descartados</string>
     <string name="logs_exportar">Exportar</string>
 
     <!-- Settings -->
@@ -67,9 +67,9 @@
     <string name="settings_autoinicio_abrir">Abrir inicio automático</string>
     <string name="settings_autoinicio_sin_pantalla">Este teléfono no permite abrir esa pantalla desde la app. Búscala en Ajustes → Aplicaciones → SMStoTelegram → Inicio automático.</string>
 
-    <string name="settings_seccion_protecciones">Protecciones</string>
+    <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
-    <string name="settings_max_reenvios_ayuda">Cortafuegos de coste: el exceso se descarta y queda en el registro. Recomendado: 10</string>
+    <string name="settings_max_reenvios_ayuda">Respeta los límites de Telegram, que admite un mensaje por segundo y chat y unos 20 por minuto en un grupo. El exceso se descarta y queda en el registro. Recomendado: 10</string>
 
     <string name="settings_seccion_envio">Envío y reintentos</string>
     <string name="settings_timeout_envio">Espera de confirmación</string>
@@ -186,7 +186,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_activa">Activa</string>
     <string name="regla_activa_ayuda">Desactívala para que no se evalúe, sin borrarla</string>
     <string name="regla_continuar">Seguir evaluando</string>
-    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite reenviar el mismo SMS a varios números.</string>
+    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite entregar el mismo SMS en varios chats.</string>
     <string name="regla_guardar">Guardar regla</string>
 
     <!-- Reglas: panel de prueba -->
@@ -198,7 +198,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="probar_mensaje_obligatorio">Escribe un texto de ejemplo</string>
     <string name="probar_evaluar">Evaluar reglas</string>
     <string name="probar_veredicto_sin_coincidencia">Ninguna regla casa: este SMS no se reenviaría</string>
-    <string name="probar_envio_real_ayuda">La prueba real envía un SMS de verdad al primer destino, y se cobra como cualquier otro.</string>
+    <string name="probar_envio_real_ayuda">La prueba real entrega un mensaje de verdad en el primer chat de destino.</string>
     <string name="probar_enviar">Enviar de prueba</string>
     <string name="regla_longitud">%1$d / %2$d caracteres</string>
     <string name="probar_enviar_confirmar">Se entregará un mensaje real a %1$s.</string>
