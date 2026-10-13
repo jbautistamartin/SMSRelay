@@ -13,7 +13,8 @@ sobre el remitente y el texto.
 > lo mismo con la entrada y reenvía como SMS a otro teléfono. Son aplicaciones **distintas**, con
 > `applicationId` propio y base de datos propia, y pueden convivir en el mismo dispositivo.
 
-Descarga el APK firmado desde la
+**Versión actual: [v1.0.0](https://github.com/jbautistamartin/SMStoTelegram/releases/tag/v1.0.0)** —
+descarga el APK firmado desde la
 [página de releases](https://github.com/jbautistamartin/SMStoTelegram/releases). No está en
 Google Play: `RECEIVE_SMS` pertenece a un grupo de permisos restringido cuya publicación exige
 una declaración aprobada. Lo que cambia en cada versión está en [`CHANGELOG.md`](CHANGELOG.md).
@@ -154,7 +155,9 @@ La vía corta si no vas a tocar el código:
 1. Descarga el APK de la
    [última release](https://github.com/jbautistamartin/SMStoTelegram/releases/latest).
 2. Pásalo al teléfono e instálalo, aceptando «instalar de orígenes desconocidos» cuando lo pida.
-3. Concede los permisos que la app solicita al arrancar.
+3. **Abre la aplicación una vez** y concede los permisos que pide. Abrirla no es opcional: una
+   aplicación recién instalada que nadie ha abierto todavía no recibe **ningún** broadcast de
+   Android, los SMS incluidos. Es la causa número uno de «la he instalado y no recibe nada».
 4. **Crea el bot**: escribe a [@BotFather](https://t.me/BotFather) en Telegram, manda `/newbot`,
    sigue los dos pasos que pide y copia el token que te dé.
 5. **Ajustes → Bot de Telegram** → pega el token y pulsa **Comprobar el token**. Debe responder

@@ -41,7 +41,7 @@ de que este cambio sea una fase de transporte y no una reescritura.
 | Cliente HTTP | `HttpURLConnection` + `kotlinx.serialization` | Es el patrón que `data/update` ya demuestra. **Retrofit y OkHttp no vuelven.** |
 | Formato del mensaje | Texto plano, **sin `parse_mode`** | Ver la trampa en la fase 3. |
 | Credencial | Token del bot en Ajustes, **fuera de la copia de seguridad** | Un token permite escribir en nombre del bot. El fichero de copia es JSON en claro. Mismo criterio que el id de SIM, motivo distinto. |
-| Versión de partida | `versionCode 1`, `versionName 0.1.0` | Sube a 1.0.0 cuando la fase 8 cierre. |
+| Versión de partida | `versionCode 1`, `versionName 0.1.0` | Subió a `versionCode 2` / `1.0.0` al cerrar la fase 8. |
 | Firma | El mismo almacén de la casa (`capicua.jks`) | Con `applicationId` distinto no hay conflicto, y mantiene la cadena de actualización de esta app a partir de su primera release. |
 
 ### Lo que el cambio de medio trae consigo
@@ -569,10 +569,35 @@ los KDoc de `SmsDatabase` y `Migraciones` explicando por qué el esquema nace ot
 nota de cabecera del `README` y del `CHANGELOG`, y las comparaciones de cada sección que cambió.
 Casi todas las decisiones de esta aplicación se entienden mejor sabiendo de qué vienen.
 
-### Fase 8 — Dispositivo real y release 1.0.0 · `[ ]`
+### Fase 8 — Dispositivo real y release 1.0.0 · `[x]` completada el 12 oct 2026
 
 Instalar en el teléfono dedicado, verificar la cadena completa con el `SmsReceiver` del sistema,
 comprobar que la exención de Doze sigue haciendo lo que hacía, y publicar.
+
+#### Resultado real
+
+Instalada la **release firmada** —no la de depuración, y eso era deliberado— en un Xiaomi con
+HyperOS 2 sobre Android 16, donde además conviven SMStoSMS y SMSGateway.
+
+**Lo que esta fase estaba ahí para descubrir era R8.** El build de publicación ofusca y recorta,
+y Hilt, Room y `kotlinx.serialization` dependen de reflexión: si faltara una regla de ProGuard,
+la aplicación arranca en depuración y se estrella en publicación. No pasó — ni una excepción, ni
+un `ClassNotFoundException` propio, inyección de dependencias arriba y proceso vivo.
+
+El aviso del Panel se vio funcionando con el token sin configurar, que es exactamente para lo que
+se escribió: «No se puede entregar nada: no hay ningún token de bot configurado en Ajustes».
+
+#### Dos cosas que solo se aprenden instalando
+
+1. **`INSTALL_FAILED_USER_RESTRICTED`.** MIUI y HyperOS bloquean la instalación por `adb` hasta
+   que se activa *Instalar vía USB* —y en HyperOS además *Depuración USB (ajustes de seguridad)*,
+   que pide cuenta Mi iniciada—. No se puede esquivar desde `adb`: lo impone su PackageManager, y
+   `pm install` desde el propio dispositivo falla igual. La alternativa cuando no se quiere pelear
+   es copiar el APK al teléfono e instalarlo tocándolo desde el explorador de archivos.
+2. **`versionCode` sube a 2 con la 1.0.0.** La 0.1.0 ya estaba instalada con `versionCode 1`, y
+   Android rechaza un APK cuyo `versionCode` no sea mayor que el instalado. Que una versión 1.0.0
+   lleve el código 2 es normal y es justo lo que la nota de la sección «Releases» de `CLAUDE.md`
+   advierte.
 
 ---
 

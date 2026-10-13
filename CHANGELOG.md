@@ -14,6 +14,16 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [No publicado]
 
+Nada todavía.
+
+---
+
+## [1.0.0] — 2026-10-12
+
+Primera versión publicada. Es la aplicación completa, no un adelanto: lo que la numera como 1.0.0
+y no como 0.x es que la cadena entera —recibir, evaluar, entregar, reintentar, rescatar lo
+atascado y purgar— está terminada y verificada en un dispositivo real.
+
 ### Añadido
 
 - **Entrega por Telegram.** Los SMS recibidos se entregan como mensajes de Telegram a través de un
