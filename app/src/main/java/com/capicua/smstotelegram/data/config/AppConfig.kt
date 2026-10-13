@@ -1,0 +1,76 @@
+// SMStoTelegram para Android
+// Copyright © 2026 Capicua · José Luis Bautista Martín
+// Licencia: GNU Lesser General Public License v2.1
+// https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+package com.capicua.smstotelegram.data.config
+
+/**
+ * Ajustes generales de la aplicación, editables en la pantalla de Configuración y
+ * persistidos en DataStore<Preferences>.
+ *
+ * Aquí no se decide **a quién** se reenvía nada: eso lo determinan las reglas, que viven en la
+ * base de datos porque son una lista ordenada. Esto son los parámetros que afectan a todos los
+ * reenvíos por igual.
+ */
+data class AppConfig(
+    /**
+     * Token del bot de Telegram, tal como lo entrega @BotFather.
+     *
+     * Vacío significa «sin configurar», y es el valor con el que arranca una instalación nueva:
+     * **no hay ningún token en el código**. Uno escrito en el fuente de un APK es un token
+     * regalado —el APK se puede descomprimir— y además sería el mismo para todo el mundo.
+     *
+     * Es una credencial, y eso impone tres cosas que el resto de los ajustes no necesitan: no
+     * se escribe nunca en el log, se enmascara en la pantalla, y no viaja en el fichero de
+     * copia de seguridad.
+     */
+    val tokenBot: String = "",
+
+    /** Número máximo de intentos antes de dar un reenvío por fallido permanentemente. */
+    val maxReintentos: Int = 10,
+
+    /** Espera inicial entre reintentos, en segundos. WorkManager la aplica como backoff. */
+    val intervaloReintentoSegundos: Int = 30,
+
+    /**
+     * Segundos que se espera la confirmación del transporte antes de dar el intento por perdido
+     * y reintentar.
+     *
+     * Existe porque un envío nunca se confirma en el acto, pero el motivo ha cambiado con el
+     * medio: con `SmsManager` se esperaba el broadcast del `sentIntent`, que llegaba cuando el
+     * operador contestaba; ahora es el plazo de la petición HTTP. Lo que no cambia es que sin
+     * esperar, todo parecería enviado.
+     */
+    val timeoutEnvioSegundos: Int = 60,
+
+    /**
+     * Tope de reenvíos creados por minuto. El exceso se descarta y queda registrado en el log.
+     *
+     * **Es la única de las tres protecciones originales que sigue viva, y ya no por el mismo
+     * motivo.** Cuando el transporte era el SMS, esto era un cortafuegos económico: un bucle de
+     * reenvíos con los reintentos detrás se convertía en una factura, y por eso había además dos
+     * guardias antibucle que comparaban destinos con remitentes.
+     *
+     * Entregar por Telegram es gratis y no puede formar bucles —un mensaje de Telegram no vuelve
+     * nunca como SMS—, así que aquellas dos guardias se fueron. Esta se queda porque los límites
+     * de quien recibe siguen existiendo: el Bot API admite del orden de 30 mensajes por segundo
+     * en total, **uno por segundo y chat** y unos 20 por minuto en un grupo. Pasarse no cuesta
+     * dinero, cuesta `429 Too Many Requests`, y con un grupo de destino eso llega enseguida.
+     *
+     * El valor por defecto —10 por minuto— queda holgadamente por debajo de cualquiera de esos
+     * techos y es más que suficiente para los SMS que recibe un teléfono real.
+     */
+    val maxReenviosPorMinuto: Int = 10,
+
+    /**
+     * Interruptor general de la recepción. En false la aplicación deja de leer los SMS que
+     * llegan: no se guardan, no se evalúan reglas y no se reenvía nada.
+     *
+     * No es una comprobación que se haga al procesar cada mensaje: lo que se apaga es el
+     * propio receptor del sistema (ver `util/ControlRecepcion`), de modo que el SMS ni
+     * siquiera despierta a la aplicación. Lo que ya estuviera encolado se termina de enviar;
+     * esto corta la entrada, no la salida.
+     */
+    val recepcionActiva: Boolean = true
+)

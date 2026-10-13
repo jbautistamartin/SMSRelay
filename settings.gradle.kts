@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SMStoSMS"
+rootProject.name = "SMStoTelegram"
 include(":app")

@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Primer plano del icono adaptativo: un bocadillo de mensaje con una flecha de reenvío.
+    Primer plano del icono adaptativo: un bocadillo de mensaje con un avión de papel calado.
 
-    Dice lo que hace la aplicación —un SMS que sale hacia otro sitio— y no se parece a la
-    mancha blanca que usaba SMSGateway.
+    Dice lo que hace la aplicación: entra un mensaje y sale hacia Telegram. El bocadillo se
+    hereda de SMStoSMS porque la **entrada** no ha cambiado —sigue siendo un SMS— y lo que
+    cambia es por dónde sale, así que lo que cambia es lo de dentro: donde aquella tenía una
+    flecha de reenvío, esta tiene el avión.
 
-    La flecha es un **hueco**, no una figura blanca encima: ambas subrutas van en el mismo
-    `pathData` con `fillType="evenOdd"`, de modo que por la flecha se ve el fondo. Hacerlo así
-    evita tener que repetir el color del fondo aquí, que con un degradado no encajaría.
+    **No es el logotipo de Telegram.** Es un avión de papel, que es el símbolo universal de
+    «enviar»; el de Telegram es un avión dentro de un círculo y no se reproduce aquí. Lo que
+    identifica a esta aplicación como la de Telegram es el color del fondo, no una marca ajena.
+
+    El avión es un **hueco**, no una figura encima: ambas subrutas van en el mismo `pathData`
+    con `fillType="evenOdd"`, de modo que por el avión se ve el fondo. Hacerlo así evita tener
+    que repetir el color del fondo aquí, que con un degradado no encajaría.
+
+    La silueta del avión es un cuadrilátero **simple**, sin autointersecciones, y eso no es
+    casual: el glifo habitual de «enviar» se dibuja con una ruta que se cruza consigo misma, y
+    bajo `evenOdd` esos cruces se cuentan dos veces y vuelven a rellenarse. Cuatro vértices
+    —punta, dos alas y la muesca de la cola— dan la misma lectura sin ese riesgo.
 
     Todo el dibujo cabe en los 72 dp centrales del lienzo de 108, que es la zona que ninguna
     máscara del lanzador recorta.
@@ -34,7 +45,7 @@
             android:fillColor="#FFFFFF"
             android:fillType="evenOdd"
             android:pathData="M38,26 L70,26 A12,12 0 0 1 82,38 L82,58 A12,12 0 0 1 70,70 L52,70 L38,84 L38,70 A12,12 0 0 1 26,58 L26,38 A12,12 0 0 1 38,26 Z
-                              M36,44 L54,44 L54,36 L72,48 L54,60 L54,52 L36,52 Z" />
+                              M38,36 L72,48 L38,60 L47,48 Z" />
     </group>
 
 

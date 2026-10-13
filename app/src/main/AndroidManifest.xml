@@ -2,15 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- SMS: recibir los entrantes y enviar los reenvíos -->
+    <!--
+        SMS: solo entrada. SEND_SMS se fue con el transporte por SMS, y READ_PHONE_STATE con
+        el selector de SIM, que servía para elegir con cuál enviar. Esta aplicación recibe por
+        la radio y entrega por otro medio, así que no necesita ni enviar ni saber qué tarjetas
+        hay puestas. SEND_SMS además es un permiso restringido, y perderlo es una buena noticia.
+    -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.SEND_SMS" />
 
-    <!-- Enumerar las SIM para poder elegir con cuál enviar en dispositivos duales -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-
-    <!-- Telefonía obligatoria: sin SIM la aplicación no tiene nada que hacer -->
+    <!-- Telefonía obligatoria: sin SIM no entra ningún SMS y la aplicación no hace nada -->
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="true" />
@@ -28,11 +29,19 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!--
-        Comprobador de versiones. INTERNET volvió aquí **solo** para esto: preguntar a
-        api.github.com si hay publicada una versión más nueva y bajar su APK si se pide. El
-        reenvío de SMS no usa la red —sale por la radio del teléfono, no por datos— y ningún
-        contenido de los mensajes viaja por aquí; «Acerca de» lo dice y se puede apagar desde
-        esa misma pantalla.
+        INTERNET es ahora el permiso central de la aplicación, y conviene leer esto antes de
+        suponer nada: **el contenido de los SMS sale por aquí**. Se entrega a los servidores de
+        Telegram, que es un tercero, mediante una petición al Bot API. Eso es lo que esta
+        aplicación hace, no un efecto colateral, y «Acerca de» lo dice con todas las letras en
+        el aviso de privacidad porque quien la instala tiene que saberlo.
+
+        Hasta la versión anterior de este proyecto la frase era la contraria —el reenvío salía
+        por la radio del operador y ningún mensaje tocaba la red— y la mantuvimos escrita aquí
+        mientras fue verdad. Ya no lo es.
+
+        El mismo permiso sirve al comprobador de versiones, que pregunta a api.github.com si hay
+        publicada una versión más nueva y baja su APK cuando alguien lo pide. Eso sí se puede
+        apagar desde «Acerca de»; la entrega de los mensajes, evidentemente, no.
 
         REQUEST_INSTALL_PACKAGES permite abrir el instalador del sistema con el APK descargado.
         No instala en silencio: Android enseña igualmente su diálogo, y desde Android 8 además
@@ -43,13 +52,13 @@
 
 
     <application
-        android:name=".SmsToSmsApplication"
+        android:name=".SmsToTelegramApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SmsToSms">
+        android:theme="@style/Theme.SmsToTelegram">
 
         <activity
             android:name=".MainActivity"
@@ -95,7 +104,7 @@
             Deshabilita la auto-inicialización de WorkManager (AndroidX Startup).
             Sin esto, WorkManager se inicializa con la fábrica por defecto ANTES de que
             Hilt inyecte HiltWorkerFactory, y los workers con @AssistedInject fallan con
-            "Could not create Worker". Con esto, SmsToSmsApplication (Configuration.Provider)
+            "Could not create Worker". Con esto, SmsToTelegramApplication (Configuration.Provider)
             provee la fábrica correcta la primera vez que se llama WorkManager.getInstance().
         -->
         <provider

@@ -1,5 +1,14 @@
 # MASTERPLAN — SMSGateway → SMStoSMS
 
+> **Este documento es historia, no el plan vigente.** Describe la migración de SMSGateway a
+> SMStoSMS, dos aplicaciones anteriores a esta. El plan de SMStoTelegram está en
+> [`MASTERPLAN_TELEGRAM.md`](MASTERPLAN_TELEGRAM.md).
+>
+> Se conserva porque explica por qué la arquitectura es como es —el patrón outbox, la
+> idempotencia de cliente, el rescate de huérfanos, el encolado centralizado— y buena parte de
+> eso sigue vigente sin un solo cambio. Lo que ya **no** vale es todo lo que habla del envío:
+> el transporte por `SmsManager`, las protecciones antibucle y el coste por mensaje.
+
 Plan de migración de la aplicación **SMSGateway** (gateway SMS → API HTTP) a **SMStoSMS**
 (reenvío de SMS a otro número de teléfono mediante reglas con expresiones regulares).
 

@@ -32,6 +32,18 @@
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
+            android:id="@+id/text_view_aviso_transporte"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="8dp"
+            android:padding="12dp"
+            android:background="?attr/colorErrorContainer"
+            android:textColor="?attr/colorOnErrorContainer"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/text_view_aviso_sin_reglas"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
