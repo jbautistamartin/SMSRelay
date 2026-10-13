@@ -19,7 +19,7 @@ import timber.log.Timber
  * Exención de la optimización de batería (modo Doze).
  *
  * Es el ajuste del sistema que más afecta a esta aplicación: con el Doze activo, Android puede
- * posponer `SmsDispatchWorker` durante horas cuando la pantalla está apagada, así que un SMS
+ * posponer `DispatchWorker` durante horas cuando la pantalla está apagada, así que un SMS
  * entra, se guarda y se queda sin reenviar hasta que alguien enciende el teléfono. Sin exención
  * la aplicación no está rota, pero deja de ser puntual, que es justamente su único trabajo.
  *

@@ -35,7 +35,6 @@ class ConfigDataStore @Inject constructor(
             timeoutEnvioSegundos       = prefs[Keys.TIMEOUT_ENVIO]         ?: porDefecto.timeoutEnvioSegundos,
             maxReenviosPorMinuto       = prefs[Keys.MAX_REENVIOS_MINUTO]   ?: porDefecto.maxReenviosPorMinuto,
             protegerBucles             = prefs[Keys.PROTEGER_BUCLES]       ?: porDefecto.protegerBucles,
-            subscriptionId             = prefs[Keys.SUBSCRIPTION_ID]       ?: porDefecto.subscriptionId,
             recepcionActiva            = prefs[Keys.RECEPCION_ACTIVA]      ?: porDefecto.recepcionActiva
         )
     }
@@ -48,7 +47,6 @@ class ConfigDataStore @Inject constructor(
             prefs[Keys.TIMEOUT_ENVIO]       = config.timeoutEnvioSegundos
             prefs[Keys.MAX_REENVIOS_MINUTO] = config.maxReenviosPorMinuto
             prefs[Keys.PROTEGER_BUCLES]     = config.protegerBucles
-            prefs[Keys.SUBSCRIPTION_ID]     = config.subscriptionId
             prefs[Keys.RECEPCION_ACTIVA]    = config.recepcionActiva
         }
     }
@@ -59,7 +57,6 @@ class ConfigDataStore @Inject constructor(
         val TIMEOUT_ENVIO       = intPreferencesKey("timeout_envio_segundos")
         val MAX_REENVIOS_MINUTO = intPreferencesKey("max_reenvios_por_minuto")
         val PROTEGER_BUCLES     = booleanPreferencesKey("proteger_bucles")
-        val SUBSCRIPTION_ID     = intPreferencesKey("subscription_id")
         val RECEPCION_ACTIVA    = booleanPreferencesKey("recepcion_activa")
     }
 }

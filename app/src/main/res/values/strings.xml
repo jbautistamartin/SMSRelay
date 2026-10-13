@@ -69,10 +69,6 @@
     <string name="settings_intervalo">Intervalo inicial de reintento</string>
     <string name="settings_intervalo_ayuda">WorkManager aplica el backoff desde este valor. Entre 5 y 3600 s</string>
 
-    <string name="settings_seccion_sim">SIM de envío</string>
-    <string name="settings_sim">Tarjeta con la que enviar</string>
-    <string name="settings_sim_ayuda">Solo afecta a los reenvíos salientes. Con la predeterminada, decide el sistema.</string>
-    <string name="settings_sim_por_defecto">Predeterminada del sistema</string>
 
     <string name="settings_backup_titulo">Copia de seguridad</string>
     <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los números de destino: trátalo como información sensible.</string>
@@ -189,9 +185,10 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="probar_veredicto_sin_coincidencia">Ninguna regla casa: este SMS no se reenviaría</string>
     <string name="probar_envio_real_ayuda">La prueba real envía un SMS de verdad al primer destino, y se cobra como cualquier otro.</string>
     <string name="probar_enviar">Enviar de prueba</string>
-    <string name="probar_enviar_confirmar">Se enviará un SMS real a %1$s, en %2$d parte(s). Tiene coste.</string>
-    <string name="probar_envio_correcto">✓ Enviado a %1$s en %2$d parte(s)</string>
-    <string name="probar_envio_correcto_breve">SMS de prueba enviado a %1$s</string>
+    <string name="regla_longitud">%1$d / %2$d caracteres</string>
+    <string name="probar_enviar_confirmar">Se entregará un mensaje real a %1$s.</string>
+    <string name="probar_envio_correcto">✓ Entregado a %1$s</string>
+    <string name="probar_envio_correcto_breve">Mensaje de prueba entregado a %1$s</string>
     <string name="probar_envio_fallido">✗ %1$s</string>
 
     <!-- Común -->
@@ -203,6 +200,6 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
 
     <!-- Permissions -->
     <string name="permiso_sms_titulo">Permiso obligatorio</string>
-    <string name="permiso_sms_mensaje">Esta aplicación necesita permiso para recibir y enviar SMS. Sin ambos no puede reenviar nada. Concédelos en Ajustes → Aplicaciones → SMStoTelegram → Permisos.</string>
+    <string name="permiso_sms_mensaje">Esta aplicación necesita permiso para recibir SMS. Sin él no entra ningún mensaje y no hay nada que reenviar. Concédelo en Ajustes → Aplicaciones → SMStoTelegram → Permisos.</string>
     <string name="permiso_entendido">Entendido</string>
 </resources>

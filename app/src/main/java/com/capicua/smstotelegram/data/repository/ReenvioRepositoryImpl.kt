@@ -95,8 +95,7 @@ class ReenvioRepositoryImpl @Inject constructor(
         intentos = intentos,
         ultimoError = ultimoError,
         fechaCreacion = fechaCreacion.toEpochMilli(),
-        fechaEnvio = fechaEnvio?.toEpochMilli(),
-        partes = partes
+        fechaEnvio = fechaEnvio?.toEpochMilli()
     )
 
     private fun ReenvioEntity.aDominio() = Reenvio(
@@ -110,7 +109,6 @@ class ReenvioRepositoryImpl @Inject constructor(
         intentos = intentos,
         ultimoError = ultimoError,
         fechaCreacion = Instant.ofEpochMilli(fechaCreacion),
-        fechaEnvio = fechaEnvio?.let { Instant.ofEpochMilli(it) },
-        partes = partes
+        fechaEnvio = fechaEnvio?.let { Instant.ofEpochMilli(it) }
     )
 }

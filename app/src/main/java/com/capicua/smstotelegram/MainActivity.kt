@@ -46,8 +46,6 @@ import javax.inject.Inject
  * En un dispositivo dedicado estos permisos se pueden pre-conceder vía MDM o ADB:
  *   adb shell pm grant com.capicua.smstotelegram android.permission.RECEIVE_SMS
  *   adb shell pm grant com.capicua.smstotelegram android.permission.READ_SMS
- *   adb shell pm grant com.capicua.smstotelegram android.permission.SEND_SMS
- *   adb shell pm grant com.capicua.smstotelegram android.permission.READ_PHONE_STATE
  *   adb shell pm grant com.capicua.smstotelegram android.permission.POST_NOTIFICATIONS
  */
 @AndroidEntryPoint
@@ -88,11 +86,9 @@ class MainActivity : AppCompatActivity() {
             Timber.d("Permiso '$permiso': ${if (concedido) "CONCEDIDO" else "DENEGADO"}")
         }
 
-        // RECEIVE_SMS y SEND_SMS son los dos imprescindibles: sin el primero no entra nada
-        // y sin el segundo no sale nada. READ_PHONE_STATE solo sirve para elegir SIM.
-        val faltaAlgunoEsencial = resultados[Manifest.permission.RECEIVE_SMS] == false ||
-            resultados[Manifest.permission.SEND_SMS] == false
-        if (faltaAlgunoEsencial) {
+        // RECEIVE_SMS es el imprescindible: sin él no entra nada y no hay nada que reenviar.
+        // READ_SMS acompaña a la lectura del cuerpo, pero su ausencia no deja la app inútil.
+        if (resultados[Manifest.permission.RECEIVE_SMS] == false) {
             mostrarDialogoPermisoObligatorio()
         }
     }
@@ -261,8 +257,6 @@ class MainActivity : AppCompatActivity() {
     private fun permisosNecesarios(): List<String> = buildList {
         add(Manifest.permission.RECEIVE_SMS)
         add(Manifest.permission.READ_SMS)
-        add(Manifest.permission.SEND_SMS)
-        add(Manifest.permission.READ_PHONE_STATE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.POST_NOTIFICATIONS)
         }

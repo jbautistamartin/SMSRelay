@@ -125,7 +125,7 @@ el esquema quede fijado. La documentación (`README`, `CLAUDE.md`, `docs/ARCHITE
 hablando de SMStoSMS a propósito: es la fase 7, y reescribirla ahora significaría hacerlo dos
 veces, porque la mitad de lo que dice va a cambiar en las fases 2 a 6.
 
-### Fase 2 — La juntura: interfaz de transporte · `[ ]`
+### Fase 2 — La juntura: interfaz de transporte · `[x]` completada el 12 oct 2026
 
 - `domain/transport/EnviadorDeMensajes.kt`: `suspend fun enviar(destino, texto): ResultadoEnvio`.
 - `ResultadoEnvio` sube de `data/sms` a `domain/transport` — deja de ser un detalle del SMS.
@@ -137,6 +137,59 @@ veces, porque la mitad de lo que dice va a cambiar en las fases 2 a 6.
 
 **Hecho cuando:** compila y los tests pasan con el transporte en blanco, y nada fuera de
 `data/telegram` (todavía vacío) menciona el medio.
+
+#### Resultado real
+
+`assembleDebug test` en verde, 85 tests y 0 fallos. **El paquete `data/sms` ha desaparecido
+entero**: la aplicación ya no sabe enviar un SMS. Lo que queda de SMS es la entrada —
+`SmsReceiver`, `SmsIngestionService`— que es lo que esta aplicación es.
+
+El interfaz quedó con tres miembros, y los tres salieron de necesidades reales de quien llama:
+
+| Miembro | Para qué | De dónde salió |
+|---------|----------|----------------|
+| `enviar(destino, texto, timeoutSegundos)` | Entregar y **esperar** | `SmsSender.enviar` sin el `subscriptionId` |
+| `limiteCaracteres` | Avisar mientras se escribe la plantilla | Sustituye a `contarPartes` |
+| `motivoNoDisponible(): String?` | Avisar **antes** de pulsar enviar | Sustituye a `tienePermisoEnviar` |
+
+`motivoNoDisponible` es `suspend` porque el transporte de Telegram tendrá que leer el token del
+DataStore, y eso obligó a que `ProbarReglasViewModel.construirAvisos` también lo sea. Es la forma
+correcta: devuelve el **motivo** en texto, no un booleano, porque la pantalla tiene que poder
+decir *por qué* no se puede enviar y los motivos van a cambiar con el medio.
+
+`TransportModule` es el único sitio del proyecto que nombra una implementación concreta del medio.
+Cambiar de transporte es cambiar su `@Binds`, y eso es precisamente lo que hará la fase 3.
+
+#### Dos decisiones tomadas al implementar
+
+1. **La restricción de red se adelantó de la fase 3 a esta.** El KDoc de `ColaDeEnvios` explicaba
+   que no había ninguna *porque un SMS sale por la radio del operador*. Al retirar el SMS esa
+   frase pasaba a ser falsa, y dejar un comentario falso una fase entera es peor que adelantar una
+   línea de código. `NetworkType.CONNECTED`, no `UNMETERED`: esperar al wifi sería dejar de
+   reenviar. El KDoc recoge ahora las tres respuestas que ha tenido el proyecto —SMSGateway no la
+   ponía a propósito, SMStoSMS no la necesitaba, SMStoTelegram sí— para que nadie la «arregle».
+2. **`SEND_SMS` y `READ_PHONE_STATE` salieron del manifest ya**, con el código que los usaba, en
+   lugar de esperar. `SEND_SMS` era un permiso restringido; `READ_PHONE_STATE` solo servía para
+   enumerar SIM. El diálogo de permiso obligatorio pasa a exigir solo `RECEIVE_SMS`.
+
+#### Lo que se fue con el medio
+
+El selector de SIM completo (ajuste, sección del layout, cuatro strings y `ProveedorDeSims`), el
+recuento de partes (`ReenvioEntity.partes`, `Reenvio.partes`, el plural `regla_partes` y los
+mapeos de los repositorios) y el parámetro `simActual` de `ConfiguracionJson.aDominio()`. El
+contador de partes se sustituyó por uno de longitud contra `limiteCaracteres`, que es el aviso que
+de verdad importa ahora: pasarse del límite del transporte es un fallo **permanente**, no un
+cargo extra. El `1.json` se regeneró sin `partes`.
+
+El criterio de «esto no viaja en la copia de seguridad» sobrevivió a la SIM que lo motivó, y está
+escrito en el KDoc de `ConfiguracionJson` esperando a que la fase 4 lo aplique al token.
+
+#### Pendiente anotado para la fase 3
+
+El comentario del bloque `INTERNET` en el manifest sigue afirmando que «ningún contenido de los
+mensajes viaja por aquí». Hoy es verdad —no hay transporte— y deja de serlo en el momento en que
+`TelegramSender` exista. **Reescribirlo es parte de la fase 3**, no de la 7: un permiso mal
+documentado en el manifest es el sitio donde peor sienta.
 
 ### Fase 3 — Cliente de Telegram · `[ ]`
 

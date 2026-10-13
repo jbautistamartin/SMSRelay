@@ -115,8 +115,7 @@ class SmsRepositoryImpl @Inject constructor(
         intentos = intentos,
         ultimoError = ultimoError,
         fechaCreacion = Instant.ofEpochMilli(fechaCreacion),
-        fechaEnvio = fechaEnvio?.let { Instant.ofEpochMilli(it) },
-        partes = partes
+        fechaEnvio = fechaEnvio?.let { Instant.ofEpochMilli(it) }
     )
 
     private fun SmsEntity.aDominio() = SmsMessage(

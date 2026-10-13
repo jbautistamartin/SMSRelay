@@ -82,11 +82,7 @@ class ProbarReglasFragment : Fragment() {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.probar_enviar)
             .setMessage(
-                getString(
-                    R.string.probar_enviar_confirmar,
-                    primera.destino,
-                    primera.partes
-                )
+                getString(R.string.probar_enviar_confirmar, primera.destino)
             )
             .setNegativeButton(R.string.cancelar, null)
             .setPositiveButton(R.string.probar_enviar) { _, _ -> viewModel.enviarPrueba() }
@@ -149,11 +145,10 @@ class ProbarReglasFragment : Fragment() {
             fila.textViewDestino.text =
                 getString(R.string.reglas_destino, coincidencia.destino)
             fila.textViewTexto.text = coincidencia.textoFinal
-            fila.textViewPartes.text = resources.getQuantityString(
-                R.plurals.regla_partes,
-                coincidencia.partes,
-                coincidencia.partes,
-                coincidencia.textoFinal.length
+            fila.textViewLongitud.text = getString(
+                R.string.regla_longitud,
+                coincidencia.textoFinal.length,
+                viewModel.limiteCaracteres
             )
             contenedor.addView(fila.root)
         }
@@ -191,9 +186,8 @@ class ProbarReglasFragment : Fragment() {
                             progreso.visibility = View.GONE
                             resultado.visibility = View.VISIBLE
                             binding.buttonEnviarPrueba.isEnabled = true
-                            resultado.text = getString(
-                                R.string.probar_envio_correcto, estado.destino, estado.partes
-                            )
+                            resultado.text =
+                                getString(R.string.probar_envio_correcto, estado.destino)
                             resultado.setTextColor(Color.parseColor("#186A2E"))
                             Snackbar.make(
                                 binding.root,

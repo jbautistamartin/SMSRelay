@@ -8,10 +8,10 @@ package com.capicua.smstotelegram.presentation.rules
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.capicua.smstotelegram.data.repository.ReglaRepository
-import com.capicua.smstotelegram.data.sms.SmsSender
 import com.capicua.smstotelegram.domain.model.Regla
 import com.capicua.smstotelegram.domain.rules.EvaluadorDeReglas
 import com.capicua.smstotelegram.domain.rules.NormalizadorTelefono
+import com.capicua.smstotelegram.domain.transport.EnviadorDeMensajes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,8 +35,11 @@ data class ErroresRegla(
 class EditarReglaViewModel @Inject constructor(
     private val reglaRepository: ReglaRepository,
     private val evaluador: EvaluadorDeReglas,
-    private val smsSender: SmsSender
+    enviador: EnviadorDeMensajes
 ) : ViewModel() {
+
+    /** Longitud máxima que admite el transporte, para el contador de la previsualización. */
+    val limiteCaracteres: Int = enviador.limiteCaracteres
 
     private val _regla = MutableStateFlow<Regla?>(null)
     /** Regla en edición. Null mientras se carga, o para una regla nueva sin valores. */
@@ -68,9 +71,6 @@ class EditarReglaViewModel @Inject constructor(
     /** Previsualiza el texto que saldría con esta plantilla, para el campo de ayuda. */
     fun previsualizar(plantilla: String, telefono: String, mensaje: String, fecha: String): String =
         evaluador.resolverPlantilla(plantilla, telefono, mensaje, fecha)
-
-    /** Partes en que se dividiría un texto, para avisar del coste de la plantilla. */
-    fun contarPartes(texto: String): Int = smsSender.contarPartes(texto)
 
     /**
      * Valida y guarda. Si hay errores, los publica en [errores] y no escribe nada.

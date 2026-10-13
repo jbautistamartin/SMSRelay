@@ -61,9 +61,12 @@ data class ReglasExportadas(
 /**
  * Los ajustes generales tal como viajan en el fichero.
  *
- * **La SIM no se exporta.** El `subscriptionId` identifica una tarjeta en *este* teléfono; en
- * otro apunta a otra SIM o a ninguna, y restaurarlo mandaría los reenvíos por donde no es. Al
- * importar, la SIM se queda como esté en el dispositivo de destino.
+ * **No todo lo que está en `AppConfig` se exporta.** El fichero describe *cómo reenviar*, que es
+ * algo que tiene sentido llevarse a otro teléfono; lo que identifica a este teléfono en concreto
+ * se queda. El caso que fijó el criterio fue la SIM de envío, que apuntaba a una tarjeta de
+ * *este* dispositivo y restaurada en otro mandaba los reenvíos por donde no era; ese ajuste ya
+ * no existe, pero el criterio sí, y en la fase 4 lo hereda el token del bot, que además es una
+ * credencial y no debe andar en un JSON en claro.
  */
 @Serializable
 data class ConfiguracionJson(
@@ -77,6 +80,7 @@ data class ConfiguracionJson(
 
 /** Convierte los ajustes a su forma exportable, dejando fuera lo que es de este teléfono. */
 fun AppConfig.aJson() = ConfiguracionJson(
+    // Si algún campo de AppConfig no debe viajar, el sitio de omitirlo es aquí, no en quien llama.
     maxReintentos = maxReintentos,
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,
@@ -85,18 +89,13 @@ fun AppConfig.aJson() = ConfiguracionJson(
     recepcionActiva = recepcionActiva
 )
 
-/**
- * Convierte los ajustes importados al dominio.
- *
- * [simActual] es la SIM que ya tenía el dispositivo: no viene en el fichero y no se toca.
- */
-fun ConfiguracionJson.aDominio(simActual: Int) = AppConfig(
+/** Convierte los ajustes importados al dominio. */
+fun ConfiguracionJson.aDominio() = AppConfig(
     maxReintentos = maxReintentos,
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,
     maxReenviosPorMinuto = maxReenviosPorMinuto,
     protegerBucles = protegerBucles,
-    subscriptionId = simActual,
     recepcionActiva = recepcionActiva
 )
 

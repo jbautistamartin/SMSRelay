@@ -13,8 +13,6 @@ import com.capicua.smstotelegram.data.config.AppConfig
 import com.capicua.smstotelegram.data.config.ConfigBackup
 import com.capicua.smstotelegram.data.config.ConfigDataStore
 import com.capicua.smstotelegram.data.config.ResultadoCopia
-import com.capicua.smstotelegram.data.sms.ProveedorDeSims
-import com.capicua.smstotelegram.data.sms.SimDisponible
 import com.capicua.smstotelegram.util.ControlRecepcion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,18 +29,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     application: Application,
     private val configDataStore: ConfigDataStore,
-    private val configBackup: ConfigBackup,
-    private val proveedorDeSims: ProveedorDeSims
+    private val configBackup: ConfigBackup
 ) : AndroidViewModel(application) {
-
-    /**
-     * SIM activas del dispositivo.
-     *
-     * Lista vacía o de un solo elemento significa que no hay nada que elegir, y la pantalla
-     * oculta el selector: enviar con la SIM predeterminada del sistema es lo correcto en la
-     * inmensa mayoría de los dispositivos.
-     */
-    val simsDisponibles: List<SimDisponible> get() = proveedorDeSims.simsDisponibles()
 
     /**
      * Estado actual de la configuración.

@@ -6,7 +6,9 @@
 package com.capicua.smstotelegram.worker
 
 import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -27,10 +29,21 @@ import javax.inject.Singleton
  * encolado leía una constante. Ahora el backoff sale de [ConfigDataStore], que es lo que el
  * operador cree estar ajustando.
  *
- * No se impone ninguna restricción de red. En la versión HTTP eso era deliberado porque Android
- * no marca como «con internet» las redes locales; ahora es que la red de datos es irrelevante:
- * un SMS sale por la red del operador, y si no hay cobertura el propio envío devuelve
- * `RESULT_ERROR_NO_SERVICE` y el worker reintenta.
+ * ## Por qué vuelve a haber restricción de red
+ * Las tres versiones de este proyecto han respondido distinto a esta pregunta, y conviene saber
+ * por qué para no «arreglar» lo que no está roto:
+ *
+ * - **SMSGateway** (HTTP a un servidor propio) no la ponía a propósito: Android no marca como
+ *   «con internet» una red local sin salida, así que la restricción habría bloqueado justo el
+ *   caso que esa versión servía.
+ * - **SMStoSMS** no la necesitaba: un SMS sale por la radio del operador, no por datos, y la
+ *   falta de cobertura ya la reportaba el propio envío como `RESULT_ERROR_NO_SERVICE`.
+ * - **SMStoTelegram** entrega por internet y sí la pone. Sin ella, cada reenvío encolado en un
+ *   túnel se gastaría sus diez intentos contra una red que no está, y el reenvío acabaría
+ *   `FALLIDO` por agotamiento en lugar de esperar a que vuelva la conexión.
+ *
+ * `NetworkType.CONNECTED` es el nivel correcto, no `UNMETERED`: un mensaje de texto por datos
+ * móviles no es un coste que haya que ahorrar, y esperar al wifi sería dejar de reenviar.
  */
 @Singleton
 class ColaDeEnvios @Inject constructor(
@@ -47,13 +60,18 @@ class ColaDeEnvios @Inject constructor(
      *
      * Usa [ExistingWorkPolicy.KEEP]: si ya hay un trabajo para este reenvío —por ejemplo un
      * reintento en curso— no se duplica. Es la primera línea de defensa contra enviar dos
-     * veces el mismo SMS.
+     * veces el mismo mensaje.
      */
     suspend fun encolar(reenvioId: String) {
         val config = configDataStore.config.first()
 
-        val solicitud = OneTimeWorkRequestBuilder<SmsDispatchWorker>()
+        val solicitud = OneTimeWorkRequestBuilder<DispatchWorker>()
             .setInputData(workDataOf(Constants.WORKER_KEY_REENVIO_ID to reenvioId))
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
                 config.intervaloReintentoSegundos.toLong(),

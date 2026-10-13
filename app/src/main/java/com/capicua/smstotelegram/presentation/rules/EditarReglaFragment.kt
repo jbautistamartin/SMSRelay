@@ -30,7 +30,8 @@ import kotlinx.coroutines.launch
  * Las expresiones regulares se validan **mientras se teclean**: una regla con un patrón roto se
  * descarta en silencio durante la evaluación, así que el único momento razonable para avisar es
  * aquí. La previsualización de la plantilla cumple la misma función con el texto de salida, e
- * incluye el número de partes porque cada parte de un SMS se tarifica aparte.
+ * incluye la longitud porque el transporte tiene un límite y pasarse de él es un fallo
+ * permanente: el reenvío no se reintenta, se descarta.
  */
 @AndroidEntryPoint
 class EditarReglaFragment : Fragment() {
@@ -122,7 +123,7 @@ class EditarReglaFragment : Fragment() {
         val plantilla = binding.editTextPlantilla.text?.toString().orEmpty()
         if (plantilla.isBlank()) {
             binding.textViewPrevisualizacion.text = getString(R.string.regla_previsualizacion_vacia)
-            binding.textViewPartes.text = ""
+            binding.textViewLongitud.text = ""
             return
         }
 
@@ -134,13 +135,12 @@ class EditarReglaFragment : Fragment() {
         )
         binding.textViewPrevisualizacion.text = texto
 
-        val partes = viewModel.contarPartes(texto)
-        binding.textViewPartes.text = resources.getQuantityString(
-            R.plurals.regla_partes, partes, partes, texto.length
-        )
-        binding.textViewPartes.setTextColor(
+        val limite = viewModel.limiteCaracteres
+        binding.textViewLongitud.text =
+            getString(R.string.regla_longitud, texto.length, limite)
+        binding.textViewLongitud.setTextColor(
             resources.getColor(
-                if (partes > 1) R.color.status_pending else R.color.status_delivered,
+                if (texto.length > limite) R.color.status_failed else R.color.status_delivered,
                 null
             )
         )

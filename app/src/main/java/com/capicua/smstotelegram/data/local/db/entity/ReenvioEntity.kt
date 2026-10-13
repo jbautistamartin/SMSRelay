@@ -86,8 +86,5 @@ data class ReenvioEntity(
 
     /** Epoch milisegundos — instante en que se confirmó el envío. Null si no se envió. */
     @ColumnInfo(name = "fecha_envio")
-    val fechaEnvio: Long? = null,
-
-    @ColumnInfo(name = "partes", defaultValue = "1")
-    val partes: Int = 1
+    val fechaEnvio: Long? = null
 )

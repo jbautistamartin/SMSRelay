@@ -137,7 +137,6 @@ class ReglasJsonTest {
             timeoutEnvioSegundos = 90,
             maxReenviosPorMinuto = 3,
             protegerBucles = false,
-            subscriptionId = 12,
             recepcionActiva = false
         )
 
@@ -153,10 +152,7 @@ class ReglasJsonTest {
             )
         )
 
-        // La SIM es de este teléfono y no viaja: al importar se conserva la del destino.
-        val importado = recuperado.configuracion!!.aDominio(simActual = 99)
-
-        assertEquals(original.copy(subscriptionId = 99), importado)
+        assertEquals(original, recuperado.configuracion!!.aDominio())
     }
 
     /**

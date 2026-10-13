@@ -2,15 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- SMS: recibir los entrantes y enviar los reenvíos -->
+    <!--
+        SMS: solo entrada. SEND_SMS se fue con el transporte por SMS, y READ_PHONE_STATE con
+        el selector de SIM, que servía para elegir con cuál enviar. Esta aplicación recibe por
+        la radio y entrega por otro medio, así que no necesita ni enviar ni saber qué tarjetas
+        hay puestas. SEND_SMS además es un permiso restringido, y perderlo es una buena noticia.
+    -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.SEND_SMS" />
 
-    <!-- Enumerar las SIM para poder elegir con cuál enviar en dispositivos duales -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-
-    <!-- Telefonía obligatoria: sin SIM la aplicación no tiene nada que hacer -->
+    <!-- Telefonía obligatoria: sin SIM no entra ningún SMS y la aplicación no hace nada -->
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="true" />

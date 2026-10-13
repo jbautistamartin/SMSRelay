@@ -21,9 +21,13 @@ data class AppConfig(
     val intervaloReintentoSegundos: Int = 30,
 
     /**
-     * Segundos que se espera la confirmación del operador (`sentIntent`) antes de dar el
-     * intento por perdido y reintentar. El envío de un SMS es asíncrono: `SmsManager` retorna
-     * al instante y el resultado llega después por broadcast.
+     * Segundos que se espera la confirmación del transporte antes de dar el intento por perdido
+     * y reintentar.
+     *
+     * Existe porque un envío nunca se confirma en el acto, pero el motivo ha cambiado con el
+     * medio: con `SmsManager` se esperaba el broadcast del `sentIntent`, que llegaba cuando el
+     * operador contestaba; ahora es el plazo de la petición HTTP. Lo que no cambia es que sin
+     * esperar, todo parecería enviado.
      */
     val timeoutEnvioSegundos: Int = 60,
 
@@ -42,12 +46,6 @@ data class AppConfig(
     val protegerBucles: Boolean = true,
 
     /**
-     * Id de suscripción de la SIM con la que enviar, en dispositivos con más de una.
-     * [SIM_POR_DEFECTO] deja que el sistema elija la SIM de SMS predeterminada.
-     */
-    val subscriptionId: Int = SIM_POR_DEFECTO,
-
-    /**
      * Interruptor general de la recepción. En false la aplicación deja de leer los SMS que
      * llegan: no se guardan, no se evalúan reglas y no se reenvía nada.
      *
@@ -57,9 +55,4 @@ data class AppConfig(
      * esto corta la entrada, no la salida.
      */
     val recepcionActiva: Boolean = true
-) {
-    companion object {
-        /** La aplicación no fuerza ninguna SIM: envía con la predeterminada del sistema. */
-        const val SIM_POR_DEFECTO = -1
-    }
-}
+)

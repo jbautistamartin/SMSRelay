@@ -16,13 +16,9 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import android.view.View.GONE
-import android.view.View.VISIBLE
-import android.widget.ArrayAdapter
 import com.capicua.smstotelegram.R
 import com.capicua.smstotelegram.data.config.AppConfig
 import com.capicua.smstotelegram.data.config.ResultadoCopia
-import com.capicua.smstotelegram.data.sms.SimDisponible
 import com.capicua.smstotelegram.databinding.FragmentSettingsBinding
 import com.capicua.smstotelegram.util.InicioAutomatico
 import com.capicua.smstotelegram.util.OptimizacionBateria
@@ -45,12 +41,6 @@ class SettingsFragment : Fragment() {
     private val viewModel: SettingsViewModel by viewModels()
 
     private var cargaInicial = true
-
-    /** SIM activas del dispositivo. Vacía o de un elemento significa que no hay que elegir. */
-    private var sims: List<SimDisponible> = emptyList()
-
-    /** SIM seleccionada en el formulario. */
-    private var simElegida = AppConfig.SIM_POR_DEFECTO
 
     // ── Selectores de fichero del sistema ─────────────────────────────────────
     //
@@ -77,7 +67,6 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        configurarSelectorSim()
         configurarBateria()
         configurarAutoinicio()
         configurarCopia()
@@ -94,32 +83,6 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         pintarEstadoBateria()
-    }
-
-    /**
-     * Monta el selector de SIM, pero solo si hay más de una.
-     *
-     * Con una sola tarjeta el selector no decidiría nada y añadiría una pregunta que el
-     * operador no tiene que responder, así que la sección entera se oculta.
-     */
-    private fun configurarSelectorSim() {
-        sims = viewModel.simsDisponibles
-        if (sims.size < 2) {
-            binding.layoutSim.visibility = GONE
-            return
-        }
-
-        binding.layoutSim.visibility = VISIBLE
-        val etiquetas = buildList {
-            add(getString(R.string.settings_sim_por_defecto))
-            addAll(sims.map { it.etiqueta })
-        }
-        binding.dropdownSim.setAdapter(
-            ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, etiquetas)
-        )
-        binding.dropdownSim.setOnItemClickListener { _, _, posicion, _ ->
-            simElegida = if (posicion == 0) AppConfig.SIM_POR_DEFECTO else sims[posicion - 1].subscriptionId
-        }
     }
 
     // ── Exención de batería ───────────────────────────────────────────────────
@@ -257,14 +220,6 @@ class SettingsFragment : Fragment() {
     }
 
     private fun rellenarCampos(config: AppConfig) {
-        simElegida = config.subscriptionId
-        if (sims.size >= 2) {
-            val indice = sims.indexOfFirst { it.subscriptionId == config.subscriptionId }
-            binding.dropdownSim.setText(
-                if (indice >= 0) sims[indice].etiqueta else getString(R.string.settings_sim_por_defecto),
-                false
-            )
-        }
         binding.switchRecepcion.isChecked = config.recepcionActiva
         binding.switchProtegerBucles.isChecked = config.protegerBucles
         binding.editTextMaxReenviosMinuto.setText(config.maxReenviosPorMinuto.toString())
@@ -291,7 +246,6 @@ class SettingsFragment : Fragment() {
                     timeoutEnvioSegundos = timeoutEnvio,
                     maxReenviosPorMinuto = maxPorMinuto,
                     protegerBucles = binding.switchProtegerBucles.isChecked,
-                    subscriptionId = simElegida,
                     recepcionActiva = binding.switchRecepcion.isChecked
                 )
             )

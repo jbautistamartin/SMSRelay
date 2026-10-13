@@ -119,10 +119,8 @@ class ConfigBackup @Inject constructor(
                     "entiende hasta el ${ReglasExportadas.VERSION_ACTUAL}"
             )
         } else {
-            // La SIM no viaja en el fichero: se conserva la que tenga este teléfono.
             fichero.configuracion?.let { importados ->
-                val simActual = configDataStore.config.first().subscriptionId
-                configDataStore.guardar(importados.aDominio(simActual))
+                configDataStore.guardar(importados.aDominio())
             }
 
             val (validas, invalidas) = fichero.reglas.partition { esValida(it) }

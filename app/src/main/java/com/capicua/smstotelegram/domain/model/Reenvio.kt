@@ -49,11 +49,5 @@ data class Reenvio(
     val fechaCreacion: Instant,
 
     /** Instante en que se confirmó el envío. Null mientras no esté [EstadoReenvio.ENVIADO]. */
-    val fechaEnvio: Instant? = null,
-
-    /**
-     * Número de partes en que se dividirá el SMS. Un mensaje de más de 160 caracteres GSM-7
-     * se fragmenta, y cada parte se tarifica por separado.
-     */
-    val partes: Int = 1
+    val fechaEnvio: Instant? = null
 )

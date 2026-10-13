@@ -9,11 +9,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.capicua.smstotelegram.data.config.ConfigDataStore
 import com.capicua.smstotelegram.data.repository.ReglaRepository
-import com.capicua.smstotelegram.data.sms.ResultadoEnvio
-import com.capicua.smstotelegram.data.sms.SmsSender
 import com.capicua.smstotelegram.domain.rules.EvaluadorDeReglas
 import com.capicua.smstotelegram.domain.rules.NormalizadorTelefono
 import com.capicua.smstotelegram.domain.rules.ResultadoEvaluacion
+import com.capicua.smstotelegram.domain.transport.EnviadorDeMensajes
+import com.capicua.smstotelegram.domain.transport.ResultadoEnvio
 import com.capicua.smstotelegram.util.toDisplayString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +29,7 @@ data class CoincidenciaProbada(
     val posicion: Int,
     val nombreRegla: String,
     val destino: String,
-    val textoFinal: String,
-    val partes: Int
+    val textoFinal: String
 )
 
 /** Resultado de probar las reglas con un SMS de ejemplo, listo para pintar. */
@@ -46,7 +45,7 @@ data class PruebaReglas(
 sealed interface EstadoEnvioPrueba {
     data object Inactivo : EstadoEnvioPrueba
     data object Enviando : EstadoEnvioPrueba
-    data class Correcto(val destino: String, val partes: Int) : EstadoEnvioPrueba
+    data class Correcto(val destino: String) : EstadoEnvioPrueba
     data class Fallido(val motivo: String) : EstadoEnvioPrueba
 }
 
@@ -54,16 +53,19 @@ sealed interface EstadoEnvioPrueba {
  * Prueba las reglas contra un SMS de ejemplo **sin enviar nada**.
  *
  * Es la herramienta que convierte una expresión regular en algo verificable: se pega un
- * remitente y un texto, y la pantalla dice qué regla casa, a qué número iría, con qué texto y
- * en cuántas partes. Sin esto, comprobar una regla exige esperar a que llegue un SMS real.
+ * remitente y un texto, y la pantalla dice qué regla casa, a qué destino iría y con qué texto.
+ * Sin esto, comprobar una regla exige esperar a que llegue un SMS real.
  */
 @HiltViewModel
 class ProbarReglasViewModel @Inject constructor(
     private val reglaRepository: ReglaRepository,
     private val evaluador: EvaluadorDeReglas,
-    private val smsSender: SmsSender,
+    private val enviador: EnviadorDeMensajes,
     private val configDataStore: ConfigDataStore
 ) : ViewModel() {
+
+    /** Longitud máxima que admite el transporte, para mostrarla junto a cada texto final. */
+    val limiteCaracteres: Int = enviador.limiteCaracteres
 
     private val _prueba = MutableStateFlow<PruebaReglas?>(null)
     val prueba: StateFlow<PruebaReglas?> = _prueba.asStateFlow()
@@ -91,8 +93,7 @@ class ProbarReglasViewModel @Inject constructor(
                         posicion = indice + 1,
                         nombreRegla = coincidencia.nombreRegla,
                         destino = coincidencia.destino,
-                        textoFinal = coincidencia.textoFinal,
-                        partes = smsSender.contarPartes(coincidencia.textoFinal)
+                        textoFinal = coincidencia.textoFinal
                     )
                 },
                 avisos = construirAvisos(resultado, telefono)
@@ -105,7 +106,8 @@ class ProbarReglasViewModel @Inject constructor(
      * Envía de verdad el primer reenvío que resultaría de la prueba.
      *
      * Deliberadamente envía **solo el primero**, aunque haya varias coincidencias: una prueba
-     * no debe gastar varios SMS sin que quede claro.
+     * tiene que ser una sola cosa observable, y recibir tres mensajes de golpe no aclara cuál
+     * vino de qué regla.
      */
     fun enviarPrueba() {
         val primera = _prueba.value?.coincidencias?.firstOrNull() ?: return
@@ -115,16 +117,15 @@ class ProbarReglasViewModel @Inject constructor(
             _envio.value = EstadoEnvioPrueba.Enviando
             val config = configDataStore.config.first()
 
-            val resultado = smsSender.enviar(
+            val resultado = enviador.enviar(
                 destino = primera.destino,
                 texto = primera.textoFinal,
-                subscriptionId = config.subscriptionId,
                 timeoutSegundos = config.timeoutEnvioSegundos
             )
 
             _envio.value = when (resultado) {
                 is ResultadoEnvio.Enviado ->
-                    EstadoEnvioPrueba.Correcto(primera.destino, resultado.partes)
+                    EstadoEnvioPrueba.Correcto(primera.destino)
                 is ResultadoEnvio.ErrorTransitorio ->
                     EstadoEnvioPrueba.Fallido(resultado.motivo)
                 is ResultadoEnvio.ErrorPermanente ->
@@ -142,7 +143,10 @@ class ProbarReglasViewModel @Inject constructor(
      * Avisos que explican por qué el resultado es el que es. Son más útiles que el propio
      * resultado cuando una regla no casa y no se entiende el motivo.
      */
-    private fun construirAvisos(resultado: ResultadoEvaluacion, telefono: String): List<String> =
+    private suspend fun construirAvisos(
+        resultado: ResultadoEvaluacion,
+        telefono: String
+    ): List<String> =
         buildList {
             resultado.reglasInvalidas.forEach { invalida ->
                 add(
@@ -177,8 +181,8 @@ class ProbarReglasViewModel @Inject constructor(
                     )
                 }
             }
-            if (!smsSender.tienePermisoEnviar()) {
-                add("Falta el permiso de envío de SMS: la prueba real no funcionará")
+            enviador.motivoNoDisponible()?.let { motivo ->
+                add("La prueba real no funcionará: $motivo")
             }
         }
 }
