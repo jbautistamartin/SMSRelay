@@ -2,12 +2,19 @@
 <!--
     Fondo del icono adaptativo.
 
-    Verde azulado, el color primario de la aplicación (`md_theme_primary`), en lugar del azul
-    #1565C0 que venía de SMSGateway: las dos aplicaciones pueden convivir en el mismo teléfono
-    y tienen que distinguirse de un vistazo en el lanzador.
+    Azul, el color primario de la aplicación (`md_theme_primary`). La regla viene de antes y se
+    mantiene: **el fondo del icono es el primario del tema**, no un color elegido aparte. Si
+    algún día cambia uno, tienen que cambiar los dos.
+
+    El color es lo que identifica a esta aplicación de un vistazo, y por eso ha cambiado dos
+    veces por el mismo motivo. SMSGateway era azul #1565C0; SMStoSMS pasó a verde azulado
+    porque las dos podían convivir en el mismo teléfono; SMStoTelegram vuelve a la familia azul
+    —la de Telegram— porque es la que dice a dónde entrega, y porque con el teal sería
+    indistinguible de SMStoSMS en el lanzador, que es justo el problema que el teal resolvía.
 
     El degradado es sutil a propósito. A 48 dp no se percibe como degradado, solo evita que el
-    icono se vea plano junto a los demás.
+    icono se vea plano junto a los demás. Los dos extremos se derivan del primario con el mismo
+    reparto que tenía el teal: uno aclarado y otro oscurecido alrededor de él.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
@@ -24,8 +31,8 @@
                 android:startY="0"
                 android:endX="108"
                 android:endY="108"
-                android:startColor="#00828F"
-                android:endColor="#00424B" />
+                android:startColor="#0079CD"
+                android:endColor="#003E69" />
         </aapt:attr>
     </path>
 

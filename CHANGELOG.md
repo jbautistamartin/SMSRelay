@@ -1,85 +1,86 @@
 # Registro de cambios
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/);
-versionado según [SemVer](https://semver.org/lang/es/).
+Todas las versiones publicadas de **SMStoTelegram**, con lo que cambió en cada una.
+El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y las versiones,
+[SemVer](https://semver.org/lang/es/).
 
-## [1.2.0] - 2026-10-11
+> **SMStoTelegram nace de [SMStoSMS](https://github.com/jbautistamartin/SMStoSMS)**, que recibe
+> SMS y los reenvía como SMS a otro teléfono. Esta aplicación hace lo mismo con la entrada y
+> cambia la salida: entrega en Telegram. Son **aplicaciones distintas**, con `applicationId`
+> propio y base de datos propia, y pueden convivir en el mismo dispositivo. Por eso este registro
+> empieza de cero en lugar de continuar el de aquella.
+
+---
+
+## [No publicado]
+
+Nada todavía.
+
+---
+
+## [1.0.0] — 2026-10-12
+
+Primera versión publicada. Es la aplicación completa, no un adelanto: lo que la numera como 1.0.0
+y no como 0.x es que la cadena entera —recibir, evaluar, entregar, reintentar, rescatar lo
+atascado y purgar— está terminada y verificada en un dispositivo real.
 
 ### Añadido
 
-- **Aviso de versión nueva.** Una vez al día comprueba si hay publicado un release más reciente y
-  lo marca con un punto en la pestaña **Acerca de**, sin diálogos ni notificaciones. Desde la
-  tarjeta de esa pestaña se puede descargar e instalar el APK —lo baja el gestor de descargas del
-  sistema y la instalación la confirma Android, como cualquier APK—, buscar a mano cuando se quiera
-  o apagar la comprobación automática. La actualización conserva reglas, ajustes y registro, porque
-  va firmada con la misma clave.
-
-- **Enlace al proyecto en «Acerca de».** Una tarjeta *Código abierto*, justo encima de la del
-  donativo, con un botón que abre la página del repositorio en el navegador: el código, el
-  registro de cambios y los APK publicados.
-
-## [1.1.0] - 2026-10-11
-
-La aplicación hace lo mismo que la 1.0.0 —recibir SMS en un teléfono con SIM y reenviarlos a otro
-número según reglas— y esta entrega va sobre cómo se maneja.
-
-### Añadido
-
-- **Pestañas deslizables.** Las cinco pantallas (Inicio, Reglas, Logs, Config y Acerca de) se
-  recorren deslizando el dedo, además de pulsando en la barra inferior. Volver atrás desde
-  cualquiera lleva a Inicio en lugar de cerrar la aplicación.
-- **Interruptor de recepción**, lo primero que hay en Config: apaga la lectura de los SMS que
-  llegan sin tocar reglas, permisos ni instalación. No es una comprobación por mensaje — se
-  desactiva el receptor del sistema, así que el SMS ni despierta a la aplicación. Corta la
-  entrada, no la salida: lo que ya estuviera en cola se termina de enviar.
-- **Copia de seguridad de toda la configuración** (Config → Copia de seguridad): los ajustes *y*
-  las reglas en un solo fichero, para restaurarlos aquí o clonarlos en otro teléfono. Al
-  importar, los ajustes se sustituyen y las reglas se **añaden** a las que haya, de modo que una
-  importación equivocada nunca deja el teléfono sin reenviar nada. El identificador de la SIM no
-  viaja en el fichero, porque señala a una tarjeta de *este* teléfono. El fichero contiene los
-  números de destino: trátalo como información sensible.
-- **Acceso al inicio automático del fabricante** desde Config (MIUI, HyperOS, EMUI, ColorOS y
-  Funtouch). Es el permiso que impide arrancar tras reiniciar en esos teléfonos y que no se puede
-  conceder ni consultar desde la aplicación.
-- **Aviso de responsabilidad** en «Acerca de», junto al de privacidad, y un enlace opcional para
-  invitar a un café. La aplicación no lo recuerda y ninguna función depende de él.
+- **Entrega por Telegram.** Los SMS recibidos se entregan como mensajes de Telegram a través de un
+  bot propio, a una persona, un grupo o un canal.
+- **Token del bot configurable en Ajustes**, con un botón que lo comprueba contra Telegram
+  (`getMe`) y dice **de qué bot se trata**, no solo si vale. El token se enmascara en pantalla,
+  no se escribe nunca en el registro y **no viaja en el fichero de copia de seguridad**.
+- **Descubrimiento de chats en la pantalla de reglas.** Un botón pregunta al bot quién le ha
+  escrito y ofrece la lista para elegir el destino, porque nadie se sabe su `chat_id`. Si la lista
+  vuelve vacía, la aplicación explica que un bot no puede escribir primero y que hace falta un
+  `/start` del otro lado.
+- **Aviso en el Panel cuando no se puede entregar nada**: sin token configurado, o con un token
+  que Telegram ha rechazado. Es el único fallo que afecta a todos los reenvíos por igual, y en el
+  registro serían cientos de líneas idénticas de las que solo la primera informa.
+- **Restricción de red en la cola de envíos.** Un reenvío encolado sin conexión espera a que
+  vuelva en lugar de gastar sus diez intentos contra una red que no está.
+- **Se respeta el `retry_after` de Telegram.** Un `429` dice en la respuesta cuánto hay que
+  esperar, y se espera.
 
 ### Cambiado
 
-- La exportación de reglas, que estaba en la pantalla de Reglas, es ahora parte de la copia de
-  seguridad de Config: las reglas son configuración y viajan con ella.
+- **El destino de una regla es un chat de Telegram**, no un número de teléfono: un `chat_id`
+  —negativo si es un grupo o un canal— o un `@usuario` de canal público.
+- **La plantilla por defecto pasa de `{mensaje}` a `{telefono} · {fecha}` y el mensaje debajo.**
+  Por Telegram todos los avisos llegan del mismo bot: sin el remitente en el texto, cuatro
+  mensajes seguidos son indistinguibles. El contexto que el SMS daba gratis hay que ponerlo.
+- **El límite de reenvíos por minuto sigue, por otro motivo.** Era un cortafuegos económico;
+  entregar por Telegram es gratis, así que ahora protege de los límites del Bot API: un mensaje
+  por segundo y chat, y unos 20 por minuto en un grupo.
+- **Icono y color propios.** La aplicación tenía el icono de SMStoSMS, y como las dos pueden
+  convivir en el mismo teléfono eran indistinguibles en el lanzador. El bocadillo se mantiene
+  —la entrada sigue siendo un SMS— y lo que cambia es lo de dentro: donde SMStoSMS tenía una
+  flecha de reenvío, aquí hay un avión de papel calado. El color primario pasa del verde azulado
+  al azul, que es de donde sale el fondo del icono.
+- **El aviso de privacidad se ha reescrito entero.** El contenido de los SMS sale a internet y
+  llega a los servidores de Telegram. Es el cambio más importante de esta aplicación respecto a
+  SMStoSMS para quien la instala.
+- Un mensaje admite **4.096 caracteres** en lugar de 160, y no se fragmenta salvo que se pase de
+  ahí. El contador de la pantalla de reglas cuenta caracteres, no SMS.
 
-### Corregido
+### Eliminado
 
-- **Las variantes de depuración y de publicación ya pueden convivir en el mismo teléfono.** La
-  *authority* del `FileProvider` estaba escrita a mano, así que las dos declaraban la misma y
-  Android se negaba a tener ambas instaladas (`INSTALL_FAILED_CONFLICTING_PROVIDER`). Ahora se
-  deriva del `applicationId`. Solo afecta a quien compila desde el código.
+- **El permiso `SEND_SMS`**, que era un permiso restringido, y **`READ_PHONE_STATE`**, que solo
+  servía para elegir SIM. Esta aplicación recibe por la radio y entrega por internet.
+- **El selector de SIM de envío**: ya no hay nada que enviar por una SIM.
+- **Las dos protecciones antibucle.** Comparaban el destino de una regla con el remitente del SMS,
+  y eso dejó de significar nada: un chat de Telegram y un número de teléfono son identidades sin
+  relación, no pueden ser el mismo ni cerrar un círculo. Un mensaje de Telegram no vuelve nunca
+  como SMS.
+- **El marcador `{telefono}` como destino** y el botón «Contestar al remitente» que lo escribía.
+  No hay forma de convertir el remitente de un SMS en un chat de Telegram. El marcador sigue en
+  la plantilla, donde ahora importa más que antes.
+- El recuento de partes de un SMS en la pantalla de reglas y en el historial.
 
-## [1.0.0] - 2026-10-09
+### Importante al venir de SMStoSMS
 
-Primera versión. Sustituye por completo la capa HTTP de SMSGateway: ya no hay servidor ni
-*endpoint*, el destino es otro teléfono.
-
-### Añadido
-
-- **Reglas de reenvío** en una lista ordenada por prioridad. Cada regla aplica una expresión
-  regular al remitente y otra al mensaje; gana la primera que casa, y puede dejar que la
-  evaluación continúe para reenviar a varios números. La coincidencia es parcial (`codigo` casa
-  con «Tu codigo es 4821») y cada regla decide si distingue mayúsculas.
-- **Plantillas** para el texto que sale, con `{mensaje}`, `{telefono}` y `{fecha}`, de modo que
-  quien lo recibe sepa de quién venía el original.
-- **Contestar al remitente**: `{telefono}` como número destino devuelve el mensaje a quien
-  escribió, en lugar de reenviarlo a un tercero.
-- **Panel de prueba**: se pega un SMS de ejemplo y la aplicación dice qué regla casa, a dónde
-  iría y con qué texto saldría, sin enviar nada.
-- **Sin pérdida de mensajes.** Patrón *outbox*: el SMS se persiste en Room antes de hacer
-  cualquier otra cosa.
-- **Confirmación real de envío.** Se espera el `sentIntent` del operador; un reenvío solo se da
-  por bueno cuando todas sus partes confirman.
-- **Protección antibucle y límite por minuto.** Se descartan los SMS que vuelven de un destino
-  configurado y no se reenvía al propio remitente, porque cada SMS cuesta dinero.
-- **Reintentos automáticos** con WorkManager y *backoff* configurable, más un rescate cada 30
-  segundos de lo que se quede atascado.
-- **Arranque automático** tras reiniciar el dispositivo, **registro de auditoría** con filtros y
-  exportación a fichero, y **selección de SIM** en teléfonos de doble tarjeta.
+Un fichero de copia de seguridad de **SMStoSMS no se puede importar aquí**, y la aplicación lo
+rechaza explicándolo. El fichero tiene exactamente la misma forma, pero sus destinos son números
+de teléfono: entraría sin un solo error y dejaría un juego de reglas cuyos destinos no existen,
+fallando uno por uno cuando llegara un SMS. Las reglas hay que crearlas de nuevo con los chats.

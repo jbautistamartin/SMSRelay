@@ -27,6 +27,57 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="24dp" />
 
+        <!-- ── Bot de Telegram ─────────────────────────────────────────────
+             Va antes incluso que la recepción porque es el único ajuste que una instalación
+             nueva trae vacío y sin el que no se puede entregar nada: la aplicación recibiría
+             SMS y los iría marcando como fallidos. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_seccion_bot"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="8dp" />
+
+        <!-- password_toggle: enmascarado por defecto, con el ojo para comprobar lo que se
+             ha pegado. Un token es una credencial y no debe quedarse legible en pantalla, pero
+             esconderlo sin poder verlo haría imposible detectar un pegado a medias. -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_token_bot"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/settings_token_bot"
+            app:endIconMode="password_toggle"
+            app:helperText="@string/settings_token_bot_ayuda"
+            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_token_bot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:imeOptions="actionDone"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_validar_bot"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/settings_validar_bot" />
+
+        <TextView
+            android:id="@+id/text_view_resultado_bot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:visibility="gone" />
+
         <!-- ── Recepción ───────────────────────────────────────────────────
              Va el primero porque manda sobre todo lo demás: con esto apagado, nada de lo que
              hay debajo llega a usarse. -->
@@ -191,50 +242,6 @@
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="8dp" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardElevation="0dp"
-            app:strokeColor="?attr/colorOutline"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_proteger_bucles"
-                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_proteger_bucles_detalle"
-                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_proteger_bucles"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_max_reenvios_minuto"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
@@ -322,46 +329,6 @@
                 android:imeOptions="actionDone"
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- ── SIM de envío: solo visible en dispositivos con más de una ──── -->
-        <LinearLayout
-            android:id="@+id/layout_sim"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <com.google.android.material.divider.MaterialDivider
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_seccion_sim"
-                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                android:textColor="?attr/colorPrimary"
-                android:layout_marginBottom="8dp" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_sim"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:hint="@string/settings_sim"
-                app:helperText="@string/settings_sim_ayuda">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/dropdown_sim"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:editable="false" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-        </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_guardar"
