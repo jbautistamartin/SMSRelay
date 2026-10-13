@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.capicua.smstotelegram.R
 import com.capicua.smstotelegram.data.config.AppConfig
 import com.capicua.smstotelegram.data.config.ResultadoCopia
+import com.capicua.smstotelegram.data.telegram.TokenDeBot
 import com.capicua.smstotelegram.databinding.FragmentSettingsBinding
 import com.capicua.smstotelegram.util.InicioAutomatico
 import com.capicua.smstotelegram.util.OptimizacionBateria
@@ -220,6 +221,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun rellenarCampos(config: AppConfig) {
+        binding.editTextTokenBot.setText(config.tokenBot)
         binding.switchRecepcion.isChecked = config.recepcionActiva
         binding.switchProtegerBucles.isChecked = config.protegerBucles
         binding.editTextMaxReenviosMinuto.setText(config.maxReenviosPorMinuto.toString())
@@ -230,17 +232,19 @@ class SettingsFragment : Fragment() {
 
     private fun configurarBotonGuardar() {
         binding.buttonGuardar.setOnClickListener {
+            val token = TokenDeBot.normalizar(binding.editTextTokenBot.text?.toString().orEmpty())
             val maxPorMinuto = binding.editTextMaxReenviosMinuto.entero(VALORES.maxReenviosPorMinuto)
             val timeoutEnvio = binding.editTextTimeoutEnvio.entero(VALORES.timeoutEnvioSegundos)
             val maxReintentos = binding.editTextMaxReintentos.entero(VALORES.maxReintentos)
             val intervalo = binding.editTextIntervalo.entero(VALORES.intervaloReintentoSegundos)
 
-            if (!validar(maxPorMinuto, timeoutEnvio, maxReintentos, intervalo)) {
+            if (!validar(token, maxPorMinuto, timeoutEnvio, maxReintentos, intervalo)) {
                 return@setOnClickListener
             }
 
             viewModel.guardar(
                 AppConfig(
+                    tokenBot = token,
                     maxReintentos = maxReintentos,
                     intervaloReintentoSegundos = intervalo,
                     timeoutEnvioSegundos = timeoutEnvio,
@@ -264,12 +268,23 @@ class SettingsFragment : Fragment() {
     }
 
     private fun validar(
+        token: String,
         maxPorMinuto: Int,
         timeoutEnvio: Int,
         maxReintentos: Int,
         intervalo: Int
     ): Boolean {
         var valido = true
+
+        // Solo la forma. Si el token sirve de verdad únicamente lo sabe Telegram, y eso es lo
+        // que comprueba el botón de validación; esto atrapa el fallo más común, que es pegar
+        // algo que no es un token.
+        if (TokenDeBot.pareceValido(token)) {
+            binding.tilTokenBot.error = null
+        } else {
+            binding.tilTokenBot.error = getString(R.string.settings_token_bot_invalido)
+            valido = false
+        }
 
         valido = comprobarRango(
             binding.tilMaxReenviosMinuto, maxPorMinuto, 1, 100,

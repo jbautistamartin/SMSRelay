@@ -191,7 +191,7 @@ mensajes viaja por aquí». Hoy es verdad —no hay transporte— y deja de serl
 `TelegramSender` exista. **Reescribirlo es parte de la fase 3**, no de la 7: un permiso mal
 documentado en el manifest es el sitio donde peor sienta.
 
-### Fase 3 — Cliente de Telegram · `[ ]`
+### Fase 3 — Cliente de Telegram · `[x]` completada el 12 oct 2026
 
 `data/telegram/`: `ApiTelegram` (el `POST` a `sendMessage`), modelos serializables de la
 respuesta, y `TelegramSender : EnviadorDeMensajes`.
@@ -221,19 +221,90 @@ no la necesitaba; sin ella se quemarían reintentos sin cobertura. Y troceado po
 caracteres del límite, que solo entra en juego con un SMS concatenado muy largo más una plantilla
 generosa.
 
-**Hecho cuando:** un token y un `chat_id` puestos a mano en el DataStore hacen que un SMS
-simulado con `adb emu sms send` llegue a Telegram, y los tests del mapeo de errores pasan.
+**El token es configuración, no código.** `AppConfig.tokenBot` y su campo en Ajustes entran en
+esta fase y no en la siguiente: sin un sitio donde escribirlo, la única forma de probar el
+transporte sería hurgar en el DataStore a mano, y un token en el código fuente de un APK es un
+token regalado. Lo que queda para la fase 4 es el trato de la credencial, no su existencia.
 
-### Fase 4 — Ajustes: el bot · `[ ]`
+**Hecho cuando:** se pega un token en Ajustes, se pone un `chat_id` en una regla, y un SMS
+simulado con `adb emu sms send` llega a Telegram. Los tests del mapeo de errores pasan sin red.
 
-- `AppConfig.tokenBot`, enmascarado en la interfaz y nunca en los logs.
+#### Resultado real
+
+`assembleDebug test` en verde con **109 tests** y 0 fallos: 24 nuevos entre `MapeoDeRespuestasTest`
+(18) y `TokenDeBotTest` (6). La entrega real contra un bot vivo queda para la fase 8, que es la de
+dispositivo; todo lo que se puede verificar sin red está verificado.
+
+Cinco piezas nuevas en `data/telegram/`:
+
+| Fichero | Papel |
+|---------|-------|
+| `TelegramSender.kt` | El `POST` a `sendMessage` y la implementación de `EnviadorDeMensajes` |
+| `MapeoDeRespuestas.kt` | Función **pura** de (código HTTP, cuerpo) a `ResultadoEnvio`, y el troceado |
+| `TokenDeBot.kt` | Lo que se puede decir de un token sin preguntar a Telegram |
+| `EstadoDelBot.kt` | Recuerda si el token fue rechazado, para que el Panel pueda decirlo |
+
+`MapeoDeRespuestas` está separado de quien hace la petición **precisamente** para que sea
+testable: es la pieza que más importa que esté bien y la única que se puede probar sin red.
+
+#### Decisiones tomadas al implementar
+
+1. **El token entró en esta fase y no en la 4.** Sin un campo donde escribirlo, probar el
+   transporte habría exigido hurgar en el DataStore a mano. Lo que queda para la 4 es el trato de
+   la credencial —enmascarado, `getMe`, formato 4 del fichero—, no su existencia.
+2. **Importar una copia habría borrado el token.** `ConfiguracionJson.aDominio()` construye un
+   `AppConfig` completo y los ajustes se *reemplazan* al importar, así que un token ausente del
+   fichero habría entrado como cadena vacía y la aplicación se habría quedado muda sin que nadie
+   tocara nada. `aDominio(tokenActual)` lo arregla, y es el mismo papel que tenía `simActual`.
+   Era un fallo de pérdida de datos y no podía esperar a la fase 4.
+3. **`retry_after` se respeta durmiendo antes de devolver `retry()`.** WorkManager cuenta su
+   backoff **desde que el worker termina**, así que dormir dentro del worker es la única forma que
+   tiene de retrasar el siguiente intento. Con tope de 120 s: un worker tiene unos diez minutos
+   antes de que el sistema lo pare, y bloquear uno un cuarto de hora para respetar un
+   `retry_after` enorme cambia un problema por otro peor.
+4. **Un `404` es un fallo de credencial, no un chat inexistente.** El token va *dentro de la URL*
+   del Bot API, así que la ruta entera depende de él: un «no existe» ahí significa que el token no
+   existe. `esFalloDeCredencial()` agrupa 401 y 404, y solo esos dos encienden el aviso del Panel;
+   un 400 o un 403 son problemas de *ese* destino y mandar a revisar el token sería mandar a mirar
+   donde no es.
+5. **Troceado en vez de truncado.** Pasarse de 4.096 caracteres exige un SMS concatenado muy largo
+   más una plantilla generosa, así que casi nunca ocurre. Cortar y tirar el resto perdería
+   contenido en silencio; dejar que Telegram conteste `400` convertiría un mensaje largo en un
+   reenvío fallido. Se trocea por el último salto de línea, y si no hay, por el último espacio.
+6. **El aviso del Panel es un `Flow`, no una comprobación puntual.** Se recalcula con cada cambio
+   de la configuración y con el flag de token rechazado, que es cuando puede dejar de ser cierto.
+   Guardar en Ajustes limpia el flag: es el gesto de quien viene a arreglarlo, y si el token nuevo
+   tampoco sirve, el siguiente envío lo pondrá otra vez.
+
+#### La trampa que no se pisó
+
+**Nada de `parse_mode`.** Con `Markdown` o `HTML`, cualquier SMS que lleve un `_`, un `*`, un `[`
+o un `<` —un enlace de un banco, una carita— hace que Telegram devuelva
+`400 Bad Request: can't parse entities`, y el reenvío se cierra como fallido permanente: el
+mensaje **no se entrega** por haber querido ponerlo en negrita. El cuerpo del SMS es contenido de
+un tercero y no se interpreta nunca, que es la misma regla que el evaluador ya aplicaba al
+sustituir `{mensaje}` en último lugar.
+
+#### El comentario del manifest, reescrito
+
+Dicho y hecho: el bloque de `INTERNET` afirmaba que «ningún contenido de los mensajes viaja por
+aquí». Ahora dice lo contrario, que es la verdad, y además dice que **hasta la versión anterior la
+frase era la otra y se mantuvo escrita mientras fue cierta**. El aviso de privacidad de «Acerca
+de» sigue siendo de la fase 7.
+
+### Fase 4 — El bot, bien tratado · `[ ]`
+
+Lo que no es «que funcione», que ya lo hizo la fase 3, sino «que la credencial esté bien»:
+
+- Enmascarado en la interfaz y **nunca** en los logs, ni en un `Timber.d` de depuración.
 - Botón de validación que llama a `getMe` y muestra el `@usuario` del bot: retroalimentación
-  inmediata de que el token sirve.
+  inmediata de que el token sirve, en vez de descubrirlo cuando falle el primer reenvío.
 - `ConfigBackup` sube a **formato 4**: el token **no viaja** en el fichero. Importar una copia en
-  otro teléfono no se lleva la credencial.
+  otro teléfono no se lleva la credencial, igual que no se llevaba la SIM, y por un motivo peor:
+  el fichero es JSON en claro y el token permite escribir en nombre del bot.
 
-**Hecho cuando:** se configura el bot entero desde la pantalla, exportar e importar funciona y el
-token no aparece en el JSON exportado.
+**Hecho cuando:** exportar e importar funciona, el token no aparece en el JSON exportado ni en
+`adb logcat`, y la pantalla dice de qué bot se trata.
 
 ### Fase 5 — Reglas: el destino es un chat · `[ ]`
 

@@ -25,8 +25,16 @@ sealed interface ResultadoEnvio {
     /**
      * Fallo que puede desaparecer solo: sin red, el servicio no contesta, o la confirmación no
      * llegó dentro del plazo. Se reintenta con el backoff de WorkManager.
+     *
+     * @param esperaSegundos espera que el propio servicio ha pedido, si lo ha hecho. Es el caso
+     *   del `retry_after` que Telegram devuelve con un `429`: el servicio sabe mejor que
+     *   nosotros cuánto hay que esperar, y reintentar antes solo gasta otro `429`. Null es lo
+     *   normal, y significa «aplica el backoff de siempre».
      */
-    data class ErrorTransitorio(val motivo: String) : ResultadoEnvio
+    data class ErrorTransitorio(
+        val motivo: String,
+        val esperaSegundos: Int? = null
+    ) : ResultadoEnvio
 
     /**
      * Fallo que no se va a arreglar reintentando: el destino no existe, el mensaje es inválido

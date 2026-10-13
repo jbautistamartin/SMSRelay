@@ -64,9 +64,9 @@ data class ReglasExportadas(
  * **No todo lo que está en `AppConfig` se exporta.** El fichero describe *cómo reenviar*, que es
  * algo que tiene sentido llevarse a otro teléfono; lo que identifica a este teléfono en concreto
  * se queda. El caso que fijó el criterio fue la SIM de envío, que apuntaba a una tarjeta de
- * *este* dispositivo y restaurada en otro mandaba los reenvíos por donde no era; ese ajuste ya
- * no existe, pero el criterio sí, y en la fase 4 lo hereda el token del bot, que además es una
- * credencial y no debe andar en un JSON en claro.
+ * *este* dispositivo y restaurada en otro mandaba los reenvíos por donde no era. Ese ajuste ya
+ * no existe; el criterio lo hereda **el token del bot**, por un motivo peor: este fichero es
+ * JSON en claro y el token permite escribir en nombre del bot.
  */
 @Serializable
 data class ConfiguracionJson(
@@ -89,8 +89,16 @@ fun AppConfig.aJson() = ConfiguracionJson(
     recepcionActiva = recepcionActiva
 )
 
-/** Convierte los ajustes importados al dominio. */
-fun ConfiguracionJson.aDominio() = AppConfig(
+/**
+ * Convierte los ajustes importados al dominio.
+ *
+ * [tokenActual] es el token que ya tenía este teléfono. **No viene en el fichero y hay que
+ * pasarlo**, porque los ajustes se *reemplazan* al importar: sin esto, importar una copia
+ * dejaría `tokenBot` vacío y la aplicación se quedaría muda sin que nadie hubiera tocado el
+ * token. Es el mismo papel que tenía `simActual` cuando el transporte era el SMS.
+ */
+fun ConfiguracionJson.aDominio(tokenActual: String) = AppConfig(
+    tokenBot = tokenActual,
     maxReintentos = maxReintentos,
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,

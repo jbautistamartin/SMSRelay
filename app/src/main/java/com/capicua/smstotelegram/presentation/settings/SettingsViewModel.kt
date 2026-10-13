@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smstotelegram.data.config.AppConfig
 import com.capicua.smstotelegram.data.config.ConfigBackup
 import com.capicua.smstotelegram.data.config.ConfigDataStore
+import com.capicua.smstotelegram.data.telegram.EstadoDelBot
 import com.capicua.smstotelegram.data.config.ResultadoCopia
 import com.capicua.smstotelegram.util.ControlRecepcion
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +30,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     application: Application,
     private val configDataStore: ConfigDataStore,
-    private val configBackup: ConfigBackup
+    private val configBackup: ConfigBackup,
+    private val estadoDelBot: EstadoDelBot
 ) : AndroidViewModel(application) {
 
     /**
@@ -59,6 +61,10 @@ class SettingsViewModel @Inject constructor(
     fun guardar(config: AppConfig) {
         viewModelScope.launch {
             configDataStore.guardar(config)
+            // Guardar el token es el gesto de quien viene a arreglar el aviso de «Telegram
+            // rechazó el token». Dejarlo puesto mandaría a arreglar lo ya arreglado; si el
+            // nuevo token tampoco sirve, el siguiente envío lo pondrá otra vez.
+            estadoDelBot.olvidarTokenRechazado()
             ControlRecepcion.aplicar(getApplication(), config.recepcionActiva)
         }
     }

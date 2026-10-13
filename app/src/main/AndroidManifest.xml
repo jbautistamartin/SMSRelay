@@ -29,11 +29,19 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!--
-        Comprobador de versiones. INTERNET volvió aquí **solo** para esto: preguntar a
-        api.github.com si hay publicada una versión más nueva y bajar su APK si se pide. El
-        reenvío de SMS no usa la red —sale por la radio del teléfono, no por datos— y ningún
-        contenido de los mensajes viaja por aquí; «Acerca de» lo dice y se puede apagar desde
-        esa misma pantalla.
+        INTERNET es ahora el permiso central de la aplicación, y conviene leer esto antes de
+        suponer nada: **el contenido de los SMS sale por aquí**. Se entrega a los servidores de
+        Telegram, que es un tercero, mediante una petición al Bot API. Eso es lo que esta
+        aplicación hace, no un efecto colateral, y «Acerca de» lo dice con todas las letras en
+        el aviso de privacidad porque quien la instala tiene que saberlo.
+
+        Hasta la versión anterior de este proyecto la frase era la contraria —el reenvío salía
+        por la radio del operador y ningún mensaje tocaba la red— y la mantuvimos escrita aquí
+        mientras fue verdad. Ya no lo es.
+
+        El mismo permiso sirve al comprobador de versiones, que pregunta a api.github.com si hay
+        publicada una versión más nueva y baja su APK cuando alguien lo pide. Eso sí se puede
+        apagar desde «Acerca de»; la entrega de los mensajes, evidentemente, no.
 
         REQUEST_INSTALL_PACKAGES permite abrir el instalador del sistema con el APK descargado.
         No instala en silencio: Android enseña igualmente su diálogo, y desde Android 8 además

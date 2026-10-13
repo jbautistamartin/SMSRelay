@@ -27,6 +27,37 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="24dp" />
 
+        <!-- ── Bot de Telegram ─────────────────────────────────────────────
+             Va antes incluso que la recepción porque es el único ajuste que una instalación
+             nueva trae vacío y sin el que no se puede entregar nada: la aplicación recibiría
+             SMS y los iría marcando como fallidos. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_seccion_bot"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_token_bot"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:hint="@string/settings_token_bot"
+            app:helperText="@string/settings_token_bot_ayuda"
+            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_token_bot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textNoSuggestions"
+                android:imeOptions="actionDone"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <!-- ── Recepción ───────────────────────────────────────────────────
              Va el primero porque manda sobre todo lo demás: con esto apagado, nada de lo que
              hay debajo llega a usarse. -->

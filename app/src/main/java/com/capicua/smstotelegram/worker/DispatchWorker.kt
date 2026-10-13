@@ -20,6 +20,7 @@ import com.capicua.smstotelegram.domain.transport.ResultadoEnvio
 import com.capicua.smstotelegram.util.Constants
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.time.Instant
@@ -128,9 +129,30 @@ class DispatchWorker @AssistedInject constructor(
                 reenvioRepository.registrarError(reenvioId, error)
                 registrar(LogTipo.ERROR, reenvio.smsId, reenvioId, reenvio.destino, error)
                 Timber.w("DispatchWorker[$reenvioId]: $error, reintentando")
+                esperarSiLoPiden(resultado.esperaSegundos)
                 Result.retry()
             }
         }
+    }
+
+    /**
+     * Espera antes de devolver `retry()` cuando el transporte ha pedido una espera concreta.
+     *
+     * No es un adorno: WorkManager cuenta su backoff **desde que el worker termina**, así que
+     * dormir aquí es la única forma que tiene esta clase de retrasar el siguiente intento. Sin
+     * esto, un `retry_after` de Telegram se ignoraría y el reintento llegaría otra vez pronto,
+     * se comería otro `429` y gastaría un intento de los diez.
+     *
+     * La espera se **limita** a [MAX_ESPERA_SEGUNDOS]: un worker tiene unos diez minutos de
+     * ejecución antes de que el sistema lo pare, y bloquear uno durante un cuarto de hora para
+     * respetar un `retry_after` enorme cambiaría un problema por otro peor. Si la espera pedida
+     * es mayor, se duerme el tope y se deja que el backoff normal haga el resto.
+     */
+    private suspend fun esperarSiLoPiden(segundos: Int?) {
+        if (segundos == null || segundos <= 0) return
+        val espera = segundos.coerceAtMost(MAX_ESPERA_SEGUNDOS)
+        Timber.d("DispatchWorker: el transporte pidió esperar ${segundos}s, esperando ${espera}s")
+        delay(espera * 1000L)
     }
 
     private suspend fun registrar(
@@ -150,5 +172,10 @@ class DispatchWorker @AssistedInject constructor(
                 timestamp = Instant.now()
             )
         )
+    }
+
+    private companion object {
+        /** Tope de la espera que puede pedir el transporte, en segundos. */
+        const val MAX_ESPERA_SEGUNDOS = 120
     }
 }

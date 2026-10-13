@@ -14,6 +14,19 @@ package com.capicua.smstotelegram.data.config
  * reenvíos por igual.
  */
 data class AppConfig(
+    /**
+     * Token del bot de Telegram, tal como lo entrega @BotFather.
+     *
+     * Vacío significa «sin configurar», y es el valor con el que arranca una instalación nueva:
+     * **no hay ningún token en el código**. Uno escrito en el fuente de un APK es un token
+     * regalado —el APK se puede descomprimir— y además sería el mismo para todo el mundo.
+     *
+     * Es una credencial, y eso impone tres cosas que el resto de los ajustes no necesitan: no
+     * se escribe nunca en el log, se enmascara en la pantalla, y no viaja en el fichero de
+     * copia de seguridad.
+     */
+    val tokenBot: String = "",
+
     /** Número máximo de intentos antes de dar un reenvío por fallido permanentemente. */
     val maxReintentos: Int = 10,
 

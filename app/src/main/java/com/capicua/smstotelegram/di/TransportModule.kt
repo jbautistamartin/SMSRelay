@@ -5,7 +5,7 @@
 
 package com.capicua.smstotelegram.di
 
-import com.capicua.smstotelegram.data.transport.TransporteSinConfigurar
+import com.capicua.smstotelegram.data.telegram.TelegramSender
 import com.capicua.smstotelegram.domain.transport.EnviadorDeMensajes
 import dagger.Binds
 import dagger.Module
@@ -20,8 +20,9 @@ import javax.inject.Singleton
  * Todo lo demás —el worker de despacho, la pantalla de prueba, el editor de reglas— depende de
  * [EnviadorDeMensajes], así que cambiar de medio es cambiar esta línea.
  *
- * Y eso es exactamente lo que va a pasar en la fase 3: `TransporteSinConfigurar` sale y entra
- * `TelegramSender`.
+ * Y eso es exactamente lo que pasó en la fase 3: salió el andamio `TransporteSinConfigurar` y
+ * entró [TelegramSender], sin que se tocara ni el worker de despacho, ni el evaluador de reglas,
+ * ni la cola, ni el rescate de huérfanos.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,5 +30,5 @@ abstract class TransportModule {
 
     @Binds
     @Singleton
-    abstract fun bindEnviadorDeMensajes(impl: TransporteSinConfigurar): EnviadorDeMensajes
+    abstract fun bindEnviadorDeMensajes(impl: TelegramSender): EnviadorDeMensajes
 }

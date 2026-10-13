@@ -18,8 +18,8 @@ import org.junit.Test
  * Tests del formato de intercambio de reglas.
  *
  * Lo que se verifica no es que kotlinx.serialization funcione, sino las decisiones propias del
- * formato: que los ids locales no viajen, que la SIM tampoco, que el orden relativo se conserve
- * y que un fichero escrito por otra versión no reviente el parseo.
+ * formato: que los ids locales no viajen, que el token del bot tampoco, que el orden relativo
+ * se conserve y que un fichero escrito por otra versión no reviente el parseo.
  */
 class ReglasJsonTest {
 
@@ -132,6 +132,7 @@ class ReglasJsonTest {
     @Test
     fun `los ajustes sobreviven a la ida y vuelta`() {
         val original = AppConfig(
+            tokenBot = "123:no-deberia-viajar",
             maxReintentos = 7,
             intervaloReintentoSegundos = 45,
             timeoutEnvioSegundos = 90,
@@ -152,7 +153,11 @@ class ReglasJsonTest {
             )
         )
 
-        assertEquals(original, recuperado.configuracion!!.aDominio())
+        // El token es una credencial: no viaja en el fichero y al importar se conserva el
+        // que tenga el dispositivo de destino.
+        val importado = recuperado.configuracion!!.aDominio(tokenActual = "999:conservado")
+
+        assertEquals(original.copy(tokenBot = "999:conservado"), importado)
     }
 
     /**

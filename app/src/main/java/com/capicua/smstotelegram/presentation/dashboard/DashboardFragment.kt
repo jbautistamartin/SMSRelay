@@ -64,6 +64,18 @@ class DashboardFragment : Fragment() {
                     }
                 }
                 launch {
+                    // El aviso del transporte va en rojo y por encima del de «sin reglas»:
+                    // sin poder entregar, lo que digan las reglas da igual.
+                    viewModel.avisoTransporte.collect { motivo ->
+                        binding.textViewAvisoTransporte.visibility =
+                            if (motivo == null) View.GONE else View.VISIBLE
+                        if (motivo != null) {
+                            binding.textViewAvisoTransporte.text =
+                                getString(R.string.dashboard_aviso_transporte, motivo)
+                        }
+                    }
+                }
+                launch {
                     viewModel.resumen.collect { resumen ->
                         binding.textViewResumen.text = getString(
                             R.string.dashboard_resumen,

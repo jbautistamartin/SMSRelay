@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -30,6 +31,7 @@ class ConfigDataStore @Inject constructor(
     val config: Flow<AppConfig> = dataStore.data.map { prefs ->
         val porDefecto = AppConfig()
         AppConfig(
+            tokenBot                   = prefs[Keys.TOKEN_BOT]            ?: porDefecto.tokenBot,
             maxReintentos              = prefs[Keys.MAX_REINTENTOS]        ?: porDefecto.maxReintentos,
             intervaloReintentoSegundos = prefs[Keys.INTERVALO_REINTENTO]   ?: porDefecto.intervaloReintentoSegundos,
             timeoutEnvioSegundos       = prefs[Keys.TIMEOUT_ENVIO]         ?: porDefecto.timeoutEnvioSegundos,
@@ -42,6 +44,7 @@ class ConfigDataStore @Inject constructor(
     /** Guarda toda la configuración de forma atómica. */
     suspend fun guardar(config: AppConfig) {
         dataStore.edit { prefs ->
+            prefs[Keys.TOKEN_BOT]           = config.tokenBot
             prefs[Keys.MAX_REINTENTOS]      = config.maxReintentos
             prefs[Keys.INTERVALO_REINTENTO] = config.intervaloReintentoSegundos
             prefs[Keys.TIMEOUT_ENVIO]       = config.timeoutEnvioSegundos
@@ -52,6 +55,7 @@ class ConfigDataStore @Inject constructor(
     }
 
     private object Keys {
+        val TOKEN_BOT           = stringPreferencesKey("token_bot")
         val MAX_REINTENTOS      = intPreferencesKey("max_reintentos")
         val INTERVALO_REINTENTO = intPreferencesKey("intervalo_reintento")
         val TIMEOUT_ENVIO       = intPreferencesKey("timeout_envio_segundos")

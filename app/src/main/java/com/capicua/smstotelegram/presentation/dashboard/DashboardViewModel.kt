@@ -7,9 +7,12 @@ package com.capicua.smstotelegram.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.capicua.smstotelegram.data.config.ConfigDataStore
 import com.capicua.smstotelegram.data.repository.ReenvioRepository
 import com.capicua.smstotelegram.data.repository.ReglaRepository
 import com.capicua.smstotelegram.data.repository.SmsRepository
+import com.capicua.smstotelegram.data.telegram.EstadoDelBot
+import com.capicua.smstotelegram.domain.transport.EnviadorDeMensajes
 import com.capicua.smstotelegram.domain.model.SmsConReenvios
 import com.capicua.smstotelegram.domain.usecase.ObtenerListaSmsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,6 +32,9 @@ data class ResumenInicio(
 class DashboardViewModel @Inject constructor(
     private val obtenerListaSms: ObtenerListaSmsUseCase,
     private val smsRepository: SmsRepository,
+    private val enviador: EnviadorDeMensajes,
+    private val estadoDelBot: EstadoDelBot,
+    configDataStore: ConfigDataStore,
     reenvioRepository: ReenvioRepository,
     reglaRepository: ReglaRepository
 ) : ViewModel() {
@@ -50,6 +56,23 @@ class DashboardViewModel @Inject constructor(
     ) { total, pendientes, reglas ->
         ResumenInicio(total, pendientes, reglas)
     }
+
+    /**
+     * Por qué no se puede entregar nada, o null si el transporte está listo.
+     *
+     * Es el aviso más importante del Panel, porque es el único fallo que afecta a **todos** los
+     * reenvíos por igual: sin token, o con un token que Telegram ha rechazado, la aplicación
+     * recibe SMS y los va marcando como fallidos uno a uno. En el registro eso son cuatrocientas
+     * líneas idénticas de las que solo la primera informa; aquí es una línea en la primera
+     * pantalla, que es donde alguien la va a leer.
+     *
+     * Se recalcula con cada cambio de la configuración, que es cuando puede dejar de ser cierto:
+     * el motivo depende del token guardado y de si el último envío fue rechazado.
+     */
+    val avisoTransporte: Flow<String?> = combine(
+        configDataStore.config,
+        estadoDelBot.tokenRechazado
+    ) { _, _ -> enviador.motivoNoDisponible() }
 
     fun limpiarTodos() {
         viewModelScope.launch {

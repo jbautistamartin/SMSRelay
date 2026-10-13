@@ -7,6 +7,7 @@
     <string name="dashboard_no_messages">Aún no se han recibido mensajes</string>
     <string name="sms_borrar_todos">Borrar</string>
     <string name="dashboard_resumen">%1$d SMS · %2$d reenvío(s) en curso · %3$d regla(s) activa(s)</string>
+    <string name="dashboard_aviso_transporte">⚠ No se puede entregar nada: %1$s</string>
     <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se reenvían a ningún número. Crea una regla en la pestaña Reglas.</string>
     <string name="sms_ruta_sin_regla">Ninguna regla casó: no se reenvió</string>
     <string name="sms_ruta_descartado">Descartado por una protección</string>
@@ -37,6 +38,11 @@
     <string name="settings_guardado">Configuración guardada</string>
     <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se reenviará nada.</string>
 
+    <string name="settings_seccion_bot">Bot de Telegram</string>
+    <string name="settings_token_bot">Token del bot</string>
+    <string name="settings_token_bot_ayuda">Crea un bot escribiendo a @BotFather en Telegram y pega aquí el token que te dé. Sin token no se puede entregar nada. El token no se incluye en la copia de seguridad.</string>
+    <string name="settings_token_bot_invalido">El token no tiene la forma que entrega @BotFather (números, dos puntos y una cadena larga)</string>
+
     <string name="settings_seccion_recepcion">Recepción de SMS</string>
     <string name="settings_recepcion">Leer los SMS que llegan</string>
     <string name="settings_recepcion_detalle">Al desactivarlo, la aplicación deja de leer los mensajes entrantes: no se guardan, no se evalúan reglas y no se reenvía nada. Lo que ya estuviera en cola sí se termina de enviar.</string>
@@ -63,7 +69,7 @@
 
     <string name="settings_seccion_envio">Envío y reintentos</string>
     <string name="settings_timeout_envio">Espera de confirmación</string>
-    <string name="settings_timeout_envio_ayuda">Tiempo que se espera la respuesta del operador antes de reintentar. Entre 10 y 300 s. Recomendado: 60</string>
+    <string name="settings_timeout_envio_ayuda">Tiempo que se espera la respuesta de Telegram antes de reintentar. Entre 10 y 300 s. Recomendado: 60</string>
     <string name="settings_max_reintentos">Máximo de reintentos</string>
     <string name="settings_max_reintentos_ayuda">Entre 1 y 100. Recomendado: 10</string>
     <string name="settings_intervalo">Intervalo inicial de reintento</string>
@@ -71,7 +77,7 @@
 
 
     <string name="settings_backup_titulo">Copia de seguridad</string>
-    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los números de destino: trátalo como información sensible.</string>
+    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los destinos de los reenvíos: trátalo como información sensible. El token del bot no viaja en él.</string>
     <string name="settings_exportar">Exportar</string>
     <string name="settings_importar">Importar</string>
     <string name="settings_importar_confirmar">Los ajustes del fichero sustituyen a los actuales. Las reglas se añaden a las que ya hay, sin borrar ninguna.</string>
