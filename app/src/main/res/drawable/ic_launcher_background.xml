@@ -8,9 +8,15 @@
 
     El color es lo que identifica a esta aplicación de un vistazo, y por eso ha cambiado dos
     veces por el mismo motivo. SMSGateway era azul #1565C0; SMStoSMS pasó a verde azulado
-    porque las dos podían convivir en el mismo teléfono; SMStoTelegram vuelve a la familia azul
-    —la de Telegram— porque es la que dice a dónde entrega, y porque con el teal sería
-    indistinguible de SMStoSMS en el lanzador, que es justo el problema que el teal resolvía.
+    porque las dos podían convivir en el mismo teléfono; SMStoTelegram volvió a la familia azul
+    —la de Telegram— porque es la que dice a dónde entrega.
+
+    SMStoWhats **se queda en ese azul**, y es una decisión, no un descuido. El verde que le
+    correspondería por destino es justo el que no puede usar: a 48 dp en el lanzador sería
+    indistinguible del verde azulado de SMStoSMS, que es exactamente el problema que el teal
+    existía para resolver. Entre decir a dónde entrega y poder distinguirse de sus hermanas,
+    gana lo segundo, porque el icono se mira para encontrar la aplicación, no para recordar su
+    arquitectura.
 
     El degradado es sutil a propósito. A 48 dp no se percibe como degradado, solo evita que el
     icono se vea plano junto a los demás. Los dos extremos se derivan del primario con el mismo

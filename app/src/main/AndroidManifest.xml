@@ -52,13 +52,13 @@
 
 
     <application
-        android:name=".SmsToTelegramApplication"
+        android:name=".SmsToWhatsApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SmsToTelegram">
+        android:theme="@style/Theme.SmsToWhats">
 
         <activity
             android:name=".MainActivity"
@@ -104,7 +104,7 @@
             Deshabilita la auto-inicialización de WorkManager (AndroidX Startup).
             Sin esto, WorkManager se inicializa con la fábrica por defecto ANTES de que
             Hilt inyecte HiltWorkerFactory, y los workers con @AssistedInject fallan con
-            "Could not create Worker". Con esto, SmsToTelegramApplication (Configuration.Provider)
+            "Could not create Worker". Con esto, SmsToWhatsApplication (Configuration.Provider)
             provee la fábrica correcta la primera vez que se llama WorkManager.getInstance().
         -->
         <provider
