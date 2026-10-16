@@ -5,7 +5,7 @@
 
 package com.capicua.smstowhats.di
 
-import com.capicua.smstowhats.data.telegram.TelegramSender
+import com.capicua.smstowhats.data.whatsapp.WhatsAppSender
 import com.capicua.smstowhats.domain.transport.EnviadorDeMensajes
 import dagger.Binds
 import dagger.Module
@@ -20,9 +20,10 @@ import javax.inject.Singleton
  * Todo lo demás —el worker de despacho, la pantalla de prueba, el editor de reglas— depende de
  * [EnviadorDeMensajes], así que cambiar de medio es cambiar esta línea.
  *
- * Y eso es exactamente lo que pasó en la fase 3: salió el andamio `TransporteSinConfigurar` y
- * entró [TelegramSender], sin que se tocara ni el worker de despacho, ni el evaluador de reglas,
- * ni la cola, ni el rescate de huérfanos.
+ * Y eso es exactamente lo que ha pasado dos veces. En SMStoTelegram salió el andamio
+ * `TransporteSinConfigurar` y entró `TelegramSender`; aquí ha salido `TelegramSender` y ha
+ * entrado [WhatsAppSender], sin que se tocara ni el worker de despacho, ni el evaluador de
+ * reglas, ni la cola, ni el rescate de huérfanos. Dos medios distintos, la misma línea.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -30,5 +31,5 @@ abstract class TransportModule {
 
     @Binds
     @Singleton
-    abstract fun bindEnviadorDeMensajes(impl: TelegramSender): EnviadorDeMensajes
+    abstract fun bindEnviadorDeMensajes(impl: WhatsAppSender): EnviadorDeMensajes
 }

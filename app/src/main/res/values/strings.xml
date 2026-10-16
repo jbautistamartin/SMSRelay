@@ -8,7 +8,7 @@
     <string name="sms_borrar_todos">Borrar</string>
     <string name="dashboard_resumen">%1$d SMS · %2$d reenvío(s) en curso · %3$d regla(s) activa(s)</string>
     <string name="dashboard_aviso_transporte">⚠ No se puede entregar nada: %1$s</string>
-    <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se entregan en ningún chat. Crea una regla en la pestaña Reglas.</string>
+    <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se entregan a ningún número. Crea una regla en la pestaña Reglas.</string>
     <string name="sms_ruta_sin_regla">Ninguna regla casó: no se entregó</string>
     <string name="sms_ruta_descartado">Descartado: se superó el límite por minuto</string>
     <string name="sms_ruta_uno">%1$s → %2$s</string>
@@ -33,21 +33,26 @@
 
     <!-- Settings -->
     <string name="settings_title">Configuración</string>
-    <string name="settings_subtitulo">El bot de Telegram y los ajustes que afectan a todas las entregas. Las reglas que deciden en qué chat acaba cada SMS tienen su propia pantalla.</string>
+    <string name="settings_subtitulo">Las credenciales de la Cloud API y los ajustes que afectan a todas las entregas. Las reglas que deciden a qué número acaba yendo cada SMS tienen su propia pantalla.</string>
     <string name="settings_guardar">Guardar configuración</string>
     <string name="settings_guardado">Configuración guardada</string>
     <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se entregará nada.</string>
 
-    <string name="settings_seccion_bot">Bot de Telegram</string>
-    <string name="settings_token_bot">Token del bot</string>
-    <string name="settings_token_bot_ayuda">Crea un bot escribiendo a @BotFather en Telegram y pega aquí el token que te dé. Sin token no se puede entregar nada. El token no se incluye en la copia de seguridad.</string>
-    <string name="settings_validar_bot">Comprobar el token</string>
-    <string name="settings_bot_comprobando">Preguntando a Telegram…</string>
-    <string name="settings_bot_correcto">✓ El token sirve · %1$s (@%2$s)</string>
-    <string name="settings_bot_rechazado">✗ Telegram no acepta este token: %1$s</string>
-    <string name="settings_bot_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>
-    <string name="settings_bot_sin_token">Escribe primero un token para poder comprobarlo</string>
-    <string name="settings_token_bot_invalido">El token no tiene la forma que entrega @BotFather (números, dos puntos y una cadena larga)</string>
+    <string name="settings_seccion_bot">Cuenta de WhatsApp</string>
+    <string name="settings_token_acceso">Token de acceso</string>
+    <string name="settings_token_acceso_ayuda">El token de usuario de sistema de tu app de Meta, con caducidad «Nunca». El que la consola enseña por defecto caduca en 24 horas y dejaría la aplicación muda al día siguiente. No se incluye en la copia de seguridad.</string>
+    <string name="settings_id_numero">Id del número</string>
+    <string name="settings_id_numero_ayuda">El «Phone number ID» de la consola de Meta: unos 15 dígitos. Ojo, NO es el número de teléfono, que la consola enseña justo al lado. Es el error de configuración más frecuente.</string>
+    <string name="settings_validar_cuenta">Comprobar las credenciales</string>
+    <string name="settings_cuenta_comprobando">Preguntando a Meta…</string>
+    <string name="settings_cuenta_correcto">✓ Las credenciales sirven · %1$s · %2$s</string>
+    <string name="settings_cuenta_calidad">Calidad del número según Meta: %1$s</string>
+    <string name="settings_cuenta_rechazado">✗ Meta no acepta estas credenciales: %1$s</string>
+    <string name="settings_cuenta_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>
+    <string name="settings_cuenta_sin_credenciales">Escribe el token y el id del número para poder comprobarlos</string>
+    <string name="settings_token_acceso_invalido">El token no tiene forma de token de acceso: es una cadena larga, sin espacios</string>
+    <string name="settings_id_numero_invalido">El id del número son solo dígitos, unos 15</string>
+    <string name="settings_id_numero_es_telefono">Eso es un número de teléfono. Aquí va el id del número, que es otro dato de la misma pantalla de la consola</string>
 
     <string name="settings_seccion_recepcion">Recepción de SMS</string>
     <string name="settings_recepcion">Leer los SMS que llegan</string>
@@ -69,7 +74,7 @@
 
     <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
-    <string name="settings_max_reenvios_ayuda">Respeta los límites de Telegram, que admite un mensaje por segundo y chat y unos 20 por minuto en un grupo. El exceso se descarta y queda en el registro. Recomendado: 10</string>
+    <string name="settings_max_reenvios_ayuda">Corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>
 
     <string name="settings_seccion_envio">Envío y reintentos</string>
     <string name="settings_timeout_envio">Espera de confirmación</string>
@@ -81,7 +86,7 @@
 
 
     <string name="settings_backup_titulo">Copia de seguridad</string>
-    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los chats de destino: trátalo como información sensible. El token del bot no viaja en él.</string>
+    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los números de destino: trátalo como información sensible. Las credenciales no viajan en él.</string>
     <string name="settings_exportar">Exportar</string>
     <string name="settings_importar">Importar</string>
     <string name="settings_importar_confirmar">Los ajustes del fichero sustituyen a los actuales. Las reglas se añaden a las que ya hay, sin borrar ninguna.</string>
@@ -173,12 +178,6 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
 
     <string name="regla_destino">Chat de destino</string>
     <string name="regla_destino_ayuda">El chat_id de la persona, grupo o canal. Los grupos y canales lo tienen negativo. También vale un @canal público.</string>
-    <string name="regla_descubrir_chats">Elegir de los chats del bot</string>
-    <string name="regla_chats_buscando">Preguntando al bot…</string>
-    <string name="regla_chats_titulo">Chats que han escrito al bot</string>
-    <string name="regla_chats_ninguno">Nadie ha escrito al bot todavía. Un bot no puede escribir primero: pídele a quien va a recibir los avisos que abra el bot en Telegram y le mande /start. Después vuelve aquí.</string>
-    <string name="regla_chats_sin_token">Configura primero el token del bot en Ajustes</string>
-    <string name="regla_chats_error">No se pudo preguntar al bot: %1$s</string>
     <string name="regla_plantilla">Plantilla del texto</string>
     <string name="regla_plantilla_ayuda">Marcadores: {mensaje}, {telefono}, {fecha}. Conviene dejar {telefono}: en Telegram todo llega del mismo bot, y sin el remitente no se sabe de quién era el SMS.</string>
     <string name="regla_previsualizacion">Así saldría</string>

@@ -13,9 +13,9 @@ import com.capicua.smstowhats.data.config.AppConfig
 import com.capicua.smstowhats.data.config.ConfigBackup
 import com.capicua.smstowhats.data.config.ConfigDataStore
 import com.capicua.smstowhats.data.config.ResultadoCopia
-import com.capicua.smstowhats.data.telegram.ComprobadorDelBot
-import com.capicua.smstowhats.data.telegram.EstadoDelBot
-import com.capicua.smstowhats.data.telegram.ResultadoDelBot
+import com.capicua.smstowhats.data.whatsapp.ComprobadorDeCuenta
+import com.capicua.smstowhats.data.whatsapp.EstadoDeLaCuenta
+import com.capicua.smstowhats.data.whatsapp.ResultadoDeCuenta
 import com.capicua.smstowhats.util.ControlRecepcion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,31 +35,37 @@ class SettingsViewModel @Inject constructor(
     application: Application,
     private val configDataStore: ConfigDataStore,
     private val configBackup: ConfigBackup,
-    private val estadoDelBot: EstadoDelBot,
-    private val comprobadorDelBot: ComprobadorDelBot
+    private val estadoDeLaCuenta: EstadoDeLaCuenta,
+    private val comprobadorDeCuenta: ComprobadorDeCuenta
 ) : AndroidViewModel(application) {
 
-    /** En qué punto está la comprobación del token. */
+    /** En qué punto está la comprobación de las credenciales. */
     sealed interface EstadoComprobacion {
         data object Inactivo : EstadoComprobacion
         data object Comprobando : EstadoComprobacion
-        data class Terminada(val resultado: ResultadoDelBot) : EstadoComprobacion
+        data class Terminada(val resultado: ResultadoDeCuenta) : EstadoComprobacion
     }
 
     private val _comprobacion = MutableStateFlow<EstadoComprobacion>(EstadoComprobacion.Inactivo)
     val comprobacion: StateFlow<EstadoComprobacion> = _comprobacion.asStateFlow()
 
     /**
-     * Pregunta a Telegram por [token] sin guardarlo.
+     * Pregunta a Meta por estas credenciales sin guardarlas.
      *
-     * Se comprueba el texto que hay en el campo, no lo guardado: quien acaba de pegar un token
-     * quiere saber si sirve **antes** de comprometerse.
+     * Se comprueba el texto que hay en los campos, no lo guardado: quien acaba de pegar unas
+     * credenciales quiere saber si sirven **antes** de comprometerse.
+     *
+     * Van las dos juntas porque la consulta ejercita las dos a la vez —el token en la cabecera,
+     * el id en la ruta— y porque comprobarlas por separado no es posible: sin id no hay URL a la
+     * que llamar, y sin token no hay permiso para llamarla.
      */
-    fun comprobarBot(token: String) {
+    fun comprobarCuenta(token: String, idNumero: String) {
         if (_comprobacion.value == EstadoComprobacion.Comprobando) return
         viewModelScope.launch {
             _comprobacion.value = EstadoComprobacion.Comprobando
-            _comprobacion.value = EstadoComprobacion.Terminada(comprobadorDelBot.comprobar(token))
+            _comprobacion.value = EstadoComprobacion.Terminada(
+                comprobadorDeCuenta.comprobar(token, idNumero)
+            )
         }
     }
 
@@ -90,10 +96,10 @@ class SettingsViewModel @Inject constructor(
     fun guardar(config: AppConfig) {
         viewModelScope.launch {
             configDataStore.guardar(config)
-            // Guardar el token es el gesto de quien viene a arreglar el aviso de «Telegram
-            // rechazó el token». Dejarlo puesto mandaría a arreglar lo ya arreglado; si el
-            // nuevo token tampoco sirve, el siguiente envío lo pondrá otra vez.
-            estadoDelBot.olvidarTokenRechazado()
+            // Guardar las credenciales es el gesto de quien viene a arreglar el aviso de
+            // «Meta las rechazó». Dejarlo puesto mandaría a arreglar lo ya arreglado; si las
+            // nuevas tampoco sirven, el siguiente envío lo pondrá otra vez.
+            estadoDeLaCuenta.olvidarCredencialRechazada()
             ControlRecepcion.aplicar(getApplication(), config.recepcionActiva)
         }
     }

@@ -11,7 +11,7 @@ import com.capicua.smstowhats.data.config.ConfigDataStore
 import com.capicua.smstowhats.data.repository.ReenvioRepository
 import com.capicua.smstowhats.data.repository.ReglaRepository
 import com.capicua.smstowhats.data.repository.SmsRepository
-import com.capicua.smstowhats.data.telegram.EstadoDelBot
+import com.capicua.smstowhats.data.whatsapp.EstadoDeLaCuenta
 import com.capicua.smstowhats.domain.transport.EnviadorDeMensajes
 import com.capicua.smstowhats.domain.model.SmsConReenvios
 import com.capicua.smstowhats.domain.usecase.ObtenerListaSmsUseCase
@@ -33,7 +33,7 @@ class DashboardViewModel @Inject constructor(
     private val obtenerListaSms: ObtenerListaSmsUseCase,
     private val smsRepository: SmsRepository,
     private val enviador: EnviadorDeMensajes,
-    private val estadoDelBot: EstadoDelBot,
+    private val estadoDeLaCuenta: EstadoDeLaCuenta,
     configDataStore: ConfigDataStore,
     reenvioRepository: ReenvioRepository,
     reglaRepository: ReglaRepository
@@ -71,7 +71,7 @@ class DashboardViewModel @Inject constructor(
      */
     val avisoTransporte: Flow<String?> = combine(
         configDataStore.config,
-        estadoDelBot.tokenRechazado
+        estadoDeLaCuenta.credencialRechazada
     ) { _, _ -> enviador.motivoNoDisponible() }
 
     fun limpiarTodos() {

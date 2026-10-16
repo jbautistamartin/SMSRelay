@@ -15,17 +15,36 @@ package com.capicua.smstowhats.data.config
  */
 data class AppConfig(
     /**
-     * Token del bot de Telegram, tal como lo entrega @BotFather.
+     * Token de acceso de la Cloud API, tal como lo entrega la consola de Meta.
      *
      * Vacío significa «sin configurar», y es el valor con el que arranca una instalación nueva:
-     * **no hay ningún token en el código**. Uno escrito en el fuente de un APK es un token
-     * regalado —el APK se puede descomprimir— y además sería el mismo para todo el mundo.
+     * **no hay ninguna credencial en el código**. Una escrita en el fuente de un APK es una
+     * credencial regalada —el APK se puede descomprimir— y además sería la misma para todo el
+     * mundo.
      *
      * Es una credencial, y eso impone tres cosas que el resto de los ajustes no necesitan: no
      * se escribe nunca en el log, se enmascara en la pantalla, y no viaja en el fichero de
      * copia de seguridad.
+     *
+     * El que sirve es un token de **usuario de sistema** con caducidad «Nunca». El que la consola
+     * enseña por defecto en la pestaña de WhatsApp caduca en unas 24 horas, y con él la
+     * aplicación se queda muda al día siguiente sin que nadie haya tocado nada.
      */
-    val tokenBot: String = "",
+    val tokenAcceso: String = "",
+
+    /**
+     * `phone_number_id` del número emisor: la segunda credencial.
+     *
+     * Vacío significa «sin configurar». Va en la ruta de la petición, así que sin él no hay URL
+     * a la que llamar — ver [com.capicua.smstowhats.data.whatsapp.IdNumeroTelefono] para por qué
+     * la Cloud API necesita dos cosas donde el Bot API de Telegram necesitaba una.
+     *
+     * Se trata como credencial aunque no sea secreto: no viaja en la copia de seguridad, porque
+     * identifica a *este* número emisor y restaurarlo en otro teléfono con otra cuenta dejaría
+     * los reenvíos saliendo por donde no es. Es el papel que tenía `simActual` cuando el
+     * transporte era el SMS.
+     */
+    val idNumeroTelefono: String = "",
 
     /** Número máximo de intentos antes de dar un reenvío por fallido permanentemente. */
     val maxReintentos: Int = 10,

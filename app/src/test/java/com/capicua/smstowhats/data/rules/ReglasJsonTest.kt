@@ -132,7 +132,8 @@ class ReglasJsonTest {
     @Test
     fun `los ajustes sobreviven a la ida y vuelta`() {
         val original = AppConfig(
-            tokenBot = "123:no-deberia-viajar",
+            tokenAcceso = "EAAno-deberia-viajar",
+            idNumeroTelefono = "111111111111111",
             maxReintentos = 7,
             intervaloReintentoSegundos = 45,
             timeoutEnvioSegundos = 90,
@@ -152,22 +153,34 @@ class ReglasJsonTest {
             )
         )
 
-        // El token es una credencial: no viaja en el fichero y al importar se conserva el
-        // que tenga el dispositivo de destino.
-        val importado = recuperado.configuracion!!.aDominio(tokenActual = "999:conservado")
+        // Las credenciales no viajan en el fichero y al importar se conservan las que tenga
+        // el dispositivo de destino. Son dos, y olvidar cualquiera de las dos deja la
+        // aplicacion callada.
+        val importado = recuperado.configuracion!!.aDominio(
+            tokenActual = "EAAconservado",
+            idActual = "222222222222222"
+        )
 
-        assertEquals(original.copy(tokenBot = "999:conservado"), importado)
+        assertEquals(
+            original.copy(
+                tokenAcceso = "EAAconservado",
+                idNumeroTelefono = "222222222222222"
+            ),
+            importado
+        )
     }
 
     /**
-     * El token es la única credencial de la aplicación, y este fichero es JSON en claro que se
-     * guarda donde el operador diga y se lleva a otro teléfono. Que no viaje no es una
-     * preferencia: es lo que impide que una copia de seguridad reparta permiso para escribir en
-     * nombre del bot.
+     * Las dos credenciales de la aplicación, y este fichero es JSON en claro que se guarda donde
+     * el operador diga y se lleva a otro teléfono. Que no viajen no es una preferencia: es lo
+     * que impide que una copia de seguridad reparta permiso para escribir en nombre del número.
      */
     @Test
-    fun `el token del bot no aparece en el fichero exportado`() {
-        val config = AppConfig(tokenBot = "123456789:AAEhBOweik6ad9r_QXZ2Ql3n1xWcCOPvj8s")
+    fun `las credenciales no aparecen en el fichero exportado`() {
+        val config = AppConfig(
+            tokenAcceso = "EAAhBOweik6ad9rQXZ2Ql3n1xWcCOPvj8sAAAAAAAAAAAA",
+            idNumeroTelefono = "123456789012345"
+        )
 
         val serializado = json.encodeToString(
             ReglasExportadas.serializer(),
@@ -178,8 +191,9 @@ class ReglasJsonTest {
             )
         )
 
-        assertFalse("el token no debe aparecer", serializado.contains("AAEhBOweik"))
+        assertFalse("el token no debe aparecer", serializado.contains("EAAhBOweik"))
         assertFalse("ni su nombre de campo", serializado.contains("token"))
+        assertFalse("ni el id del numero", serializado.contains("123456789012345"))
     }
 
     /**

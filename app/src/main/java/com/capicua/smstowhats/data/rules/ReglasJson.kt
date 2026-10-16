@@ -83,9 +83,15 @@ data class ReglasExportadas(
  * **No todo lo que está en `AppConfig` se exporta.** El fichero describe *cómo reenviar*, que es
  * algo que tiene sentido llevarse a otro teléfono; lo que identifica a este teléfono en concreto
  * se queda. El caso que fijó el criterio fue la SIM de envío, que apuntaba a una tarjeta de
- * *este* dispositivo y restaurada en otro mandaba los reenvíos por donde no era. Ese ajuste ya
- * no existe; el criterio lo hereda **el token del bot**, por un motivo peor: este fichero es
- * JSON en claro y el token permite escribir en nombre del bot.
+ * *este* dispositivo y restaurada en otro mandaba los reenvíos por donde no era.
+ *
+ * Ese criterio lo heredan ahora **las dos credenciales de la Cloud API**, cada una por su motivo:
+ *
+ * - El **token de acceso** no viaja porque este fichero es JSON en claro y el token permite
+ *   escribir en nombre del número. Es el motivo del token del bot de Telegram, agravado.
+ * - El **id del número** no viaja aunque no sea secreto, y este es el heredero directo de
+ *   `simActual`: identifica el número emisor de *esta* cuenta, y restaurado en otro teléfono
+ *   dejaría los reenvíos saliendo por donde no es.
  */
 @Serializable
 data class ConfiguracionJson(
@@ -109,13 +115,17 @@ fun AppConfig.aJson() = ConfiguracionJson(
 /**
  * Convierte los ajustes importados al dominio.
  *
- * [tokenActual] es el token que ya tenía este teléfono. **No viene en el fichero y hay que
- * pasarlo**, porque los ajustes se *reemplazan* al importar: sin esto, importar una copia
- * dejaría `tokenBot` vacío y la aplicación se quedaría muda sin que nadie hubiera tocado el
- * token. Es el mismo papel que tenía `simActual` cuando el transporte era el SMS.
+ * [tokenActual] e [idActual] son las credenciales que ya tenía este teléfono. **No vienen en el
+ * fichero y hay que pasarlas**, porque los ajustes se *reemplazan* al importar: sin esto,
+ * importar una copia dejaría las dos vacías y la aplicación se quedaría muda sin que nadie
+ * hubiera tocado nada. Es el mismo papel que tenía `simActual` cuando el transporte era el SMS.
+ *
+ * Son dos parámetros y no uno porque son dos credenciales independientes, y olvidar cualquiera
+ * de las dos deja la aplicación igual de callada.
  */
-fun ConfiguracionJson.aDominio(tokenActual: String) = AppConfig(
-    tokenBot = tokenActual,
+fun ConfiguracionJson.aDominio(tokenActual: String, idActual: String) = AppConfig(
+    tokenAcceso = tokenActual,
+    idNumeroTelefono = idActual,
     maxReintentos = maxReintentos,
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,

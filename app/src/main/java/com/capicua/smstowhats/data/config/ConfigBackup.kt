@@ -128,11 +128,13 @@ class ConfigBackup @Inject constructor(
                     "así que esas reglas no servirían: hay que crearlas de nuevo"
             )
         } else {
-            // El token no viaja en el fichero y los ajustes se reemplazan: hay que
-            // devolverle el que ya tenía este teléfono o la importación lo borraría.
+            // Las credenciales no viajan en el fichero y los ajustes se reemplazan: hay
+            // que devolverle las que ya tenía este teléfono o la importación las borraría.
             fichero.configuracion?.let { importados ->
-                val tokenActual = configDataStore.config.first().tokenBot
-                configDataStore.guardar(importados.aDominio(tokenActual))
+                val actual = configDataStore.config.first()
+                configDataStore.guardar(
+                    importados.aDominio(actual.tokenAcceso, actual.idNumeroTelefono)
+                )
             }
 
             val (validas, invalidas) = fichero.reglas.partition { esValida(it) }

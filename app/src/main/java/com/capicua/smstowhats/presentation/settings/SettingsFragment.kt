@@ -19,8 +19,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.capicua.smstowhats.R
 import com.capicua.smstowhats.data.config.AppConfig
 import com.capicua.smstowhats.data.config.ResultadoCopia
-import com.capicua.smstowhats.data.telegram.ResultadoDelBot
-import com.capicua.smstowhats.data.telegram.TokenDeBot
+import com.capicua.smstowhats.data.whatsapp.IdNumeroTelefono
+import com.capicua.smstowhats.data.whatsapp.ResultadoDeCuenta
+import com.capicua.smstowhats.data.whatsapp.TokenDeAcceso
 import com.capicua.smstowhats.databinding.FragmentSettingsBinding
 import com.capicua.smstowhats.util.InicioAutomatico
 import com.capicua.smstowhats.util.OptimizacionBateria
@@ -74,7 +75,7 @@ class SettingsFragment : Fragment() {
         configurarCopia()
         configurarComprobacionDelBot()
         observarConfiguracion()
-        observarComprobacionDelBot()
+        observarComprobacionDeCuenta()
         observarCopias()
         configurarBotonGuardar()
     }
@@ -92,19 +93,22 @@ class SettingsFragment : Fragment() {
     // ── Comprobación del bot ──────────────────────────────────────────────────
 
     private fun configurarComprobacionDelBot() {
-        binding.buttonValidarBot.setOnClickListener {
+        binding.buttonValidarCuenta.setOnClickListener {
             // Se comprueba lo que hay escrito, no lo guardado: la gracia es saberlo antes de
-            // guardar un token que no sirve.
-            viewModel.comprobarBot(binding.editTextTokenBot.text?.toString().orEmpty())
+            // guardar unas credenciales que no sirven.
+            viewModel.comprobarCuenta(
+                binding.editTextTokenAcceso.text?.toString().orEmpty(),
+                binding.editTextIdNumero.text?.toString().orEmpty()
+            )
         }
     }
 
-    private fun observarComprobacionDelBot() {
+    private fun observarComprobacionDeCuenta() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.comprobacion.collect { estado ->
-                    val vista = binding.textViewResultadoBot
-                    binding.buttonValidarBot.isEnabled =
+                    val vista = binding.textViewResultadoCuenta
+                    binding.buttonValidarCuenta.isEnabled =
                         estado != SettingsViewModel.EstadoComprobacion.Comprobando
 
                     when (estado) {
@@ -113,13 +117,13 @@ class SettingsFragment : Fragment() {
 
                         SettingsViewModel.EstadoComprobacion.Comprobando -> {
                             vista.visibility = View.VISIBLE
-                            vista.setText(R.string.settings_bot_comprobando)
+                            vista.setText(R.string.settings_cuenta_comprobando)
                             vista.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
                         }
 
                         is SettingsViewModel.EstadoComprobacion.Terminada -> {
                             vista.visibility = View.VISIBLE
-                            pintarResultadoDelBot(vista, estado.resultado)
+                            pintarResultadoDeCuenta(vista, estado.resultado)
                         }
                     }
                 }
@@ -127,33 +131,62 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    private fun pintarResultadoDelBot(vista: android.widget.TextView, resultado: ResultadoDelBot) {
+    private fun pintarResultadoDeCuenta(
+        vista: android.widget.TextView,
+        resultado: ResultadoDeCuenta
+    ) {
         when (resultado) {
-            is ResultadoDelBot.Correcto -> {
-                // Enseñar de qué bot se trata es lo que hace la respuesta comprobable: quien
-                // la pidió puede reconocer su bot, o ver que ha pegado el de otro.
-                vista.text = getString(
-                    R.string.settings_bot_correcto, resultado.nombre, resultado.usuario
-                )
-                vista.setTextColor(resources.getColor(R.color.status_delivered, null))
+            is ResultadoDeCuenta.Correcto -> {
+                // Ensenar de que numero se trata es lo que hace la respuesta comprobable: quien
+                // la pidio puede reconocer su numero, o ver que ha pegado el id de otro.
+                //
+                // La calidad va detras y en su propia linea porque no es parte de la respuesta
+                // a "sirven?": sirven igual con la calidad en amarillo. Es un aviso de que Meta
+                // esta a punto de limitar el numero, y es el unico de los riesgos de este
+                // proyecto que avisa antes de materializarse.
+                vista.text = buildString {
+                    append(
+                        getString(
+                            R.string.settings_cuenta_correcto,
+                            resultado.nombre,
+                            resultado.telefono
+                        )
+                    )
+                    appendLine()
+                    append(getString(R.string.settings_cuenta_calidad, resultado.calidad))
+                }
+                vista.setTextColor(colorDeCalidad(resultado.calidad))
             }
 
-            is ResultadoDelBot.Rechazado -> {
-                vista.text = getString(R.string.settings_bot_rechazado, resultado.motivo)
+            is ResultadoDeCuenta.Rechazado -> {
+                vista.text = getString(R.string.settings_cuenta_rechazado, resultado.motivo)
                 vista.setTextColor(resources.getColor(R.color.status_failed, null))
             }
 
-            is ResultadoDelBot.NoSePudo -> {
-                // Sin red no se sabe si el token vale: decir que está mal sería mentir.
-                vista.text = getString(R.string.settings_bot_sin_red, resultado.motivo)
+            is ResultadoDeCuenta.NoSePudo -> {
+                // Sin red no se sabe si las credenciales valen: decir que estan mal seria mentir.
+                vista.text = getString(R.string.settings_cuenta_sin_red, resultado.motivo)
                 vista.setTextColor(resources.getColor(R.color.status_pending, null))
             }
 
-            ResultadoDelBot.SinToken -> {
-                vista.setText(R.string.settings_bot_sin_token)
+            ResultadoDeCuenta.SinCredenciales -> {
+                vista.setText(R.string.settings_cuenta_sin_credenciales)
                 vista.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
             }
         }
+    }
+
+    /**
+     * Color del resultado segun la calidad que Meta da al numero.
+     *
+     * Un `GREEN` se pinta como un exito y un `YELLOW` o un `RED` como un aviso, aunque las
+     * credenciales sirvan en los tres casos: lo que esta en riesgo no es la configuracion, es
+     * el numero. `UNKNOWN` es lo normal en un numero recien creado y no dice nada malo.
+     */
+    private fun colorDeCalidad(calidad: String): Int = when (calidad.uppercase()) {
+        "RED" -> resources.getColor(R.color.status_failed, null)
+        "YELLOW" -> resources.getColor(R.color.status_pending, null)
+        else -> resources.getColor(R.color.status_delivered, null)
     }
 
     private fun colorDe(atributo: Int): Int {
@@ -297,7 +330,8 @@ class SettingsFragment : Fragment() {
     }
 
     private fun rellenarCampos(config: AppConfig) {
-        binding.editTextTokenBot.setText(config.tokenBot)
+        binding.editTextTokenAcceso.setText(config.tokenAcceso)
+        binding.editTextIdNumero.setText(config.idNumeroTelefono)
         binding.switchRecepcion.isChecked = config.recepcionActiva
         binding.editTextMaxReenviosMinuto.setText(config.maxReenviosPorMinuto.toString())
         binding.editTextTimeoutEnvio.setText(config.timeoutEnvioSegundos.toString())
@@ -307,19 +341,28 @@ class SettingsFragment : Fragment() {
 
     private fun configurarBotonGuardar() {
         binding.buttonGuardar.setOnClickListener {
-            val token = TokenDeBot.normalizar(binding.editTextTokenBot.text?.toString().orEmpty())
+            val token = TokenDeAcceso.normalizar(
+                binding.editTextTokenAcceso.text?.toString().orEmpty()
+            )
+            val idNumero = IdNumeroTelefono.normalizar(
+                binding.editTextIdNumero.text?.toString().orEmpty()
+            )
             val maxPorMinuto = binding.editTextMaxReenviosMinuto.entero(VALORES.maxReenviosPorMinuto)
             val timeoutEnvio = binding.editTextTimeoutEnvio.entero(VALORES.timeoutEnvioSegundos)
             val maxReintentos = binding.editTextMaxReintentos.entero(VALORES.maxReintentos)
             val intervalo = binding.editTextIntervalo.entero(VALORES.intervaloReintentoSegundos)
 
-            if (!validar(token, maxPorMinuto, timeoutEnvio, maxReintentos, intervalo)) {
+            if (!validar(
+                    token, idNumero, maxPorMinuto, timeoutEnvio, maxReintentos, intervalo
+                )
+            ) {
                 return@setOnClickListener
             }
 
             viewModel.guardar(
                 AppConfig(
-                    tokenBot = token,
+                    tokenAcceso = token,
+                    idNumeroTelefono = idNumero,
                     maxReintentos = maxReintentos,
                     intervaloReintentoSegundos = intervalo,
                     timeoutEnvioSegundos = timeoutEnvio,
@@ -343,6 +386,7 @@ class SettingsFragment : Fragment() {
 
     private fun validar(
         token: String,
+        idNumero: String,
         maxPorMinuto: Int,
         timeoutEnvio: Int,
         maxReintentos: Int,
@@ -350,13 +394,29 @@ class SettingsFragment : Fragment() {
     ): Boolean {
         var valido = true
 
-        // Solo la forma. Si el token sirve de verdad únicamente lo sabe Telegram, y eso es lo
-        // que comprueba el botón de validación; esto atrapa el fallo más común, que es pegar
-        // algo que no es un token.
-        if (TokenDeBot.pareceValido(token)) {
-            binding.tilTokenBot.error = null
+        // Solo la forma. Si las credenciales sirven de verdad únicamente lo sabe Meta, y eso es
+        // lo que comprueba el botón de comprobación; esto atrapa el fallo más común, que es
+        // pegar algo que no es una credencial.
+        if (TokenDeAcceso.pareceValido(token)) {
+            binding.tilTokenAcceso.error = null
         } else {
-            binding.tilTokenBot.error = getString(R.string.settings_token_bot_invalido)
+            binding.tilTokenAcceso.error = getString(R.string.settings_token_acceso_invalido)
+            valido = false
+        }
+
+        // El id tiene un error propio para el caso más probable de todos: pegar el número de
+        // teléfono, que la consola de Meta enseña justo al lado. Decir «no tiene forma de id»
+        // sería verdad y no resolvería nada.
+        if (IdNumeroTelefono.pareceValido(idNumero)) {
+            binding.tilIdNumero.error = null
+        } else {
+            binding.tilIdNumero.error = getString(
+                if (IdNumeroTelefono.pareceTelefono(idNumero)) {
+                    R.string.settings_id_numero_es_telefono
+                } else {
+                    R.string.settings_id_numero_invalido
+                }
+            )
             valido = false
         }
 

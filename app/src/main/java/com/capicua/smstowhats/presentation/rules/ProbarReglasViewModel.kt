@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.capicua.smstowhats.data.config.ConfigDataStore
 import com.capicua.smstowhats.data.repository.ReglaRepository
-import com.capicua.smstowhats.data.telegram.DestinoDeTelegram
+import com.capicua.smstowhats.data.whatsapp.DestinoDeWhatsApp
 import com.capicua.smstowhats.domain.rules.EvaluadorDeReglas
 import com.capicua.smstowhats.domain.rules.ResultadoEvaluacion
 import com.capicua.smstowhats.domain.transport.EnviadorDeMensajes
@@ -155,15 +155,15 @@ class ProbarReglasViewModel @Inject constructor(
             // Un destino mal escrito no lo detecta la evaluación —casa igual— y el reenvío
             // solo falla cuando llega un SMS de verdad. Aquí hay un momento mejor para decirlo.
             resultado.coincidencias
-                .filterNot { DestinoDeTelegram.pareceValido(it.destino) }
+                .filterNot { DestinoDeWhatsApp.pareceValido(it.destino) }
                 .forEach { coincidencia ->
                     add(
                         "La regla «${coincidencia.nombreRegla}» apunta a «${coincidencia.destino}», " +
-                            if (DestinoDeTelegram.pareceTelefono(coincidencia.destino)) {
-                                "que es un número de teléfono. El destino tiene que ser un chat " +
-                                    "de Telegram, así que ese reenvío fallará"
+                            if (DestinoDeWhatsApp.faltaPrefijo(coincidencia.destino)) {
+                                "al que le falta el prefijo internacional. Escríbelo con «+» y " +
+                                    "el prefijo del país, o ese reenvío fallará"
                             } else {
-                                "que no tiene forma de chat de Telegram: ese reenvío fallará"
+                                "que no tiene forma de teléfono: ese reenvío fallará"
                             }
                     )
                 }

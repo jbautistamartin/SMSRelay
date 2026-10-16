@@ -43,35 +43,57 @@
              ha pegado. Un token es una credencial y no debe quedarse legible en pantalla, pero
              esconderlo sin poder verlo haría imposible detectar un pegado a medias. -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_token_bot"
+            android:id="@+id/til_token_acceso"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:hint="@string/settings_token_bot"
+            android:hint="@string/settings_token_acceso"
             app:endIconMode="password_toggle"
-            app:helperText="@string/settings_token_bot_ayuda"
+            app:helperText="@string/settings_token_acceso_ayuda"
             app:helperTextTextColor="?attr/colorOnSurfaceVariant">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_token_bot"
+                android:id="@+id/edit_text_token_acceso"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
+                android:imeOptions="actionNext"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- La segunda credencial. No se enmascara: no es secreta, y a cambio hay que poder
+             compararla de un vistazo con la que enseña la consola de Meta, que es donde está
+             el error más frecuente de toda la configuración. -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_id_numero"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/settings_id_numero"
+            app:helperText="@string/settings_id_numero_ayuda"
+            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_id_numero"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
                 android:imeOptions="actionDone"
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_validar_bot"
+            android:id="@+id/button_validar_cuenta"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="@string/settings_validar_bot" />
+            android:text="@string/settings_validar_cuenta" />
 
         <TextView
-            android:id="@+id/text_view_resultado_bot"
+            android:id="@+id/text_view_resultado_cuenta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"

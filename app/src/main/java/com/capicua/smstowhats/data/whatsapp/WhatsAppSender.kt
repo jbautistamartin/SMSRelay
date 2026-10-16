@@ -3,7 +3,7 @@
 // Licencia: GNU Lesser General Public License v2.1
 // https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
 
-package com.capicua.smstowhats.data.telegram
+package com.capicua.smstowhats.data.whatsapp
 
 import com.capicua.smstowhats.data.config.ConfigDataStore
 import com.capicua.smstowhats.domain.transport.EnviadorDeMensajes
@@ -15,6 +15,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import timber.log.Timber
 import java.net.HttpURLConnection
 import java.net.URL
@@ -23,49 +25,59 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Entrega mensajes por el Bot API de Telegram.
+ * Entrega mensajes por la Cloud API de WhatsApp.
  *
- * Una petición `POST` a `https://api.telegram.org/bot<token>/sendMessage` con un JSON de dos
- * campos. Sin Retrofit y sin OkHttp: el patrón de la casa para esto es `HttpURLConnection` más
+ * Una petición `POST` a `https://graph.facebook.com/<version>/<phone_number_id>/messages`. Sin
+ * Retrofit y sin OkHttp: el patrón de la casa para esto es `HttpURLConnection` más
  * `kotlinx.serialization`, el mismo que usa `ComprobadorDeActualizaciones`, y una dependencia
  * nueva para una petición no se paga.
  *
- * ## Texto plano, sin `parse_mode`
- * Esta es la decisión que más fácil sería tomar mal. Con `parse_mode` en `Markdown` o `HTML`,
- * cualquier SMS que lleve un `_`, un `*`, un `[` o un `<` —un enlace de un banco, una fórmula,
- * una carita— hace que Telegram devuelva `400 Bad Request: can't parse entities` y el reenvío se
- * marque como fallido permanente. El mensaje **no se entrega** por haber querido ponerlo en
- * negrita.
+ * ## Texto plano, y esto sigue siendo lo que más fácil sería hacer mal
+ * Con Telegram el peligro era `parse_mode`: ponerlo hacía que un SMS con un `_` o un `*`
+ * devolviera `400 can't parse entities` y el reenvío muriera por haber querido poner algo en
+ * negrita. Aquí el peligro cambia de forma y se suaviza: **WhatsApp interpreta `*negrita*` y
+ * `_cursiva_` siempre, sin que haya nada que desactivar**. Un SMS con asteriscos llegará con
+ * medio texto en negrita.
  *
- * El cuerpo del SMS es contenido de un tercero y no se interpreta nunca. Es la misma regla que
- * el evaluador ya aplica al sustituir `{mensaje}` en último lugar para que no pueda inyectar
- * marcadores, y se toma aquí por el mismo motivo.
+ * Se acepta, y la alternativa se descarta a propósito: escapar el cuerpo sería *interpretar*
+ * contenido de un tercero para modificarlo, que es justo lo que este proyecto no hace en ningún
+ * sitio. El resultado es cosmético y el mensaje llega entero, que es lo que importa.
  *
- * ## El token no se registra
- * Va dentro de la URL, así que la URL tampoco se registra: los `Timber` de esta clase hablan del
- * destino y del código de respuesta, nunca de la ruta. Un token en `adb logcat` es un token
- * publicado.
+ * ## `preview_url` en false, y no es un detalle estético
+ * Si se deja en true, WhatsApp **descarga** el primer enlace que encuentre en el cuerpo para
+ * pintar su tarjeta de vista previa. Como el cuerpo es un SMS de un tercero, eso significa que
+ * entregar un mensaje provocaría una petición de los servidores de Meta a una URL que la ha
+ * puesto quien mandó el SMS: desde confirmar que el enlace de un phishing tiene público hasta
+ * marcar un enlace de un solo uso como ya visitado. Va en false y no es configurable.
+ *
+ * ## Las credenciales no se registran
+ * El token va en la cabecera `Authorization`, así que la cabecera no se registra. El
+ * `phone_number_id` va en la URL, así que la URL tampoco. Los `Timber` de esta clase hablan del
+ * destino y del código de respuesta. Una credencial en `adb logcat` es una credencial publicada.
  *
  * ## Qué no hace
  * No reintenta —eso es de `DispatchWorker`— ni escribe en el registro de la aplicación. Devuelve
  * un [ResultadoEnvio] con un motivo legible y quien llama decide.
  */
 @Singleton
-class TelegramSender @Inject constructor(
+class WhatsAppSender @Inject constructor(
     private val configDataStore: ConfigDataStore,
-    private val estadoDelBot: EstadoDelBot
+    private val estadoDeLaCuenta: EstadoDeLaCuenta
 ) : EnviadorDeMensajes {
 
     override val limiteCaracteres: Int = MapeoDeRespuestas.LIMITE_CARACTERES
 
     override suspend fun motivoNoDisponible(): String? {
-        val token = configDataStore.config.first().tokenBot
+        val config = configDataStore.config.first()
         return when {
-            token.isBlank() ->
-                "no hay ningún token de bot configurado en Ajustes"
+            config.tokenAcceso.isBlank() ->
+                "no hay ningún token de acceso configurado en Ajustes"
 
-            estadoDelBot.leerTokenRechazado() ->
-                "Telegram rechazó el token configurado: revísalo en Ajustes"
+            config.idNumeroTelefono.isBlank() ->
+                "no hay ningún id de número configurado en Ajustes"
+
+            estadoDeLaCuenta.leerCredencialRechazada() ->
+                "Meta rechazó las credenciales configuradas: revísalas en Ajustes"
 
             else -> null
         }
@@ -77,9 +89,15 @@ class TelegramSender @Inject constructor(
         timeoutSegundos: Int
     ): ResultadoEnvio {
 
-        val token = configDataStore.config.first().tokenBot
+        val config = configDataStore.config.first()
+        val token = config.tokenAcceso
+        val idNumero = config.idNumeroTelefono
+
         if (token.isBlank()) {
-            return ResultadoEnvio.ErrorPermanente("no hay token de bot configurado")
+            return ResultadoEnvio.ErrorPermanente("no hay token de acceso configurado")
+        }
+        if (idNumero.isBlank()) {
+            return ResultadoEnvio.ErrorPermanente("no hay id de número configurado")
         }
         if (destino.isBlank()) {
             return ResultadoEnvio.ErrorPermanente("el destino está vacío")
@@ -88,24 +106,24 @@ class TelegramSender @Inject constructor(
             return ResultadoEnvio.ErrorPermanente("el texto a enviar está vacío")
         }
 
-        // Pasarse de 4.096 caracteres es casi imposible y aun así posible. Trocear nunca
-        // pierde contenido; dejar que Telegram conteste 400 convertiría un mensaje largo en un
+        // Pasarse de 4.096 caracteres es casi imposible y aun así posible. Trocear nunca pierde
+        // contenido; dejar que Meta conteste con un error convertiría un mensaje largo en un
         // reenvío fallido.
         val trozos = MapeoDeRespuestas.trocear(texto, limiteCaracteres)
         if (trozos.size > 1) {
-            Timber.d("TelegramSender: el texto va en ${trozos.size} mensajes por longitud")
+            Timber.d("WhatsAppSender: el texto va en ${trozos.size} mensajes por longitud")
         }
 
         // El plazo configurado gobierna los timeouts del socket, y el de la corrutina es solo
         // un respaldo con margen por encima. El orden importa y está explicado en el KDoc de
-        // [plazos]: invertirlo abandona peticiones que siguen en vuelo y pueden entregarse.
+        // [Plazos]: invertirlo abandona peticiones que siguen en vuelo y pueden entregarse.
         val plazos = Plazos.de(timeoutSegundos)
         val respaldoMs = plazos.totalMs * trozos.size + MARGEN_RESPALDO_MS
 
         return withTimeoutOrNull(respaldoMs) {
-            enviarTrozos(token, destino, trozos, plazos)
+            enviarTrozos(token, idNumero, destino, trozos, plazos)
         } ?: ResultadoEnvio.ErrorTransitorio(
-            "Telegram no contestó en ${respaldoMs / 1000} s"
+            "Meta no contestó en ${respaldoMs / 1000} s"
         )
     }
 
@@ -118,7 +136,7 @@ class TelegramSender @Inject constructor(
      * `withTimeoutOrNull` **no puede interrumpir una lectura de socket bloqueante**. Cancela la
      * corrutina, sí, pero el hilo de `Dispatchers.IO` sigue dentro de `HttpURLConnection` hasta
      * que el propio socket se rinde. Lo que devuelve, por tanto, no es «la petición se ha
-     * abortado» sino «he dejado de esperarla»: la petición puede completarse después, Telegram
+     * abortado» sino «he dejado de esperarla»: la petición puede completarse después, Meta
      * puede entregar el mensaje, y el worker —que ya recibió un `ErrorTransitorio`— lo reintenta.
      * El resultado es un **mensaje duplicado en el chat de alguien**.
      *
@@ -126,10 +144,8 @@ class TelegramSender @Inject constructor(
      * el de la corrutina queda como respaldo con margen por encima, para lo que el socket no
      * cubre.
      *
-     * La primera versión de esta clase tenía los dos plazos como constantes independientes —15 s
-     * para conectar y 20 s para leer— mientras el ajuste de la pantalla admitía valores **desde
-     * 10 s**. Con el ajuste por debajo de 35 s, el respaldo saltaba siempre primero y el fallo
-     * descrito arriba dejaba de ser teórico.
+     * Esto se escribió para Telegram, se arregló para Telegram y se hereda sin un cambio: el
+     * problema no era del Bot API, era de cómo `HttpURLConnection` y las corrutinas conviven.
      */
     private data class Plazos(val conexionMs: Int, val lecturaMs: Int) {
         val totalMs: Long get() = (conexionMs + lecturaMs).toLong()
@@ -169,12 +185,13 @@ class TelegramSender @Inject constructor(
      */
     private suspend fun enviarTrozos(
         token: String,
+        idNumero: String,
         destino: String,
         trozos: List<String>,
         plazos: Plazos
     ): ResultadoEnvio {
         for (trozo in trozos) {
-            val resultado = enviarUno(token, destino, trozo, plazos)
+            val resultado = enviarUno(token, idNumero, destino, trozo, plazos)
             if (resultado !is ResultadoEnvio.Enviado) return resultado
         }
         return ResultadoEnvio.Enviado
@@ -182,6 +199,7 @@ class TelegramSender @Inject constructor(
 
     private suspend fun enviarUno(
         token: String,
+        idNumero: String,
         destino: String,
         texto: String,
         plazos: Plazos
@@ -189,21 +207,35 @@ class TelegramSender @Inject constructor(
 
         var conexion: HttpURLConnection? = null
         try {
-            // chat_id es un string en el JSON a propósito: vale un id numérico («-1001234»)
-            // y vale un «@canal», y Telegram acepta ambos en ese campo.
-            val cuerpoPeticion = JsonObject(
-                mapOf(
-                    "chat_id" to JsonPrimitive(destino),
-                    "text" to JsonPrimitive(texto)
-                )
-            ).let { json.encodeToString(JsonObject.serializer(), it) }
+            val cuerpoPeticion = json.encodeToString(
+                JsonObject.serializer(),
+                buildJsonObject {
+                    put("messaging_product", "whatsapp")
+                    // Fijo: los destinos de esta aplicación son siempre personas, nunca grupos.
+                    put("recipient_type", "individual")
+                    put("to", DestinoDeWhatsApp.aDestinatarioApi(destino))
+                    put("type", "text")
+                    put(
+                        "text",
+                        JsonObject(
+                            mapOf(
+                                // Ver el KDoc de la clase: en true, Meta descargaría los enlaces
+                                // que vengan dentro de un SMS de un tercero.
+                                "preview_url" to JsonPrimitive(false),
+                                "body" to JsonPrimitive(texto)
+                            )
+                        )
+                    )
+                }
+            )
 
-            conexion = (URL("$BASE$token/sendMessage").openConnection() as HttpURLConnection)
+            conexion = (URL("$BASE$API/$idNumero/messages").openConnection() as HttpURLConnection)
                 .apply {
                     requestMethod = "POST"
                     connectTimeout = plazos.conexionMs
                     readTimeout = plazos.lecturaMs
                     doOutput = true
+                    setRequestProperty("Authorization", "Bearer $token")
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     setRequestProperty("Accept", "application/json")
                 }
@@ -211,8 +243,9 @@ class TelegramSender @Inject constructor(
             conexion.outputStream.use { it.write(cuerpoPeticion.toByteArray(Charsets.UTF_8)) }
 
             val codigo = conexion.responseCode
-            // Un error viene por errorStream, no por inputStream, y es donde está el
-            // `description` que explica qué pasó. Leerlo es la mitad del diagnóstico.
+            // Un error viene por errorStream, no por inputStream, y es donde está el bloque
+            // `error` con el `code` que decide la clasificación. Leerlo no es opcional aquí:
+            // sin él, los cuatro 400 distintos de la Cloud API son indistinguibles.
             val cuerpo = runCatching {
                 if (codigo in 200..299) {
                     conexion.inputStream.bufferedReader().use { it.readText() }
@@ -221,15 +254,15 @@ class TelegramSender @Inject constructor(
                 }
             }.getOrNull()
 
-            Timber.d("TelegramSender: sendMessage a '$destino' → HTTP $codigo")
+            Timber.d("WhatsAppSender: mensaje a '$destino' → HTTP $codigo")
 
-            anotarEstadoDeCredencial(codigo)
+            anotarEstadoDeCredencial(codigo, cuerpo)
             MapeoDeRespuestas.interpretarEnvio(codigo, cuerpo)
 
         } catch (e: Exception) {
             // Sin red, DNS caído, timeout de socket: todo transitorio. El outbox no pierde
             // nada y el worker volverá cuando haya conexión.
-            Timber.w(e, "TelegramSender: fallo de red enviando a '$destino'")
+            Timber.w(e, "WhatsAppSender: fallo de red enviando a '$destino'")
             ResultadoEnvio.ErrorTransitorio(
                 "${e.javaClass.simpleName}: ${e.message ?: "fallo de red"}"
             )
@@ -239,23 +272,34 @@ class TelegramSender @Inject constructor(
     }
 
     /**
-     * Mantiene al día el aviso de «el token no sirve» que mira el Panel.
+     * Mantiene al día el aviso de «las credenciales no sirven» que mira el Panel.
      *
-     * Un envío correcto lo borra porque es la mejor prueba posible de que el token va bien, y
-     * dejarlo puesto mandaría a alguien a arreglar algo que ya funciona.
+     * Un envío correcto lo borra porque es la mejor prueba posible de que las credenciales van
+     * bien, y dejarlo puesto mandaría a alguien a arreglar algo que ya funciona.
      */
-    private suspend fun anotarEstadoDeCredencial(codigo: Int) {
-        if (MapeoDeRespuestas.esFalloDeCredencial(codigo)) {
-            Timber.e("TelegramSender: Telegram rechazó el token (HTTP $codigo)")
-            estadoDelBot.anotarTokenRechazado()
+    private suspend fun anotarEstadoDeCredencial(codigo: Int, cuerpo: String?) {
+        if (MapeoDeRespuestas.esFalloDeCredencial(codigo, cuerpo)) {
+            Timber.e("WhatsAppSender: Meta rechazó las credenciales (HTTP $codigo)")
+            estadoDeLaCuenta.anotarCredencialRechazada()
         } else if (codigo in 200..299) {
-            estadoDelBot.olvidarTokenRechazado()
+            estadoDeLaCuenta.olvidarCredencialRechazada()
         }
     }
 
-    private companion object {
-        /** El token se concatena aquí. Esta constante nunca se registra con el token pegado. */
-        const val BASE = "https://api.telegram.org/bot"
+    internal companion object {
+        /** Host de la Graph API. El `phone_number_id` se concatena tras la versión. */
+        const val BASE = "https://graph.facebook.com/"
+
+        /**
+         * Versión de la Graph API que se pide explícitamente.
+         *
+         * Nunca se llama sin versión. Una URL sin versión usa la más reciente que Meta tenga
+         * publicada, lo que convierte cualquier cambio suyo en un cambio de comportamiento de
+         * esta aplicación sin que nadie haya tocado nada. Subirla es una decisión, y se toma
+         * leyendo el registro de cambios de Meta.
+         */
+        const val API = "v22.0"
+
         /**
          * Margen del respaldo de la corrutina sobre la suma de los plazos del socket.
          *
