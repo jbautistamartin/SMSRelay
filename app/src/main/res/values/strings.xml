@@ -8,9 +8,11 @@
     <string name="sms_borrar_todos">Borrar</string>
     <string name="dashboard_resumen">%1$d SMS · %2$d reenvío(s) en curso · %3$d regla(s) activa(s)</string>
     <string name="dashboard_aviso_transporte">⚠ No se puede entregar nada: %1$s</string>
+    <string name="dashboard_mensajes_mes">Este mes: %1$d de %2$d mensajes · %3$d de servicio y %4$d de plantilla</string>
+    <string name="dashboard_mensajes_mes_sin_tope">Este mes: %1$d mensajes · %2$d de servicio y %3$d de plantilla · sin tope</string>
     <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se entregan a ningún número. Crea una regla en la pestaña Reglas.</string>
     <string name="sms_ruta_sin_regla">Ninguna regla casó: no se entregó</string>
-    <string name="sms_ruta_descartado">Descartado: se superó el límite por minuto</string>
+    <string name="sms_ruta_descartado">Descartado: se superó un límite configurado</string>
     <string name="sms_ruta_uno">%1$s → %2$s</string>
     <string name="sms_detalle_error">Error en %1$s: %2$s</string>
     <string name="sms_detalle_desglose">%1$d enviados · %2$d en curso · %3$d fallidos</string>
@@ -93,6 +95,9 @@
     <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
     <string name="settings_max_reenvios_ayuda">Corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>
+
+    <string name="settings_max_mensajes_mes">Tope de mensajes al mes</string>
+    <string name="settings_max_mensajes_mes_ayuda">Meta regala los primeros 1.000 mensajes de servicio al mes y factura todos los de plantilla. Mil al mes son 33 al día. Pasado el tope, los SMS se descartan y queda en el registro. 0 lo desactiva. Recomendado: 900</string>
 
     <string name="settings_seccion_envio">Envío y reintentos</string>
     <string name="settings_timeout_envio">Espera de confirmación</string>

@@ -95,21 +95,45 @@ data class AppConfig(
     /**
      * Tope de reenvíos creados por minuto. El exceso se descarta y queda registrado en el log.
      *
-     * **Es la única de las tres protecciones originales que sigue viva, y ya no por el mismo
-     * motivo.** Cuando el transporte era el SMS, esto era un cortafuegos económico: un bucle de
-     * reenvíos con los reintentos detrás se convertía en una factura, y por eso había además dos
-     * guardias antibucle que comparaban destinos con remitentes.
+     * **Esta protección cambia de significado por tercera vez, y es la tercera vez que sobrevive
+     * por un motivo distinto del que la hizo nacer.**
      *
-     * Entregar por Telegram es gratis y no puede formar bucles —un mensaje de Telegram no vuelve
-     * nunca como SMS—, así que aquellas dos guardias se fueron. Esta se queda porque los límites
-     * de quien recibe siguen existiendo: el Bot API admite del orden de 30 mensajes por segundo
-     * en total, **uno por segundo y chat** y unos 20 por minuto en un grupo. Pasarse no cuesta
-     * dinero, cuesta `429 Too Many Requests`, y con un grupo de destino eso llega enseguida.
+     * | Transporte | Para qué servía |
+     * |------------|-----------------|
+     * | SMS | Cortafuegos económico: un bucle con reintentos detrás era una factura |
+     * | Telegram | Los límites del Bot API: un mensaje por segundo y chat. Entregar era gratis |
+     * | Cloud API | Las dos cosas a la vez, y la económica aprieta más que nunca |
      *
-     * El valor por defecto —10 por minuto— queda holgadamente por debajo de cualquiera de esos
-     * techos y es más que suficiente para los SMS que recibe un teléfono real.
+     * El caudal de la Cloud API es holgado —del orden de 80 mensajes por segundo— así que por
+     * ahí no hay problema. Lo que existe es el error `131056`, demasiados mensajes al mismo
+     * destinatario en poco tiempo, y sobre todo el coste: ver [maxMensajesPorMes].
+     *
+     * Esto sigue siendo lo que corta una **avalancha**: una ráfaga de SMS en un minuto. El techo
+     * mensual es otra cosa y la vigila otro ajuste.
      */
     val maxReenviosPorMinuto: Int = 10,
+
+    /**
+     * Tope de mensajes entregados en el mes natural. Pasado el tope, los SMS se descartan y
+     * queda registrado en el log.
+     *
+     * **Es el límite que de verdad importa ahora, y el primero de este proyecto que mide dinero
+     * en lugar de tiempo.** Meta regala los primeros 1.000 mensajes de servicio al mes y por
+     * número, y factura todos los de plantilla; pasarse no da ningún error, da una factura.
+     *
+     * Mil al mes son **treinta y tres al día**. El tope por minuto no protege de esto en
+     * absoluto: 10 por minuto son 14.400 al día, tres órdenes de magnitud por encima del primer
+     * techo que se va a encontrar. Son dos protecciones distintas porque miden cosas distintas:
+     * una corta una ráfaga, la otra corta un mes.
+     *
+     * El valor por defecto es 900, por debajo de los 1.000 gratuitos, para que una instalación
+     * que nadie ha configurado no llegue a facturar nada. Quien quiera gastar más lo sube a
+     * conciencia; `0` lo desactiva.
+     *
+     * Lo cuenta `ContadorDeMensajes`, que cuenta **mensajes entregados** y no reenvíos: un SMS
+     * largo se trocea y Meta factura por mensaje.
+     */
+    val maxMensajesPorMes: Int = 900,
 
     /**
      * Interruptor general de la recepción. En false la aplicación deja de leer los SMS que

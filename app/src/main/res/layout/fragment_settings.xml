@@ -423,6 +423,26 @@
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- El tope que de verdad importa: es el unico ajuste de esta aplicacion que mide
+             dinero. El de por minuto corta una rafaga; este corta un mes. -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_max_mensajes_mes"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:hint="@string/settings_max_mensajes_mes"
+            app:helperText="@string/settings_max_mensajes_mes_ayuda">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_max_mensajes_mes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:imeOptions="actionNext"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

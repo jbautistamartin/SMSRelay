@@ -40,6 +40,7 @@ class ConfigDataStore @Inject constructor(
             intervaloReintentoSegundos = prefs[Keys.INTERVALO_REINTENTO]   ?: porDefecto.intervaloReintentoSegundos,
             timeoutEnvioSegundos       = prefs[Keys.TIMEOUT_ENVIO]         ?: porDefecto.timeoutEnvioSegundos,
             maxReenviosPorMinuto       = prefs[Keys.MAX_REENVIOS_MINUTO]   ?: porDefecto.maxReenviosPorMinuto,
+            maxMensajesPorMes          = prefs[Keys.MAX_MENSAJES_MES]      ?: porDefecto.maxMensajesPorMes,
             recepcionActiva            = prefs[Keys.RECEPCION_ACTIVA]      ?: porDefecto.recepcionActiva
         )
     }
@@ -56,6 +57,7 @@ class ConfigDataStore @Inject constructor(
             prefs[Keys.INTERVALO_REINTENTO] = config.intervaloReintentoSegundos
             prefs[Keys.TIMEOUT_ENVIO]       = config.timeoutEnvioSegundos
             prefs[Keys.MAX_REENVIOS_MINUTO] = config.maxReenviosPorMinuto
+            prefs[Keys.MAX_MENSAJES_MES]    = config.maxMensajesPorMes
             prefs[Keys.RECEPCION_ACTIVA]    = config.recepcionActiva
         }
     }
@@ -70,6 +72,7 @@ class ConfigDataStore @Inject constructor(
         val INTERVALO_REINTENTO = intPreferencesKey("intervalo_reintento")
         val TIMEOUT_ENVIO       = intPreferencesKey("timeout_envio_segundos")
         val MAX_REENVIOS_MINUTO = intPreferencesKey("max_reenvios_por_minuto")
+        val MAX_MENSAJES_MES    = intPreferencesKey("max_mensajes_por_mes")
         val RECEPCION_ACTIVA    = booleanPreferencesKey("recepcion_activa")
     }
 }

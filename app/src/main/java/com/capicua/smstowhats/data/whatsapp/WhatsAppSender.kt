@@ -66,7 +66,8 @@ import javax.inject.Singleton
 @Singleton
 class WhatsAppSender @Inject constructor(
     private val configDataStore: ConfigDataStore,
-    private val estadoDeLaCuenta: EstadoDeLaCuenta
+    private val estadoDeLaCuenta: EstadoDeLaCuenta,
+    private val contadorDeMensajes: ContadorDeMensajes
 ) : EnviadorDeMensajes {
 
     /**
@@ -246,7 +247,13 @@ class WhatsAppSender @Inject constructor(
         }
 
         return conRespaldo(plazos, trozos.size) {
-            enviarTrozos(credenciales, trozos, plazos) { cuerpoDeTexto(credenciales, it) }
+            enviarTrozos(
+                credenciales = credenciales,
+                trozos = trozos,
+                plazos = plazos,
+                alEntregar = contadorDeMensajes::contarServicio,
+                cuerpo = { cuerpoDeTexto(credenciales, it) }
+            )
         }
     }
 
@@ -286,9 +293,13 @@ class WhatsAppSender @Inject constructor(
         }
 
         return conRespaldo(plazos, parametros.size) {
-            enviarTrozos(credenciales, parametros, plazos) {
-                cuerpoDePlantilla(credenciales, it, config)
-            }
+            enviarTrozos(
+                credenciales = credenciales,
+                trozos = parametros,
+                plazos = plazos,
+                alEntregar = contadorDeMensajes::contarPlantilla,
+                cuerpo = { cuerpoDePlantilla(credenciales, it, config) }
+            )
         }
     }
 
@@ -321,11 +332,15 @@ class WhatsAppSender @Inject constructor(
         credenciales: Credenciales,
         trozos: List<String>,
         plazos: Plazos,
+        alEntregar: suspend () -> Unit,
         cuerpo: (String) -> String
     ): Entrega {
         for (trozo in trozos) {
             val entrega = enviarUno(credenciales, cuerpo(trozo), plazos)
             if (entrega.resultado !is ResultadoEnvio.Enviado) return entrega
+            // Se cuenta aquí, por trozo entregado, y no una vez por reenvío: Meta factura por
+            // mensaje, así que contar reenvíos daría una cifra que no se parece a la factura.
+            alEntregar()
         }
         return Entrega(ResultadoEnvio.Enviado)
     }

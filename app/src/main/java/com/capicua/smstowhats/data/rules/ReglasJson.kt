@@ -122,6 +122,7 @@ data class ConfiguracionJson(
     @SerialName("intervalo_reintento_segundos") val intervaloReintentoSegundos: Int,
     @SerialName("timeout_envio_segundos") val timeoutEnvioSegundos: Int,
     @SerialName("max_reenvios_por_minuto") val maxReenviosPorMinuto: Int,
+    @SerialName("max_mensajes_por_mes") val maxMensajesPorMes: Int = 900,
     @SerialName("recepcion_activa") val recepcionActiva: Boolean = true
 )
 
@@ -135,6 +136,7 @@ fun AppConfig.aJson() = ConfiguracionJson(
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,
     maxReenviosPorMinuto = maxReenviosPorMinuto,
+    maxMensajesPorMes = maxMensajesPorMes,
     recepcionActiva = recepcionActiva
 )
 
@@ -159,6 +161,7 @@ fun ConfiguracionJson.aDominio(tokenActual: String, idActual: String) = AppConfi
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,
     maxReenviosPorMinuto = maxReenviosPorMinuto,
+    maxMensajesPorMes = maxMensajesPorMes,
     recepcionActiva = recepcionActiva
 )
 

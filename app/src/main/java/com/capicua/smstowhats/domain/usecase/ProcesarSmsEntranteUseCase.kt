@@ -10,6 +10,7 @@ import com.capicua.smstowhats.data.repository.LogRepository
 import com.capicua.smstowhats.data.repository.ReenvioRepository
 import com.capicua.smstowhats.data.repository.ReglaRepository
 import com.capicua.smstowhats.data.repository.SmsRepository
+import com.capicua.smstowhats.data.whatsapp.ContadorDeMensajes
 import com.capicua.smstowhats.domain.model.EstadoSms
 import com.capicua.smstowhats.domain.model.LogEntry
 import com.capicua.smstowhats.domain.model.LogTipo
@@ -59,7 +60,8 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
     private val logRepository: LogRepository,
     private val evaluador: EvaluadorDeReglas,
     private val colaDeEnvios: ColaDeEnvios,
-    private val configDataStore: ConfigDataStore
+    private val configDataStore: ConfigDataStore,
+    private val contadorDeMensajes: ContadorDeMensajes
 ) {
 
     /** Persiste el SMS y lo tramita. Para mensajes recién recibidos. */
@@ -93,6 +95,8 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
         val config = configDataStore.config.first()
 
         // ── Protección: límite de reenvíos por minuto ─────────────────────────
+        //
+        // Corta una avalancha: una ráfaga de SMS en un minuto.
         val desde = Instant.now().minus(1, ChronoUnit.MINUTES)
         val recientes = reenvioRepository.contarCreadosDesde(desde)
         if (recientes >= config.maxReenviosPorMinuto) {
@@ -102,6 +106,33 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                     "($recientes en los últimos 60 s)"
             )
             return
+        }
+
+        // ── Protección: tope de mensajes del mes ──────────────────────────────
+        //
+        // Es otra protección y no una variante de la anterior, porque mide otra cosa: aquella
+        // corta una ráfaga, esta corta un mes. Y es la primera de este proyecto que mide
+        // **dinero**: entregar por la Cloud API cuesta pasados los mil mensajes de servicio
+        // gratuitos, y pasarse no da ningún error, da una factura.
+        //
+        // Se comprueba aquí, al crear el reenvío, y no al entregarlo, por dos razones. Una es
+        // que así usa el mismo mecanismo que el tope por minuto —descartar el SMS y dejarlo en
+        // el registro— en lugar de inventar una tercera forma de fallar. La otra es que un
+        // reenvío cerrado como fallido al intentar entregarlo habría consumido ya su sitio en
+        // la cola y sus reintentos para nada.
+        //
+        // Un tope de 0 lo desactiva, para quien prefiera no tener techo.
+        if (config.maxMensajesPorMes > 0) {
+            val mes = contadorDeMensajes.leerMesEnCurso()
+            if (mes.total >= config.maxMensajesPorMes) {
+                descartar(
+                    sms,
+                    "tope de ${config.maxMensajesPorMes} mensajes del mes alcanzado " +
+                        "(${mes.servicio} de servicio y ${mes.plantilla} de plantilla " +
+                        "entregados en ${mes.mes})"
+                )
+                return
+            }
         }
 
         // ── Evaluación ────────────────────────────────────────────────────────

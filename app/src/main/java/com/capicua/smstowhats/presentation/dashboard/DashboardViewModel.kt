@@ -11,7 +11,9 @@ import com.capicua.smstowhats.data.config.ConfigDataStore
 import com.capicua.smstowhats.data.repository.ReenvioRepository
 import com.capicua.smstowhats.data.repository.ReglaRepository
 import com.capicua.smstowhats.data.repository.SmsRepository
+import com.capicua.smstowhats.data.whatsapp.ContadorDeMensajes
 import com.capicua.smstowhats.data.whatsapp.EstadoDeLaCuenta
+import com.capicua.smstowhats.data.whatsapp.MensajesDelMes
 import com.capicua.smstowhats.domain.transport.EnviadorDeMensajes
 import com.capicua.smstowhats.domain.model.SmsConReenvios
 import com.capicua.smstowhats.domain.usecase.ObtenerListaSmsUseCase
@@ -34,6 +36,7 @@ class DashboardViewModel @Inject constructor(
     private val smsRepository: SmsRepository,
     private val enviador: EnviadorDeMensajes,
     private val estadoDeLaCuenta: EstadoDeLaCuenta,
+    contadorDeMensajes: ContadorDeMensajes,
     configDataStore: ConfigDataStore,
     reenvioRepository: ReenvioRepository,
     reglaRepository: ReglaRepository
@@ -58,16 +61,32 @@ class DashboardViewModel @Inject constructor(
     }
 
     /**
+     * Lo entregado este mes y el tope configurado, para el Panel.
+     *
+     * Está en la primera pantalla porque es la única cifra de esta aplicación que **cuesta
+     * dinero** y que nadie va a ir a buscar a propósito. Enterrada en Ajustes, la primera
+     * noticia de haberse pasado sería la factura.
+     *
+     * Van juntos el contador y el tope porque por separado no dicen nada: «143 mensajes» no es
+     * ni mucho ni poco hasta que se sabe contra qué.
+     */
+    val mensajesDelMes: Flow<Pair<MensajesDelMes, Int>> = combine(
+        contadorDeMensajes.mesEnCurso,
+        configDataStore.config
+    ) { mes, config -> mes to config.maxMensajesPorMes }
+
+    /**
      * Por qué no se puede entregar nada, o null si el transporte está listo.
      *
      * Es el aviso más importante del Panel, porque es el único fallo que afecta a **todos** los
-     * reenvíos por igual: sin token, o con un token que Telegram ha rechazado, la aplicación
+     * reenvíos por igual: sin credenciales, o con unas que Meta ha rechazado, la aplicación
      * recibe SMS y los va marcando como fallidos uno a uno. En el registro eso son cuatrocientas
      * líneas idénticas de las que solo la primera informa; aquí es una línea en la primera
      * pantalla, que es donde alguien la va a leer.
      *
      * Se recalcula con cada cambio de la configuración, que es cuando puede dejar de ser cierto:
-     * el motivo depende del token guardado y de si el último envío fue rechazado.
+     * el motivo depende de las credenciales guardadas, del modo de entrega y de si el último
+     * envío fue rechazado.
      */
     val avisoTransporte: Flow<String?> = combine(
         configDataStore.config,

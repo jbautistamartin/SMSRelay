@@ -377,6 +377,7 @@ class SettingsFragment : Fragment() {
         )
         binding.switchRecepcion.isChecked = config.recepcionActiva
         binding.editTextMaxReenviosMinuto.setText(config.maxReenviosPorMinuto.toString())
+        binding.editTextMaxMensajesMes.setText(config.maxMensajesPorMes.toString())
         binding.editTextTimeoutEnvio.setText(config.timeoutEnvioSegundos.toString())
         binding.editTextMaxReintentos.setText(config.maxReintentos.toString())
         binding.editTextIntervalo.setText(config.intervaloReintentoSegundos.toString())
@@ -396,13 +397,14 @@ class SettingsFragment : Fragment() {
                 binding.editTextPlantillaIdioma.text?.toString()?.trim().orEmpty()
             val modo = modoElegido()
             val maxPorMinuto = binding.editTextMaxReenviosMinuto.entero(VALORES.maxReenviosPorMinuto)
+            val maxPorMes = binding.editTextMaxMensajesMes.entero(VALORES.maxMensajesPorMes)
             val timeoutEnvio = binding.editTextTimeoutEnvio.entero(VALORES.timeoutEnvioSegundos)
             val maxReintentos = binding.editTextMaxReintentos.entero(VALORES.maxReintentos)
             val intervalo = binding.editTextIntervalo.entero(VALORES.intervaloReintentoSegundos)
 
             if (!validar(
                     token, idNumero, modo, plantillaNombre, plantillaIdioma,
-                    maxPorMinuto, timeoutEnvio, maxReintentos, intervalo
+                    maxPorMinuto, maxPorMes, timeoutEnvio, maxReintentos, intervalo
                 )
             ) {
                 return@setOnClickListener
@@ -419,6 +421,7 @@ class SettingsFragment : Fragment() {
                     intervaloReintentoSegundos = intervalo,
                     timeoutEnvioSegundos = timeoutEnvio,
                     maxReenviosPorMinuto = maxPorMinuto,
+                    maxMensajesPorMes = maxPorMes,
                     recepcionActiva = binding.switchRecepcion.isChecked
                 )
             )
@@ -450,6 +453,7 @@ class SettingsFragment : Fragment() {
         plantillaNombre: String,
         plantillaIdioma: String,
         maxPorMinuto: Int,
+        maxPorMes: Int,
         timeoutEnvio: Int,
         maxReintentos: Int,
         intervalo: Int
@@ -509,6 +513,12 @@ class SettingsFragment : Fragment() {
         valido = comprobarRango(
             binding.tilMaxReenviosMinuto, maxPorMinuto, 1, 100,
             getString(R.string.settings_error_rango, 1, 100)
+        ) && valido
+
+        // El cero es legitimo y significa «sin tope», asi que el rango empieza en 0 y no en 1.
+        valido = comprobarRango(
+            binding.tilMaxMensajesMes, maxPorMes, 0, 100_000,
+            getString(R.string.settings_error_rango, 0, 100_000)
         ) && valido
 
         valido = comprobarRango(

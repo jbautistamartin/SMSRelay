@@ -76,6 +76,23 @@ class DashboardFragment : Fragment() {
                     }
                 }
                 launch {
+                    // Un tope de 0 significa «sin tope», y entonces enseñar «143 de 0» sería
+                    // absurdo: se dice que no hay tope y se deja la cifra sola.
+                    viewModel.mensajesDelMes.collect { (mes, tope) ->
+                        binding.textViewMensajesMes.text = if (tope > 0) {
+                            getString(
+                                R.string.dashboard_mensajes_mes,
+                                mes.total, tope, mes.servicio, mes.plantilla
+                            )
+                        } else {
+                            getString(
+                                R.string.dashboard_mensajes_mes_sin_tope,
+                                mes.total, mes.servicio, mes.plantilla
+                            )
+                        }
+                    }
+                }
+                launch {
                     viewModel.resumen.collect { resumen ->
                         binding.textViewResumen.text = getString(
                             R.string.dashboard_resumen,
