@@ -46,6 +46,35 @@ data class AppConfig(
      */
     val idNumeroTelefono: String = "",
 
+    /**
+     * Cómo sale cada reenvío: texto libre, plantilla, o lo que haga falta.
+     *
+     * Ver [ModoDeEntrega]. El valor por defecto entrega siempre sin gastar más de lo necesario,
+     * que es lo que hace falta en un teléfono que nadie está mirando.
+     */
+    val modoDeEntrega: ModoDeEntrega = ModoDeEntrega.AUTOMATICO,
+
+    /**
+     * Nombre de la plantilla aprobada en el Business Manager, o vacío si no hay ninguna.
+     *
+     * Vacío no es un error de configuración: es una instalación que solo va a entregar dentro de
+     * la ventana de 24 h. Lo que sí hace es dejar [ModoDeEntrega.AUTOMATICO] sin nada a lo que
+     * saltar, y el motivo del fallo lo dice.
+     *
+     * No es una credencial, así que **sí viaja en la copia de seguridad**: describe *cómo*
+     * reenviar, que es lo que el fichero existe para llevarse a otro teléfono.
+     */
+    val plantillaNombre: String = "",
+
+    /**
+     * Código de idioma de la plantilla, tal como se dio de alta.
+     *
+     * Una plantilla no existe «en general»: existe en un idioma, y pedirla en otro devuelve un
+     * `132001`. El valor por defecto es `es` porque es el idioma de la aplicación; una plantilla
+     * dada de alta como `es_ES` necesita escribirlo así.
+     */
+    val plantillaIdioma: String = "es",
+
     /** Número máximo de intentos antes de dar un reenvío por fallido permanentemente. */
     val maxReintentos: Int = 10,
 

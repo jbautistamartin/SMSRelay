@@ -144,6 +144,21 @@ object MapeoDeRespuestas {
     }
 
     /**
+     * true si la respuesta dice que la ventana de 24 h está cerrada.
+     *
+     * Se consulta **antes** de interpretar, porque esto no es un fallo que haya que clasificar:
+     * es la señal de que este mensaje tiene que salir por el otro camino. Quien la usa es el
+     * transporte en modo [com.capicua.smstowhats.data.config.ModoDeEntrega.AUTOMATICO], para
+     * reenviar como plantilla sin gastar un reintento del worker.
+     *
+     * Es un predicado aparte y no un `ResultadoEnvio` nuevo a propósito: `ResultadoEnvio` lo lee
+     * `DispatchWorker`, que no sabe —ni debe saber— que existen dos formas de entregar. Añadir
+     * ahí un tercer caso obligaría al worker a decidir algo que es del transporte.
+     */
+    fun esVentanaCerrada(cuerpo: String?): Boolean =
+        interpretarCuerpo(cuerpo)?.error?.codigo == VENTANA_CERRADA
+
+    /**
      * Longitud máxima del `text.body` de un mensaje de texto.
      *
      * Es **el mismo número** que el límite del Bot API de Telegram, lo que permitió que

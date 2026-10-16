@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smstowhats.data.config.ConfigDataStore
 import com.capicua.smstowhats.data.repository.ReglaRepository
 import com.capicua.smstowhats.data.whatsapp.DestinoDeWhatsApp
+import com.capicua.smstowhats.data.whatsapp.MapeoDeRespuestas
 import com.capicua.smstowhats.domain.rules.EvaluadorDeReglas
 import com.capicua.smstowhats.domain.rules.ResultadoEvaluacion
 import com.capicua.smstowhats.domain.transport.EnviadorDeMensajes
@@ -17,6 +18,9 @@ import com.capicua.smstowhats.domain.transport.ResultadoEnvio
 import com.capicua.smstowhats.util.toDisplayString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -64,8 +68,24 @@ class ProbarReglasViewModel @Inject constructor(
     private val configDataStore: ConfigDataStore
 ) : ViewModel() {
 
-    /** Longitud máxima que admite el transporte, para mostrarla junto a cada texto final. */
-    val limiteCaracteres: Int = enviador.limiteCaracteres
+    /**
+     * Longitud máxima que admite el transporte con la configuración actual, para mostrarla
+     * junto a cada texto final.
+     *
+     * Es un [StateFlow] y no un `Int` porque el límite dejó de ser una constante del medio: la
+     * Cloud API admite 4.096 caracteres en un mensaje de texto libre y 1.024 renderizados en uno
+     * de plantilla, así que el que aplica depende de cómo esté configurado el transporte y hay
+     * que leerlo suspendiendo.
+     *
+     * Arranca en el límite del texto libre, que es el modo por defecto, para que el contador no
+     * enseñe un cero en el primer repintado.
+     */
+    val limiteCaracteres: StateFlow<Int> = flow { emit(enviador.limiteCaracteres()) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = MapeoDeRespuestas.LIMITE_CARACTERES
+        )
 
     private val _prueba = MutableStateFlow<PruebaReglas?>(null)
     val prueba: StateFlow<PruebaReglas?> = _prueba.asStateFlow()

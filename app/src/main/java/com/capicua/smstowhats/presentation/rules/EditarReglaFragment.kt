@@ -119,7 +119,7 @@ class EditarReglaFragment : Fragment() {
         )
         binding.textViewPrevisualizacion.text = texto
 
-        val limite = viewModel.limiteCaracteres
+        val limite = viewModel.limiteCaracteres.value
         binding.textViewLongitud.text =
             getString(R.string.regla_longitud, texto.length, limite)
         binding.textViewLongitud.setTextColor(

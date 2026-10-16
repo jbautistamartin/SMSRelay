@@ -19,7 +19,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.capicua.smstowhats.R
 import com.capicua.smstowhats.data.config.AppConfig
 import com.capicua.smstowhats.data.config.ResultadoCopia
+import com.capicua.smstowhats.data.config.ModoDeEntrega
 import com.capicua.smstowhats.data.whatsapp.IdNumeroTelefono
+import com.capicua.smstowhats.data.whatsapp.PlantillaDeWhatsApp
 import com.capicua.smstowhats.data.whatsapp.ResultadoDeCuenta
 import com.capicua.smstowhats.data.whatsapp.TokenDeAcceso
 import com.capicua.smstowhats.databinding.FragmentSettingsBinding
@@ -73,7 +75,8 @@ class SettingsFragment : Fragment() {
         configurarBateria()
         configurarAutoinicio()
         configurarCopia()
-        configurarComprobacionDelBot()
+        configurarComprobacionDeCuenta()
+        configurarPlantilla()
         observarConfiguracion()
         observarComprobacionDeCuenta()
         observarCopias()
@@ -90,9 +93,40 @@ class SettingsFragment : Fragment() {
         pintarEstadoBateria()
     }
 
-    // ── Comprobación del bot ──────────────────────────────────────────────────
+    // ── Entrega: la plantilla ─────────────────────────────────────────────────
 
-    private fun configurarComprobacionDelBot() {
+    /**
+     * Enseña el cuerpo exacto que hay que dar de alta en el Business Manager, y lo copia.
+     *
+     * El botón de copiar no es una comodidad: escribir ese cuerpo a mano es la forma segura de
+     * equivocarse en una línea en blanco, y una plantilla aprobada con la maquetación mal puesta
+     * no se puede corregir —hay que dar de alta otra y esperar a que la aprueben—.
+     */
+    private fun configurarPlantilla() {
+        binding.textViewPlantillaContrato.text = PlantillaDeWhatsApp.CUERPO_RECOMENDADO
+        binding.textViewPlantillaCoste.text =
+            getString(R.string.settings_plantilla_coste, PlantillaDeWhatsApp.PRESUPUESTO)
+
+        binding.buttonCopiarPlantilla.setOnClickListener {
+            val portapapeles = requireContext()
+                .getSystemService(android.content.ClipboardManager::class.java)
+            portapapeles?.setPrimaryClip(
+                android.content.ClipData.newPlainText(
+                    getString(R.string.settings_plantilla_contrato_titulo),
+                    PlantillaDeWhatsApp.CUERPO_RECOMENDADO
+                )
+            )
+            Snackbar.make(
+                binding.root,
+                R.string.settings_plantilla_copiado,
+                Snackbar.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    // ── Comprobación de las credenciales ──────────────────────────────────────────────────
+
+    private fun configurarComprobacionDeCuenta() {
         binding.buttonValidarCuenta.setOnClickListener {
             // Se comprueba lo que hay escrito, no lo guardado: la gracia es saberlo antes de
             // guardar unas credenciales que no sirven.
@@ -137,12 +171,12 @@ class SettingsFragment : Fragment() {
     ) {
         when (resultado) {
             is ResultadoDeCuenta.Correcto -> {
-                // Ensenar de que numero se trata es lo que hace la respuesta comprobable: quien
-                // la pidio puede reconocer su numero, o ver que ha pegado el id de otro.
+                // Enseñar de qué número se trata es lo que hace la respuesta comprobable: quien
+                // la pidió puede reconocer su número, o ver que ha pegado el id de otro.
                 //
-                // La calidad va detras y en su propia linea porque no es parte de la respuesta
-                // a "sirven?": sirven igual con la calidad en amarillo. Es un aviso de que Meta
-                // esta a punto de limitar el numero, y es el unico de los riesgos de este
+                // La calidad va detrás y en su propia línea porque no es parte de la respuesta
+                // a «¿sirven?»: sirven igual con la calidad en amarillo. Es un aviso de que Meta
+                // está a punto de limitar el número, y es el único de los riesgos de este
                 // proyecto que avisa antes de materializarse.
                 vista.text = buildString {
                     append(
@@ -164,7 +198,7 @@ class SettingsFragment : Fragment() {
             }
 
             is ResultadoDeCuenta.NoSePudo -> {
-                // Sin red no se sabe si las credenciales valen: decir que estan mal seria mentir.
+                // Sin red no se sabe si las credenciales valen: decir que están mal sería mentir.
                 vista.text = getString(R.string.settings_cuenta_sin_red, resultado.motivo)
                 vista.setTextColor(resources.getColor(R.color.status_pending, null))
             }
@@ -177,11 +211,11 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Color del resultado segun la calidad que Meta da al numero.
+     * Color del resultado según la calidad que Meta da al número.
      *
-     * Un `GREEN` se pinta como un exito y un `YELLOW` o un `RED` como un aviso, aunque las
-     * credenciales sirvan en los tres casos: lo que esta en riesgo no es la configuracion, es
-     * el numero. `UNKNOWN` es lo normal en un numero recien creado y no dice nada malo.
+     * Un `GREEN` se pinta como un éxito y un `YELLOW` o un `RED` como un aviso, aunque las
+     * credenciales sirvan en los tres casos: lo que está en riesgo no es la configuración, es
+     * el número. `UNKNOWN` es lo normal en un número recién creado y no dice nada malo.
      */
     private fun colorDeCalidad(calidad: String): Int = when (calidad.uppercase()) {
         "RED" -> resources.getColor(R.color.status_failed, null)
@@ -332,6 +366,15 @@ class SettingsFragment : Fragment() {
     private fun rellenarCampos(config: AppConfig) {
         binding.editTextTokenAcceso.setText(config.tokenAcceso)
         binding.editTextIdNumero.setText(config.idNumeroTelefono)
+        binding.editTextPlantillaNombre.setText(config.plantillaNombre)
+        binding.editTextPlantillaIdioma.setText(config.plantillaIdioma)
+        binding.radioGroupModo.check(
+            when (config.modoDeEntrega) {
+                ModoDeEntrega.AUTOMATICO -> R.id.radio_modo_automatico
+                ModoDeEntrega.SOLO_TEXTO_LIBRE -> R.id.radio_modo_texto_libre
+                ModoDeEntrega.SOLO_PLANTILLA -> R.id.radio_modo_plantilla
+            }
+        )
         binding.switchRecepcion.isChecked = config.recepcionActiva
         binding.editTextMaxReenviosMinuto.setText(config.maxReenviosPorMinuto.toString())
         binding.editTextTimeoutEnvio.setText(config.timeoutEnvioSegundos.toString())
@@ -347,13 +390,19 @@ class SettingsFragment : Fragment() {
             val idNumero = IdNumeroTelefono.normalizar(
                 binding.editTextIdNumero.text?.toString().orEmpty()
             )
+            val plantillaNombre =
+                binding.editTextPlantillaNombre.text?.toString()?.trim().orEmpty()
+            val plantillaIdioma =
+                binding.editTextPlantillaIdioma.text?.toString()?.trim().orEmpty()
+            val modo = modoElegido()
             val maxPorMinuto = binding.editTextMaxReenviosMinuto.entero(VALORES.maxReenviosPorMinuto)
             val timeoutEnvio = binding.editTextTimeoutEnvio.entero(VALORES.timeoutEnvioSegundos)
             val maxReintentos = binding.editTextMaxReintentos.entero(VALORES.maxReintentos)
             val intervalo = binding.editTextIntervalo.entero(VALORES.intervaloReintentoSegundos)
 
             if (!validar(
-                    token, idNumero, maxPorMinuto, timeoutEnvio, maxReintentos, intervalo
+                    token, idNumero, modo, plantillaNombre, plantillaIdioma,
+                    maxPorMinuto, timeoutEnvio, maxReintentos, intervalo
                 )
             ) {
                 return@setOnClickListener
@@ -363,6 +412,9 @@ class SettingsFragment : Fragment() {
                 AppConfig(
                     tokenAcceso = token,
                     idNumeroTelefono = idNumero,
+                    modoDeEntrega = modo,
+                    plantillaNombre = plantillaNombre,
+                    plantillaIdioma = plantillaIdioma,
                     maxReintentos = maxReintentos,
                     intervaloReintentoSegundos = intervalo,
                     timeoutEnvioSegundos = timeoutEnvio,
@@ -384,9 +436,19 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    /** El modo marcado en los tres botones. */
+    private fun modoElegido(): ModoDeEntrega = when (binding.radioGroupModo.checkedRadioButtonId) {
+        R.id.radio_modo_texto_libre -> ModoDeEntrega.SOLO_TEXTO_LIBRE
+        R.id.radio_modo_plantilla -> ModoDeEntrega.SOLO_PLANTILLA
+        else -> ModoDeEntrega.AUTOMATICO
+    }
+
     private fun validar(
         token: String,
         idNumero: String,
+        modo: ModoDeEntrega,
+        plantillaNombre: String,
+        plantillaIdioma: String,
         maxPorMinuto: Int,
         timeoutEnvio: Int,
         maxReintentos: Int,
@@ -417,6 +479,30 @@ class SettingsFragment : Fragment() {
                     R.string.settings_id_numero_invalido
                 }
             )
+            valido = false
+        }
+
+        // La plantilla puede no estar configurada: eso significa «solo entrego dentro de la
+        // ventana de 24 h», que es un estado legítimo. Lo que no es legítimo es pedir el modo
+        // «solo plantilla» sin tenerla, porque entonces no se entrega nada nunca.
+        if (plantillaNombre.isEmpty() || NOMBRE_PLANTILLA.matches(plantillaNombre)) {
+            binding.tilPlantillaNombre.error = null
+        } else {
+            binding.tilPlantillaNombre.error =
+                getString(R.string.settings_plantilla_nombre_invalido)
+            valido = false
+        }
+
+        if (modo == ModoDeEntrega.SOLO_PLANTILLA && plantillaNombre.isEmpty()) {
+            binding.tilPlantillaNombre.error = getString(R.string.settings_plantilla_falta)
+            valido = false
+        }
+
+        if (IDIOMA_PLANTILLA.matches(plantillaIdioma)) {
+            binding.tilPlantillaIdioma.error = null
+        } else {
+            binding.tilPlantillaIdioma.error =
+                getString(R.string.settings_plantilla_idioma_invalido)
             valido = false
         }
 
@@ -468,5 +554,16 @@ class SettingsFragment : Fragment() {
     private companion object {
         /** Valores por defecto, para no repetirlos cuando un campo se queda vacío. */
         val VALORES = AppConfig()
+
+        /**
+         * Nombre de plantilla tal como lo admite Meta: minúsculas, dígitos y guiones bajos.
+         *
+         * Lo valida la propia consola al darla de alta, así que aquí solo sirve para atrapar un
+         * nombre copiado con mayúsculas o con un espacio, que daría un `132001` al entregar.
+         */
+        val NOMBRE_PLANTILLA = Regex("""^[a-z0-9_]{1,512}$""")
+
+        /** Un código de idioma: `es`, `es_ES`, `pt_BR`. */
+        val IDIOMA_PLANTILLA = Regex("""^[a-z]{2}(_[A-Z]{2})?$""")
     }
 }

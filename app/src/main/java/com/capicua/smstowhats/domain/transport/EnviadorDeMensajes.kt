@@ -27,12 +27,22 @@ package com.capicua.smstowhats.domain.transport
 interface EnviadorDeMensajes {
 
     /**
-     * Longitud máxima de un mensaje, en caracteres.
+     * Longitud máxima de un mensaje, en caracteres, **con la configuración actual**.
      *
      * La pantalla de reglas la usa para avisar mientras se escribe la plantilla, que es el único
      * momento en que alguien puede hacer algo al respecto.
+     *
+     * ## Por qué suspende
+     * Era una propiedad, y dejó de poder serlo cuando el límite pasó a depender de cómo esté
+     * configurado el transporte: la Cloud API admite 4.096 caracteres en un mensaje de texto
+     * libre y 1.024 renderizados en uno de plantilla, así que el límite que de verdad aplica no
+     * se puede saber sin leer la configuración persistida, y eso suspende.
+     *
+     * Pasarse no pierde contenido —el transporte trocea— pero sí cuesta: cada trozo es un
+     * mensaje más, y en modo plantilla cada mensaje se factura. Por eso el aviso merece ser
+     * exacto en lugar de cómodo.
      */
-    val limiteCaracteres: Int
+    suspend fun limiteCaracteres(): Int
 
     /**
      * Entrega [texto] a [destino] y **espera la confirmación**.

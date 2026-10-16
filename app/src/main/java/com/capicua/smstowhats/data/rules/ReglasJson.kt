@@ -6,6 +6,7 @@
 package com.capicua.smstowhats.data.rules
 
 import com.capicua.smstowhats.data.config.AppConfig
+import com.capicua.smstowhats.data.config.ModoDeEntrega
 import com.capicua.smstowhats.domain.model.Regla
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -105,6 +106,18 @@ data class ReglasExportadas(
  */
 @Serializable
 data class ConfiguracionJson(
+    /**
+     * Modo de entrega y plantilla. **Sí viajan**, al contrario que las credenciales.
+     *
+     * La línea que separa lo que viaja de lo que no es «¿describe cómo reenviar, o identifica a
+     * este teléfono?». El nombre de la plantilla describe cómo reenviar: quien clona esta
+     * configuración en otro teléfono va a querer el mismo modo y la misma plantilla, que habrá
+     * dado de alta con las mismas instrucciones. El id del número y el token identifican a
+     * *esta* cuenta, y se quedan.
+     */
+    @SerialName("modo_entrega") val modoEntrega: String = ModoDeEntrega.AUTOMATICO.name,
+    @SerialName("plantilla_nombre") val plantillaNombre: String = "",
+    @SerialName("plantilla_idioma") val plantillaIdioma: String = "es",
     @SerialName("max_reintentos") val maxReintentos: Int,
     @SerialName("intervalo_reintento_segundos") val intervaloReintentoSegundos: Int,
     @SerialName("timeout_envio_segundos") val timeoutEnvioSegundos: Int,
@@ -115,6 +128,9 @@ data class ConfiguracionJson(
 /** Convierte los ajustes a su forma exportable, dejando fuera lo que es de este teléfono. */
 fun AppConfig.aJson() = ConfiguracionJson(
     // Si algún campo de AppConfig no debe viajar, el sitio de omitirlo es aquí, no en quien llama.
+    modoEntrega = modoDeEntrega.name,
+    plantillaNombre = plantillaNombre,
+    plantillaIdioma = plantillaIdioma,
     maxReintentos = maxReintentos,
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,
@@ -136,6 +152,9 @@ fun AppConfig.aJson() = ConfiguracionJson(
 fun ConfiguracionJson.aDominio(tokenActual: String, idActual: String) = AppConfig(
     tokenAcceso = tokenActual,
     idNumeroTelefono = idActual,
+    modoDeEntrega = ModoDeEntrega.de(modoEntrega),
+    plantillaNombre = plantillaNombre,
+    plantillaIdioma = plantillaIdioma,
     maxReintentos = maxReintentos,
     intervaloReintentoSegundos = intervaloReintentoSegundos,
     timeoutEnvioSegundos = timeoutEnvioSegundos,

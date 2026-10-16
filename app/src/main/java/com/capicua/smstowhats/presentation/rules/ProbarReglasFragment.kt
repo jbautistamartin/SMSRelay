@@ -147,7 +147,7 @@ class ProbarReglasFragment : Fragment() {
             fila.textViewLongitud.text = getString(
                 R.string.regla_longitud,
                 coincidencia.textoFinal.length,
-                viewModel.limiteCaracteres
+                viewModel.limiteCaracteres.value
             )
             contenedor.addView(fila.root)
         }

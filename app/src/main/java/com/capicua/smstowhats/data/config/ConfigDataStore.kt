@@ -33,6 +33,9 @@ class ConfigDataStore @Inject constructor(
         AppConfig(
             tokenAcceso                = prefs[Keys.TOKEN_ACCESO]         ?: porDefecto.tokenAcceso,
             idNumeroTelefono           = prefs[Keys.ID_NUMERO]            ?: porDefecto.idNumeroTelefono,
+            modoDeEntrega              = ModoDeEntrega.de(prefs[Keys.MODO_ENTREGA]),
+            plantillaNombre            = prefs[Keys.PLANTILLA_NOMBRE]     ?: porDefecto.plantillaNombre,
+            plantillaIdioma            = prefs[Keys.PLANTILLA_IDIOMA]     ?: porDefecto.plantillaIdioma,
             maxReintentos              = prefs[Keys.MAX_REINTENTOS]        ?: porDefecto.maxReintentos,
             intervaloReintentoSegundos = prefs[Keys.INTERVALO_REINTENTO]   ?: porDefecto.intervaloReintentoSegundos,
             timeoutEnvioSegundos       = prefs[Keys.TIMEOUT_ENVIO]         ?: porDefecto.timeoutEnvioSegundos,
@@ -46,6 +49,9 @@ class ConfigDataStore @Inject constructor(
         dataStore.edit { prefs ->
             prefs[Keys.TOKEN_ACCESO]        = config.tokenAcceso
             prefs[Keys.ID_NUMERO]           = config.idNumeroTelefono
+            prefs[Keys.MODO_ENTREGA]        = config.modoDeEntrega.name
+            prefs[Keys.PLANTILLA_NOMBRE]    = config.plantillaNombre
+            prefs[Keys.PLANTILLA_IDIOMA]    = config.plantillaIdioma
             prefs[Keys.MAX_REINTENTOS]      = config.maxReintentos
             prefs[Keys.INTERVALO_REINTENTO] = config.intervaloReintentoSegundos
             prefs[Keys.TIMEOUT_ENVIO]       = config.timeoutEnvioSegundos
@@ -57,6 +63,9 @@ class ConfigDataStore @Inject constructor(
     private object Keys {
         val TOKEN_ACCESO        = stringPreferencesKey("token_acceso")
         val ID_NUMERO           = stringPreferencesKey("id_numero_telefono")
+        val MODO_ENTREGA        = stringPreferencesKey("modo_entrega")
+        val PLANTILLA_NOMBRE    = stringPreferencesKey("plantilla_nombre")
+        val PLANTILLA_IDIOMA    = stringPreferencesKey("plantilla_idioma")
         val MAX_REINTENTOS      = intPreferencesKey("max_reintentos")
         val INTERVALO_REINTENTO = intPreferencesKey("intervalo_reintento")
         val TIMEOUT_ENVIO       = intPreferencesKey("timeout_envio_segundos")

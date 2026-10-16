@@ -27,14 +27,14 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="24dp" />
 
-        <!-- ── Bot de Telegram ─────────────────────────────────────────────
-             Va antes incluso que la recepción porque es el único ajuste que una instalación
-             nueva trae vacío y sin el que no se puede entregar nada: la aplicación recibiría
+        <!-- ── Cuenta de WhatsApp ──────────────────────────────────────────
+             Va antes incluso que la recepción porque son los únicos ajustes que una instalación
+             nueva trae vacíos y sin los que no se puede entregar nada: la aplicación recibiría
              SMS y los iría marcando como fallidos. -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/settings_seccion_bot"
+            android:text="@string/settings_seccion_cuenta"
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="8dp" />
@@ -99,6 +99,147 @@
             android:layout_marginBottom="24dp"
             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
             android:visibility="gone" />
+
+        <!-- ── Entrega ─────────────────────────────────────────────────────
+             Va justo detrás de las credenciales porque es la otra mitad de «¿puede esta
+             aplicación entregar algo?». Sin plantilla, solo entrega dentro de la ventana de
+             24 h que abre el destinatario. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_seccion_entrega"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="@string/settings_entrega_explicacion"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <RadioGroup
+            android:id="@+id/radio_group_modo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/radio_modo_automatico"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_modo_automatico" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/radio_modo_texto_libre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_modo_texto_libre" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/radio_modo_plantilla"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_modo_plantilla" />
+        </RadioGroup>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_plantilla_nombre"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/settings_plantilla_nombre"
+            app:helperText="@string/settings_plantilla_nombre_ayuda"
+            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_plantilla_nombre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:imeOptions="actionNext"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_plantilla_idioma"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/settings_plantilla_idioma"
+            app:helperText="@string/settings_plantilla_idioma_ayuda"
+            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_plantilla_idioma"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:imeOptions="actionDone"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- El cuerpo exacto que hay que dar de alta en el Business Manager. Se puede copiar
+             porque escribirlo a mano es la forma segura de equivocarse en un salto de línea. -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_plantilla_contrato_titulo"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
+
+                <TextView
+                    android:id="@+id/text_view_plantilla_contrato"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="monospace"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textIsSelectable="true" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/settings_plantilla_contrato_ayuda"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_copiar_plantilla"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/settings_plantilla_copiar" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- El texto lo pone el fragment: lleva el presupuesto, que se calcula del contrato. -->
+        <TextView
+            android:id="@+id/text_view_plantilla_coste"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <!-- ── Recepción ───────────────────────────────────────────────────
              Va el primero porque manda sobre todo lo demás: con esto apagado, nada de lo que

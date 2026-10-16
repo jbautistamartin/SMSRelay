@@ -38,7 +38,7 @@
     <string name="settings_guardado">Configuración guardada</string>
     <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se entregará nada.</string>
 
-    <string name="settings_seccion_bot">Cuenta de WhatsApp</string>
+    <string name="settings_seccion_cuenta">Cuenta de WhatsApp</string>
     <string name="settings_token_acceso">Token de acceso</string>
     <string name="settings_token_acceso_ayuda">El token de usuario de sistema de tu app de Meta, con caducidad «Nunca». El que la consola enseña por defecto caduca en 24 horas y dejaría la aplicación muda al día siguiente. No se incluye en la copia de seguridad.</string>
     <string name="settings_id_numero">Id del número</string>
@@ -53,6 +53,24 @@
     <string name="settings_token_acceso_invalido">El token no tiene forma de token de acceso: es una cadena larga, sin espacios</string>
     <string name="settings_id_numero_invalido">El id del número son solo dígitos, unos 15</string>
     <string name="settings_id_numero_es_telefono">Eso es un número de teléfono. Aquí va el id del número, que es otro dato de la misma pantalla de la consola</string>
+
+    <string name="settings_seccion_entrega">Entrega</string>
+    <string name="settings_entrega_explicacion">WhatsApp solo permite enviar texto libre durante las 24 horas siguientes a que el destinatario escriba al número emisor. Fuera de esa ventana hace falta una plantilla aprobada por Meta, y cada mensaje de plantilla se factura.</string>
+    <string name="settings_modo_automatico">Automático: texto libre y, si la ventana está cerrada, plantilla</string>
+    <string name="settings_modo_texto_libre">Solo texto libre: nunca gasta plantillas, pero con la ventana cerrada no entrega</string>
+    <string name="settings_modo_plantilla">Solo plantilla: entrega siempre y factura siempre</string>
+    <string name="settings_plantilla_nombre">Nombre de la plantilla</string>
+    <string name="settings_plantilla_nombre_ayuda">Tal como la diste de alta en el Business Manager, por ejemplo sms_reenviado. Déjalo vacío si no tienes ninguna: entonces solo se entregará dentro de la ventana de 24 horas.</string>
+    <string name="settings_plantilla_idioma">Idioma de la plantilla</string>
+    <string name="settings_plantilla_idioma_ayuda">El código con el que la diste de alta: es, es_ES, en… Pedirla en otro idioma devuelve un error y el reenvío falla.</string>
+    <string name="settings_plantilla_contrato_titulo">Cuerpo que tiene que tener la plantilla</string>
+    <string name="settings_plantilla_contrato_ayuda">Cópialo tal cual, con sus líneas en blanco. Los saltos de línea tienen que estar en la plantilla y no en la variable: Meta rechaza un salto de línea dentro de {{1}}. La plantilla tampoco puede empezar ni terminar con la variable, que es por lo que lleva texto delante y detrás.</string>
+    <string name="settings_plantilla_copiar">Copiar el cuerpo</string>
+    <string name="settings_plantilla_copiado">Cuerpo de la plantilla copiado</string>
+    <string name="settings_plantilla_coste">Dentro de la plantilla caben %1$d caracteres. Lo que pase de ahí se entrega en varios mensajes, y cada uno se factura.</string>
+    <string name="settings_plantilla_nombre_invalido">El nombre de la plantilla va en minúsculas, con números y guiones bajos</string>
+    <string name="settings_plantilla_idioma_invalido">El código de idioma es como «es» o «es_ES»</string>
+    <string name="settings_plantilla_falta">El modo «solo plantilla» necesita una plantilla configurada</string>
 
     <string name="settings_seccion_recepcion">Recepción de SMS</string>
     <string name="settings_recepcion">Leer los SMS que llegan</string>

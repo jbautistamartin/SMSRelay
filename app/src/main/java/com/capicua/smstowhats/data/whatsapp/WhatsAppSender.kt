@@ -5,7 +5,9 @@
 
 package com.capicua.smstowhats.data.whatsapp
 
+import com.capicua.smstowhats.data.config.AppConfig
 import com.capicua.smstowhats.data.config.ConfigDataStore
+import com.capicua.smstowhats.data.config.ModoDeEntrega
 import com.capicua.smstowhats.domain.transport.EnviadorDeMensajes
 import com.capicua.smstowhats.domain.transport.ResultadoEnvio
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +15,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -65,7 +69,21 @@ class WhatsAppSender @Inject constructor(
     private val estadoDeLaCuenta: EstadoDeLaCuenta
 ) : EnviadorDeMensajes {
 
-    override val limiteCaracteres: Int = MapeoDeRespuestas.LIMITE_CARACTERES
+    /**
+     * El límite que aplica **con la configuración actual**.
+     *
+     * En `SOLO_PLANTILLA` es el presupuesto de la variable de la plantilla; en los otros dos
+     * modos es el del texto libre. En `AUTOMATICO` el límite honesto sería «el del texto libre
+     * si la ventana está abierta y el de la plantilla si no», que no se puede saber sin
+     * preguntar, así que se enseña el del texto libre: es el camino que se intenta primero y el
+     * que va a usarse casi siempre.
+     */
+    override suspend fun limiteCaracteres(): Int =
+        if (configDataStore.config.first().modoDeEntrega == ModoDeEntrega.SOLO_PLANTILLA) {
+            PlantillaDeWhatsApp.PRESUPUESTO
+        } else {
+            MapeoDeRespuestas.LIMITE_CARACTERES
+        }
 
     override suspend fun motivoNoDisponible(): String? {
         val config = configDataStore.config.first()
@@ -79,10 +97,26 @@ class WhatsAppSender @Inject constructor(
             estadoDeLaCuenta.leerCredencialRechazada() ->
                 "Meta rechazó las credenciales configuradas: revísalas en Ajustes"
 
+            config.modoDeEntrega == ModoDeEntrega.SOLO_PLANTILLA &&
+                config.plantillaNombre.isBlank() ->
+                "el modo de entrega es «solo plantilla» y no hay ninguna configurada en Ajustes"
+
             else -> null
         }
     }
 
+    /**
+     * Entrega [texto] a [destino] por el camino que diga el modo configurado.
+     *
+     * ## El salto a plantilla va dentro del intento, no como reintento
+     * En `AUTOMATICO` se prueba el texto libre y, si Meta contesta que la ventana está cerrada,
+     * se reenvía **aquí mismo** como plantilla. Devolver un `ErrorTransitorio` y dejar que
+     * `DispatchWorker` lo reintentara tendría el mismo resultado diez veces: la ventana seguiría
+     * cerrada, porque lo que la abre es que el destinatario escriba.
+     *
+     * Es la primera vez que este transporte hace dos peticiones distintas para un reenvío. El
+     * worker no se entera, y eso es lo correcto: el modo de entrega es del transporte.
+     */
     override suspend fun enviar(
         destino: String,
         texto: String,
@@ -106,25 +140,27 @@ class WhatsAppSender @Inject constructor(
             return ResultadoEnvio.ErrorPermanente("el texto a enviar está vacío")
         }
 
-        // Pasarse de 4.096 caracteres es casi imposible y aun así posible. Trocear nunca pierde
-        // contenido; dejar que Meta conteste con un error convertiría un mensaje largo en un
-        // reenvío fallido.
-        val trozos = MapeoDeRespuestas.trocear(texto, limiteCaracteres)
-        if (trozos.size > 1) {
-            Timber.d("WhatsAppSender: el texto va en ${trozos.size} mensajes por longitud")
-        }
-
         // El plazo configurado gobierna los timeouts del socket, y el de la corrutina es solo
         // un respaldo con margen por encima. El orden importa y está explicado en el KDoc de
         // [Plazos]: invertirlo abandona peticiones que siguen en vuelo y pueden entregarse.
         val plazos = Plazos.de(timeoutSegundos)
-        val respaldoMs = plazos.totalMs * trozos.size + MARGEN_RESPALDO_MS
+        val credenciales = Credenciales(token, idNumero, destino)
 
-        return withTimeoutOrNull(respaldoMs) {
-            enviarTrozos(token, idNumero, destino, trozos, plazos)
-        } ?: ResultadoEnvio.ErrorTransitorio(
-            "Meta no contestó en ${respaldoMs / 1000} s"
-        )
+        if (config.modoDeEntrega == ModoDeEntrega.SOLO_PLANTILLA) {
+            return porPlantilla(credenciales, texto, config, plazos).resultado
+        }
+
+        val libre = porTextoLibre(credenciales, texto, plazos)
+
+        val puedeSaltar = config.modoDeEntrega == ModoDeEntrega.AUTOMATICO &&
+            config.plantillaNombre.isNotBlank()
+
+        return if (libre.ventanaCerrada && puedeSaltar) {
+            Timber.i("WhatsAppSender: ventana cerrada para '$destino', va por plantilla")
+            porPlantilla(credenciales, texto, config, plazos).resultado
+        } else {
+            libre.resultado
+        }
     }
 
     // ── Interno ───────────────────────────────────────────────────────────────
@@ -175,6 +211,104 @@ class WhatsAppSender @Inject constructor(
         }
     }
 
+    /** Lo que hace falta para una petición, agrupado para no arrastrar tres parámetros. */
+    private data class Credenciales(
+        val token: String,
+        val idNumero: String,
+        val destino: String
+    )
+
+    /**
+     * Resultado de un camino de entrega.
+     *
+     * [ventanaCerrada] es lo único que `ResultadoEnvio` no puede decir, y es lo que decide si
+     * hay que probar el otro camino. Vive aquí, en el transporte, para que no tenga que subir
+     * hasta `DispatchWorker`, que no sabe que hay dos caminos.
+     */
+    private data class Entrega(
+        val resultado: ResultadoEnvio,
+        val ventanaCerrada: Boolean = false
+    )
+
+    // ── Texto libre ───────────────────────────────────────────────────────────
+
+    private suspend fun porTextoLibre(
+        credenciales: Credenciales,
+        texto: String,
+        plazos: Plazos
+    ): Entrega {
+        // Pasarse de 4.096 caracteres es casi imposible y aun así posible. Trocear nunca pierde
+        // contenido; dejar que Meta conteste con un error convertiría un mensaje largo en un
+        // reenvío fallido.
+        val trozos = MapeoDeRespuestas.trocear(texto, MapeoDeRespuestas.LIMITE_CARACTERES)
+        if (trozos.size > 1) {
+            Timber.d("WhatsAppSender: el texto va en ${trozos.size} mensajes por longitud")
+        }
+
+        return conRespaldo(plazos, trozos.size) {
+            enviarTrozos(credenciales, trozos, plazos) { cuerpoDeTexto(credenciales, it) }
+        }
+    }
+
+    // ── Plantilla ─────────────────────────────────────────────────────────────
+
+    private suspend fun porPlantilla(
+        credenciales: Credenciales,
+        texto: String,
+        config: AppConfig,
+        plazos: Plazos
+    ): Entrega {
+        if (config.plantillaNombre.isBlank()) {
+            return Entrega(
+                ResultadoEnvio.ErrorPermanente(
+                    "hace falta una plantilla para entregar a este número y no hay ninguna " +
+                        "configurada en Ajustes"
+                )
+            )
+        }
+
+        // Aplanar puede dejar vacío un texto que solo tuviera espacios y saltos. Un parámetro
+        // vacío es un 131009, y decirlo aquí explica mucho mejor lo que ha pasado.
+        val parametros = PlantillaDeWhatsApp.prepararParametros(texto)
+        if (parametros.isEmpty()) {
+            return Entrega(
+                ResultadoEnvio.ErrorPermanente(
+                    "el texto se queda vacío al prepararlo para la plantilla"
+                )
+            )
+        }
+        if (parametros.size > 1) {
+            // Esto cuesta dinero: cada trozo es un mensaje de plantilla facturado.
+            Timber.w(
+                "WhatsAppSender: el texto va en ${parametros.size} mensajes de plantilla, " +
+                    "y cada uno se factura"
+            )
+        }
+
+        return conRespaldo(plazos, parametros.size) {
+            enviarTrozos(credenciales, parametros, plazos) {
+                cuerpoDePlantilla(credenciales, it, config)
+            }
+        }
+    }
+
+    // ── Mecánica común ────────────────────────────────────────────────────────
+
+    /**
+     * Envuelve el envío en el respaldo de la corrutina, proporcional al número de peticiones.
+     */
+    private suspend fun conRespaldo(
+        plazos: Plazos,
+        peticiones: Int,
+        bloque: suspend () -> Entrega
+    ): Entrega {
+        val respaldoMs = plazos.totalMs * peticiones + MARGEN_RESPALDO_MS
+        return withTimeoutOrNull(respaldoMs) { bloque() }
+            ?: Entrega(
+                ResultadoEnvio.ErrorTransitorio("Meta no contestó en ${respaldoMs / 1000} s")
+            )
+    }
+
     /**
      * Envía los trozos en orden y se detiene en el primero que falle.
      *
@@ -184,61 +318,112 @@ class WhatsAppSender @Inject constructor(
      * el final es peor que duplicar su principio.
      */
     private suspend fun enviarTrozos(
-        token: String,
-        idNumero: String,
-        destino: String,
+        credenciales: Credenciales,
         trozos: List<String>,
-        plazos: Plazos
-    ): ResultadoEnvio {
+        plazos: Plazos,
+        cuerpo: (String) -> String
+    ): Entrega {
         for (trozo in trozos) {
-            val resultado = enviarUno(token, idNumero, destino, trozo, plazos)
-            if (resultado !is ResultadoEnvio.Enviado) return resultado
+            val entrega = enviarUno(credenciales, cuerpo(trozo), plazos)
+            if (entrega.resultado !is ResultadoEnvio.Enviado) return entrega
         }
-        return ResultadoEnvio.Enviado
+        return Entrega(ResultadoEnvio.Enviado)
     }
 
-    private suspend fun enviarUno(
-        token: String,
-        idNumero: String,
-        destino: String,
-        texto: String,
-        plazos: Plazos
-    ): ResultadoEnvio = withContext(Dispatchers.IO) {
+    /** El JSON de un mensaje de texto libre. */
+    private fun cuerpoDeTexto(credenciales: Credenciales, texto: String): String =
+        json.encodeToString(
+            JsonObject.serializer(),
+            buildJsonObject {
+                ponerSobre(credenciales)
+                put("type", "text")
+                put(
+                    "text",
+                    JsonObject(
+                        mapOf(
+                            // Ver el KDoc de la clase: en true, Meta descargaría los enlaces
+                            // que vengan dentro de un SMS de un tercero.
+                            "preview_url" to JsonPrimitive(false),
+                            "body" to JsonPrimitive(texto)
+                        )
+                    )
+                )
+            }
+        )
 
-        var conexion: HttpURLConnection? = null
-        try {
-            val cuerpoPeticion = json.encodeToString(
-                JsonObject.serializer(),
+    /**
+     * El JSON de un mensaje de plantilla, con el contrato de una sola variable.
+     *
+     * El valor que entra en `{{1}}` viene ya aplanado por [PlantillaDeWhatsApp]: un salto de
+     * línea aquí devuelve un `132007` y cierra el reenvío.
+     */
+    private fun cuerpoDePlantilla(
+        credenciales: Credenciales,
+        parametro: String,
+        config: AppConfig
+    ): String = json.encodeToString(
+        JsonObject.serializer(),
+        buildJsonObject {
+            ponerSobre(credenciales)
+            put("type", "template")
+            put(
+                "template",
                 buildJsonObject {
-                    put("messaging_product", "whatsapp")
-                    // Fijo: los destinos de esta aplicación son siempre personas, nunca grupos.
-                    put("recipient_type", "individual")
-                    put("to", DestinoDeWhatsApp.aDestinatarioApi(destino))
-                    put("type", "text")
+                    put("name", config.plantillaNombre)
+                    put("language", JsonObject(mapOf("code" to JsonPrimitive(config.plantillaIdioma))))
                     put(
-                        "text",
-                        JsonObject(
-                            mapOf(
-                                // Ver el KDoc de la clase: en true, Meta descargaría los enlaces
-                                // que vengan dentro de un SMS de un tercero.
-                                "preview_url" to JsonPrimitive(false),
-                                "body" to JsonPrimitive(texto)
+                        "components",
+                        JsonArray(
+                            listOf(
+                                buildJsonObject {
+                                    put("type", "body")
+                                    put(
+                                        "parameters",
+                                        JsonArray(
+                                            listOf(
+                                                buildJsonObject {
+                                                    put("type", "text")
+                                                    put("text", parametro)
+                                                }
+                                            )
+                                        )
+                                    )
+                                }
                             )
                         )
                     )
                 }
             )
+        }
+    )
 
-            conexion = (URL("$BASE$API/$idNumero/messages").openConnection() as HttpURLConnection)
-                .apply {
-                    requestMethod = "POST"
-                    connectTimeout = plazos.conexionMs
-                    readTimeout = plazos.lecturaMs
-                    doOutput = true
-                    setRequestProperty("Authorization", "Bearer $token")
-                    setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                    setRequestProperty("Accept", "application/json")
-                }
+    /** El sobre común a los dos tipos de mensaje. */
+    private fun JsonObjectBuilder.ponerSobre(credenciales: Credenciales) {
+        put("messaging_product", "whatsapp")
+        // Fijo: los destinos de esta aplicación son siempre personas, nunca grupos.
+        put("recipient_type", "individual")
+        put("to", DestinoDeWhatsApp.aDestinatarioApi(credenciales.destino))
+    }
+
+    private suspend fun enviarUno(
+        credenciales: Credenciales,
+        cuerpoPeticion: String,
+        plazos: Plazos
+    ): Entrega = withContext(Dispatchers.IO) {
+
+        val destino = credenciales.destino
+        var conexion: HttpURLConnection? = null
+        try {
+            val url = "$BASE$API/${credenciales.idNumero}/messages"
+            conexion = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = plazos.conexionMs
+                readTimeout = plazos.lecturaMs
+                doOutput = true
+                setRequestProperty("Authorization", "Bearer ${credenciales.token}")
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                setRequestProperty("Accept", "application/json")
+            }
 
             conexion.outputStream.use { it.write(cuerpoPeticion.toByteArray(Charsets.UTF_8)) }
 
@@ -257,14 +442,19 @@ class WhatsAppSender @Inject constructor(
             Timber.d("WhatsAppSender: mensaje a '$destino' → HTTP $codigo")
 
             anotarEstadoDeCredencial(codigo, cuerpo)
-            MapeoDeRespuestas.interpretarEnvio(codigo, cuerpo)
+            Entrega(
+                resultado = MapeoDeRespuestas.interpretarEnvio(codigo, cuerpo),
+                ventanaCerrada = MapeoDeRespuestas.esVentanaCerrada(cuerpo)
+            )
 
         } catch (e: Exception) {
             // Sin red, DNS caído, timeout de socket: todo transitorio. El outbox no pierde
             // nada y el worker volverá cuando haya conexión.
             Timber.w(e, "WhatsAppSender: fallo de red enviando a '$destino'")
-            ResultadoEnvio.ErrorTransitorio(
-                "${e.javaClass.simpleName}: ${e.message ?: "fallo de red"}"
+            Entrega(
+                ResultadoEnvio.ErrorTransitorio(
+                    "${e.javaClass.simpleName}: ${e.message ?: "fallo de red"}"
+                )
             )
         } finally {
             conexion?.disconnect()
