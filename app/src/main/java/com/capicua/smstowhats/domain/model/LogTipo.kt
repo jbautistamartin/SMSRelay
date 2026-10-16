@@ -25,13 +25,18 @@ enum class LogTipo {
     SIN_REGLA,
 
     /**
-     * SMS descartado por el tope de reenvíos por minuto.
+     * SMS descartado por un tope configurado: el de reenvíos por minuto o el de mensajes al mes.
      *
-     * Se llamaba `BUCLE_EVITADO` mientras existían las protecciones antibucle, que comparaban
-     * el destino de una regla con el remitente del SMS. Con el destino convertido en un chat de
-     * Telegram esa comparación dejó de significar nada y las guardias se fueron; el único
-     * descarte que queda es el del límite de frecuencia, así que el tipo se llama por lo que de
-     * verdad registra.
+     * Se llamaba `BUCLE_EVITADO` mientras existían las protecciones antibucle, que comparaban el
+     * destino de una regla con el remitente del SMS. Aquel nombre murió cuando el destino pasó a
+     * ser un chat y la comparación dejó de significar nada.
+     *
+     * **El nombre que quedó ha envejecido mejor que su motivo original.** Hoy el destino vuelve a
+     * ser un teléfono, así que la comparación volvería a ser posible —y sigue sin servir de nada,
+     * porque un mensaje de WhatsApp no vuelve nunca como SMS—. Y en cambio los descartes han
+     * pasado de uno a dos: al límite de frecuencia se le ha unido el tope de mensajes del mes, que
+     * es el primero de este proyecto que mide dinero. El tipo se sigue llamando por lo que de
+     * verdad registra, que es «un tope dijo que no».
      */
     LIMITE_ALCANZADO,
 

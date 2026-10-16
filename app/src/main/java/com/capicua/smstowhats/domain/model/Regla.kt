@@ -53,12 +53,20 @@ data class Regla(
     val ignorarMayusculas: Boolean = false,
 
     /**
-     * Chat de Telegram que recibe el mensaje si la regla casa.
+     * Número de WhatsApp que recibe el mensaje si la regla casa.
      *
-     * Un `chat_id` numérico —negativo si es un grupo o un canal— o un `@usuario` de canal
-     * público. **No admite marcadores:** cuando el destino era un teléfono se podía escribir
-     * `{telefono}` para contestar al remitente, pero el remitente de un SMS y un chat de
-     * Telegram son identidades sin relación y no hay forma de convertir uno en el otro.
+     * En formato internacional, con `+` y prefijo de país: ver `DestinoDeWhatsApp`. Siempre una
+     * persona, nunca un grupo.
+     *
+     * **No admite marcadores**, y eso es una propiedad de seguridad que sobrevivió al cambio de
+     * medio aunque su argumento original ya no valga. Cuando el destino era un teléfono y la
+     * salida era un SMS, se podía escribir `{telefono}` para contestar al remitente; con un chat
+     * de Telegram eso dejó de tener sentido porque eran identidades sin relación. Ahora el
+     * destino vuelve a ser un teléfono y el marcador *podría* resolverse otra vez.
+     *
+     * No se hace, y a propósito: **el cuerpo de un SMS no puede influir nunca en a dónde se
+     * manda nada**. Permitirlo convertiría un SMS de un tercero en un selector de destinatario
+     * sobre una cuenta de empresa que factura por mensaje.
      */
     val destino: String,
 
@@ -79,10 +87,14 @@ data class Regla(
          * Plantilla por defecto: el remitente y la fecha en una línea, y debajo el mensaje.
          *
          * Con el SMS bastaba `{mensaje}`, porque el reenvío llegaba como un SMS más y el
-         * teléfono ya enseñaba quién lo mandaba. Por Telegram **todo llega del mismo bot**: sin
-         * el remitente en el texto, cuatro avisos seguidos son cuatro mensajes indistinguibles
-         * y hay que adivinar cuál era del banco. El contexto que el SMS daba gratis hay que
-         * ponerlo aquí a mano.
+         * teléfono ya enseñaba quién lo mandaba. Por WhatsApp **todo llega del mismo número**:
+         * sin el remitente en el texto, cuatro avisos seguidos son cuatro mensajes
+         * indistinguibles y hay que adivinar cuál era del banco. El contexto que el SMS daba
+         * gratis hay que ponerlo aquí a mano.
+         *
+         * Con la plantilla aprieta todavía más, porque el cuerpo que Meta aprueba es siempre el
+         * mismo para todos los reenvíos: lo único que distingue un aviso de otro es lo que entre
+         * en la variable.
          */
         const val PLANTILLA_POR_DEFECTO = "{telefono} · {fecha}\n{mensaje}"
     }

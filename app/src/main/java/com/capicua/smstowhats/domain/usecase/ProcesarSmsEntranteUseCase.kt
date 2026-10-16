@@ -33,15 +33,15 @@ import javax.inject.Inject
  * que solo guardaba y encolaba porque el destino era siempre el mismo.
  *
  * ## Destino de un reenvío
- * Normalmente es el número fijo de la regla. Si la regla declara `{telefono}` como destino, el
- * reenvío vuelve **al propio remitente**, que es la forma de contestar a quien escribió. Esa
- * circularidad es intencionada y la protección antibucle no la bloquea; lo que sí se comprueba
- * es que el remitente sea un número al que se pueda enviar.
+ * Es siempre el número fijo que escribió la regla, y **en el destino no se resuelve ningún
+ * marcador**. SMStoSMS sí resolvía `{telefono}` ahí, para contestar a quien escribió; eso se fue
+ * con el transporte por SMS y no vuelve, porque el cuerpo de un SMS de un tercero no puede
+ * decidir a dónde se manda nada. Ver el KDoc de `Regla.destino`.
  *
  * ## Orden de las operaciones
  * ```
  * 1. INSERT del SMS en estado PENDIENTE        ← outbox: nada se pierde a partir de aquí
- * 2. Protecciones antibucle y de frecuencia    ← si salta alguna: DESCARTADO y fin
+ * 2. Topes de frecuencia y de coste            ← si salta alguno: DESCARTADO y fin
  * 3. Evaluar reglas
  * 4. INSERT de los reenvíos (lote atómico)
  * 5. Marcar el SMS como PROCESADO o SIN_REGLA
@@ -175,11 +175,18 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
 
         // ── Creación de los reenvíos ──────────────────────────────────────────
         //
-        // Aquí ya no hay nada que filtrar. Las dos protecciones antibucle que vivían en este
-        // punto comparaban el destino de la regla con el remitente del SMS, y eso dejó de
-        // significar nada al cambiar el medio: un chat de Telegram y un número de teléfono son
-        // identidades sin relación, así que no pueden ser «el mismo» ni formar un círculo. El
-        // SMS que antes volvía por el receptor ahora llega a Telegram y se queda ahí.
+        // Aquí ya no hay nada que filtrar, y conviene saber por qué antes de «restaurar» nada.
+        //
+        // Las dos protecciones antibucle que vivían en este punto comparaban el destino de la
+        // regla con el remitente del SMS. Murieron cuando el destino pasó a ser un chat de
+        // Telegram, porque un chat y un teléfono son identidades sin relación y no pueden ser
+        // «el mismo».
+        //
+        // Ahora el destino vuelve a ser un teléfono, así que la comparación **volvería a ser
+        // posible** — y sigue sin servir de nada, por otro motivo: un mensaje de WhatsApp no
+        // vuelve nunca como SMS. El SMS entra por la radio y el reenvío sale por la red; no hay
+        // círculo que cerrar. Lo único parecido lo vigila Meta sola, rechazando con el error
+        // 131021 un envío del número emisor a sí mismo.
         val ahora = Instant.now()
         val reenvios = resultado.coincidencias.map { coincidencia ->
             Reenvio(

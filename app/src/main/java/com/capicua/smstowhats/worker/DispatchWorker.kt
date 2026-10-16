@@ -140,8 +140,13 @@ class DispatchWorker @AssistedInject constructor(
      *
      * No es un adorno: WorkManager cuenta su backoff **desde que el worker termina**, así que
      * dormir aquí es la única forma que tiene esta clase de retrasar el siguiente intento. Sin
-     * esto, un `retry_after` de Telegram se ignoraría y el reintento llegaría otra vez pronto,
-     * se comería otro `429` y gastaría un intento de los diez.
+     * esto, una espera pedida por el servicio se ignoraría y el reintento llegaría otra vez
+     * pronto, se comería otro rechazo y gastaría un intento de los diez.
+     *
+     * Se escribió para el `retry_after` de Telegram. **La Cloud API no manda ninguna espera**,
+     * así que hoy esto no se ejecuta nunca: `esperaSegundos` llega siempre null y la función
+     * retorna en la primera línea. Se queda porque el contrato de `ResultadoEnvio` admite la
+     * espera, y el día que un medio la pida otra vez el worker ya sabe respetarla.
      *
      * La espera se **limita** a [MAX_ESPERA_SEGUNDOS]: un worker tiene unos diez minutos de
      * ejecución antes de que el sistema lo pare, y bloquear uno durante un cuarto de hora para

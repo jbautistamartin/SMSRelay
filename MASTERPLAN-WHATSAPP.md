@@ -127,16 +127,25 @@ la Cloud API sin añadir ni quitar nada. El `esperaSegundos` que se escribió pa
 de Telegram sirve igual para un `130429`, con la diferencia de que Meta **no** dice cuánto
 esperar: ahí irá `null`, que ya significaba «aplica el backoff de siempre».
 
-**`EnviadorDeMensajes` tampoco cambia de firma.** Hay una tentación de añadirle algo para el modo
+**`EnviadorDeMensajes` casi no cambia de firma.** Hay una tentación de añadirle algo para el modo
 de entrega, y no hace falta: el modo es configuración del transporte y se lee dentro de la
-implementación. `limiteCaracteres` sí pasa a ser **efectivo** —4.096 en texto libre, el presupuesto
-de la plantilla en modo plantilla— pero eso es una línea en la implementación, no en el interfaz.
+implementación.
+
+> **Corregido en la fase 6.** Este punto decía que `limiteCaracteres` pasaba a ser **efectivo**
+> —4.096 en texto libre, el presupuesto de la plantilla en modo plantilla— «en una línea de la
+> implementación, no en el interfaz», y eso era **falso**: el límite depende de configuración
+> persistida y leerla suspende, así que no cabe en una propiedad. `limiteCaracteres` pasa de
+> `val` a `suspend fun`, y los dos ViewModel que lo pintaban lo exponen como `StateFlow<Int>`.
+>
+> Es el único cambio de firma de la juntura en tres migraciones, y conviene no restarle
+> importancia: lo que lo fuerza no es el medio, es que por primera vez **el límite es
+> configurable**.
 
 ---
 
 ## 5. Fases
 
-### Fase 1 — Renombrado integral y esquema v1 limpio
+### Fase 1 — Renombrado integral y esquema v1 limpio · `[x]` completada el 15 oct 2026
 
 - `com.capicua.smstotelegram` → `com.capicua.smstowhats` (namespace, `applicationId`, árbol de
   paquetes, los 90 ficheros `.kt`).
@@ -154,7 +163,7 @@ de la plantilla en modo plantilla— pero eso es una línea en la implementació
 **Verificación:** `./gradlew assembleDebug test` y los 66 tests que sobreviven en verde (ver
 fase 8).
 
-### Fase 2 — Comprobar que la juntura aguanta
+### Fase 2 — Comprobar que la juntura aguanta · `[x]` completada el 15 oct 2026
 
 No es una fase de código, es una de lectura, y existe porque es la que evita las tres veces que
 esto se podría hacer mal. Recorrer todo lo que está por encima de `EnviadorDeMensajes` y
@@ -165,7 +174,7 @@ Andamio: dejar un `TransporteSinConfigurar` que devuelve siempre `ErrorPermanent
 configurar")`, como en la fase 2 de la migración anterior. Permite que la aplicación compile,
 arranque y se navegue entera mientras la fase 3 se escribe.
 
-### Fase 3 — Cliente de la Cloud API, texto libre
+### Fase 3 — Cliente de la Cloud API, texto libre · `[x]` completada el 15 oct 2026
 
 `data/telegram/` → `data/whatsapp/`.
 
@@ -192,7 +201,16 @@ líneas idénticas de registro:
 | `0`, `3`, `190` | 401/403 | `ErrorPermanente` **y fallo de credencial** | Token caducado, revocado o sin permisos |
 | `130429`, `80007`, `131048`, `131056` | 429 | `ErrorTransitorio`, sin espera sugerida | Límite de caudal. Meta **no** manda `retry_after` |
 | `131000`, `133004` | 5xx | `ErrorTransitorio` | Avería del lado de Meta |
+| un `4xx` desconocido | 4xx | `ErrorPermanente` | El reintento manda los **mismos bytes**: una queja sobre la petición no cambia por esperar |
 | cualquier otro | — | `ErrorTransitorio` | Por prudencia, igual que antes |
+
+> **Corregido en la fase 3.** La tabla tenía una sola fila final —«cualquier otro →
+> `ErrorTransitorio`, por prudencia»— heredada del mapeo de Telegram, donde «otro» significaba un
+> estado HTTP fuera de los listados. Aquí la clasificación vive en `error.code`, así que
+> «desconocido» quiere decir otra cosa: un código que no reconocemos. Y entonces el reparto por
+> prudencia ya no es uno: un `4xx` es Meta diciendo «tu petición está mal», y reintentar bytes
+> idénticos diez veces acaba en el mismo sitio gastando diez líneas de registro. El motivo que
+> queda en el log lleva el `error.code` dentro, que es con lo que se busca en la documentación.
 
 `esFalloDeCredencial()` pasa a mirar el código, no el HTTP: con Telegram eran el 401 y el 404
 porque el token iba en la ruta; aquí el token va en la cabecera y un 404 es, otra vez, un
@@ -206,7 +224,7 @@ una petición que todavía puede entregarse, y duplicar el mensaje— es idénti
 
 `TransportModule`: una línea.
 
-### Fase 4 — Las dos credenciales, bien tratadas
+### Fase 4 — Las dos credenciales, bien tratadas · `[x]` completada el 15 oct 2026
 
 - **Ajustes** pasa de un campo a dos: *Token de acceso* y *Id del número*. Los dos son
   credenciales: no se registran, se enmascaran y no viajan en la copia.
@@ -221,7 +239,7 @@ una petición que todavía puede entregarse, y duplicar el mensaje— es idénti
 - Se borran `DescubridorDeChats`, `ChatDescubierto`, `ResultadoDescubrimiento`, su botón en el
   editor de reglas y sus seis cadenas.
 
-### Fase 5 — Reglas: el destino vuelve a ser un teléfono
+### Fase 5 — Reglas: el destino vuelve a ser un teléfono · `[x]` completada el 15 oct 2026
 
 - `EditarReglaViewModel` y `ProbarReglasViewModel` pasan a validar con `DestinoDeWhatsApp`.
 - El mensaje de error se invierte: antes avisaba de que un teléfono no es un chat; ahora avisa de
@@ -234,7 +252,7 @@ una petición que todavía puede entregarse, y duplicar el mensaje— es idénti
   por el mismo motivo por el que recibía la primera: los ajustes se **sustituyen** al importar, y
   sin eso un fichero sin credenciales dejaría la aplicación muda sin que nadie tocara nada.
 
-### Fase 6 — Plantillas y modo de entrega
+### Fase 6 — Plantillas y modo de entrega · `[x]` completada el 15 oct 2026
 
 La fase que no existía en la migración anterior.
 
@@ -285,7 +303,7 @@ reenvío, y es la razón de que `limiteCaracteres` tenga que ser el efectivo del
 la pantalla de reglas avisa mientras se escribe la plantilla, que es el único momento en que
 alguien puede hacer algo al respecto.
 
-### Fase 7 — Límites y coste
+### Fase 7 — Límites y coste · `[x]` completada el 15 oct 2026
 
 **El tope por minuto cambia de significado por tercera vez.** Con SMS era un cortafuegos
 económico; con Telegram pasó a proteger los límites de quien recibe, porque entregar era gratis.
@@ -307,7 +325,7 @@ DataStore que los ajustes pero con sus propias claves —igual que `EstadoActual
 la copia. El Panel lo enseña. Sin esto, la primera noticia de que se ha pasado el tope es la
 factura.
 
-### Fase 8 — Documentación y privacidad
+### Fase 8 — Documentación y privacidad · `[x]` completada el 15 oct 2026
 
 - `CLAUDE.md` reescrito. Hay afirmaciones que hoy son verdad y dejan de serlo: «el Bot API admite
   un mensaje por segundo y chat», «entregar por Telegram es gratis». Y una que sigue siéndolo y
@@ -328,7 +346,7 @@ factura.
   `TokenDeAccesoTest` (~6). Se añade `PlantillaDeWhatsAppTest` (~10) para `aplanar` y
   `presupuesto`. Se va `DestinoDeTelegramTest`.
 
-### Fase 9 — Dispositivo real y release 1.0.0
+### Fase 9 — Dispositivo real y release 1.0.0 · `[ ]` pendiente: necesita la cuenta de Meta y un dispositivo
 
 1. Con el **número de prueba** de Meta y 5 destinatarios en lista blanca: ventana abierta (texto
    libre), ventana cerrada (salto a plantilla), token revocado a mano (aviso del Panel),

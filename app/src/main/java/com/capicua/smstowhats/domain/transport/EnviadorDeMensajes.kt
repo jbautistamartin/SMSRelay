@@ -13,11 +13,12 @@ package com.capicua.smstowhats.domain.transport
  * medias— es agnóstico del medio y no cambia aunque cambie el medio. Lo que hay después es un
  * detalle de implementación que vive en `data`.
  *
- * Hoy la única implementación entrega por Telegram, y **no está previsto que haya dos**. El
- * interfaz no existe para permitir varios transportes a la vez: existe porque marca dónde está
- * el corte, y porque es lo que permitió que pasar de SMS a Telegram no tocase la tubería. Añadir
- * un selector de transporte por regla duplicaría la pantalla de reglas, la de ajustes y las
- * guardias para un caso que esta aplicación no tiene.
+ * Hoy la única implementación entrega por la Cloud API de WhatsApp, y **no está previsto que
+ * haya dos**. El interfaz no existe para permitir varios transportes a la vez: existe porque
+ * marca dónde está el corte, y porque es lo que ha permitido que cambiar de medio **dos veces**
+ * —de `SmsManager` a Telegram, y de Telegram a la Cloud API— no tocase la tubería ni una sola
+ * vez. Añadir un selector de transporte por regla duplicaría la pantalla de reglas, la de
+ * ajustes y las guardias para un caso que esta aplicación no tiene.
  *
  * ## Qué no es responsabilidad del transporte
  * - **Reintentar.** Devuelve [ResultadoEnvio.ErrorTransitorio] y decide `DispatchWorker`.
@@ -50,7 +51,8 @@ interface EnviadorDeMensajes {
      * Esperar no es opcional ni es un detalle de este medio: si la función retornase antes de
      * saber el desenlace, todo reenvío parecería correcto y los fallos reales se perderían en
      * silencio. Cada implementación lo consigue como pueda —el SMS lo hacía suspendiendo hasta
-     * el broadcast del `sentIntent`— y todas respetan [timeoutSegundos] como plazo máximo.
+     * el broadcast del `sentIntent`; aquí es esperar la respuesta HTTP— y todas respetan
+     * [timeoutSegundos] como plazo máximo.
      *
      * @param destino identificador que entienda el transporte, tal como lo dejó la regla.
      * @param timeoutSegundos plazo tras el cual el intento se da por perdido y se reintenta.

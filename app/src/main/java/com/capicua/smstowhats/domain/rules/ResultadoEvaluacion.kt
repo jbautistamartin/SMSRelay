@@ -28,7 +28,7 @@ data class Coincidencia(
     val reglaId: Long,
     val nombreRegla: String,
 
-    /** Chat de destino, tal como lo escribió la regla. No se resuelve ningún marcador aquí. */
+    /** Número de destino, tal como lo escribió la regla. No se resuelve ningún marcador. */
     val destino: String,
 
     val textoFinal: String
