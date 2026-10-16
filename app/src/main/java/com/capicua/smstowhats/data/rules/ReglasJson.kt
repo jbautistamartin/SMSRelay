@@ -47,6 +47,7 @@ data class ReglasExportadas(
          * | 2       | La regla gana `ignorar_mayusculas`.                        | SMStoSMS |
          * | 3       | El fichero gana el bloque `configuracion`.                 | SMStoSMS |
          * | 4       | **`destino` es un chat de Telegram, no un teléfono.**      | SMStoTelegram |
+         * | 5       | **`destino` vuelve a ser un teléfono, en formato E.164.**  | SMStoWhats |
          *
          * Subir la versión al añadir un campo opcional puede parecer excesivo, porque un
          * fichero de la 1 se sigue importando sin problema. Lo que evita es el caso contrario:
@@ -54,26 +55,35 @@ data class ReglasExportadas(
          * `ignorar_mayusculas` en silencio —`ignoreUnknownKeys` está activado— y la regla
          * entraría distinguiendo mayúsculas sin avisar.
          *
-         * ## Por qué la 4 rompe la compatibilidad hacia atrás, y es la primera que lo hace
+         * ## Por qué la 4 y la 5 rompen la compatibilidad hacia atrás
+         * Es el mismo problema dos veces, y la segunda vez es simétrica de la primera.
+         *
          * Un fichero del formato 3 tiene **exactamente la misma forma** que uno del 4: ningún
          * campo cambió de nombre ni de tipo. Lo que cambió es lo que significa `destino`. En la 3
-         * era un número de teléfono; en la 4 es un `chat_id` o un `@usuario` de Telegram.
+         * era un número de teléfono; en la 4 es un `chat_id` o un `@usuario` de Telegram. Y en la
+         * 5 vuelve a ser un teléfono, pero **no el mismo teléfono que en la 3**: ahora tiene que
+         * llevar prefijo internacional, porque va a WhatsApp y no a la radio del operador.
          *
-         * Eso lo convierte en el peor caso posible de importación: el fichero entraría sin un
-         * solo error de parseo y dejaría un juego de reglas cuyos destinos **no existen**, que
+         * Eso convierte a los dos en el peor caso posible de importación: el fichero entraría sin
+         * un solo error de parseo y dejaría un juego de reglas cuyos destinos **no existen**, que
          * fallarían uno por uno cuando llegara un SMS, horas después y sin que nada apuntase al
-         * fichero importado. Por eso [MINIMA_ACEPTADA] es 4 y la importación de un fichero
+         * fichero importado. Por eso [MINIMA_ACEPTADA] es 5 y la importación de un fichero
          * anterior se rechaza explicando el motivo, en lugar de aceptarlo y romperse luego.
+         *
+         * Que un fichero del 3 —cuyos destinos *son* teléfonos— tampoco se acepte es deliberado:
+         * son teléfonos nacionales, escritos para marcarse desde ese país, y entrarían todos sin
+         * prefijo para fallar todos igual.
          */
-        const val VERSION_ACTUAL = 4
+        const val VERSION_ACTUAL = 5
 
         /**
          * Versión más antigua que se puede importar.
          *
-         * Es la única del proyecto que no es 1, y el KDoc de [VERSION_ACTUAL] explica por qué:
-         * los ficheros anteriores llevan números de teléfono donde ahora van chats.
+         * Nunca ha sido 1 desde que el medio de salida empezó a moverse, y el KDoc de
+         * [VERSION_ACTUAL] explica por qué: los ficheros anteriores llevan en `destino` algo que
+         * aquí no se puede entregar.
          */
-        const val MINIMA_ACEPTADA = 4
+        const val MINIMA_ACEPTADA = 5
     }
 }
 

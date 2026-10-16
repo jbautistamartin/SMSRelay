@@ -176,28 +176,28 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_ignorar_mayusculas">Ignorar mayúsculas</string>
     <string name="regla_ignorar_mayusculas_ayuda">Aplica las dos expresiones sin distinguir mayúsculas de minúsculas: «hola» casa con «HOLA». Equivale a escribir (?i) en ambas.</string>
 
-    <string name="regla_destino">Chat de destino</string>
-    <string name="regla_destino_ayuda">El chat_id de la persona, grupo o canal. Los grupos y canales lo tienen negativo. También vale un @canal público.</string>
+    <string name="regla_destino">Número de destino</string>
+    <string name="regla_destino_ayuda">El número de WhatsApp de la persona, en formato internacional: «+», el prefijo del país y el número. Por ejemplo +34600112233. Tiene que tener WhatsApp y haber escrito al número emisor en las últimas 24 horas, o hará falta una plantilla.</string>
     <string name="regla_plantilla">Plantilla del texto</string>
-    <string name="regla_plantilla_ayuda">Marcadores: {mensaje}, {telefono}, {fecha}. Conviene dejar {telefono}: en Telegram todo llega del mismo bot, y sin el remitente no se sabe de quién era el SMS.</string>
+    <string name="regla_plantilla_ayuda">Marcadores: {mensaje}, {telefono}, {fecha}. Conviene dejar {telefono}: en WhatsApp todo llega del mismo número, y sin el remitente no se sabe de quién era el SMS.</string>
     <string name="regla_previsualizacion">Así saldría</string>
     <string name="regla_previsualizacion_vacia">Escribe una plantilla para ver el resultado</string>
     <string name="regla_activa">Activa</string>
     <string name="regla_activa_ayuda">Desactívala para que no se evalúe, sin borrarla</string>
     <string name="regla_continuar">Seguir evaluando</string>
-    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite entregar el mismo SMS en varios chats.</string>
+    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite entregar el mismo SMS a varios números.</string>
     <string name="regla_guardar">Guardar regla</string>
 
     <!-- Reglas: panel de prueba -->
     <string name="probar_title">Probar reglas</string>
-    <string name="probar_subtitulo">Escribe un SMS de ejemplo y comprueba qué regla casa, a qué chat iría y con qué texto. No se entrega nada hasta que lo pidas.</string>
+    <string name="probar_subtitulo">Escribe un SMS de ejemplo y comprueba qué regla casa, a qué número iría y con qué texto. No se entrega nada hasta que lo pidas.</string>
     <string name="probar_telefono">Remitente de ejemplo</string>
     <string name="probar_telefono_ayuda">Un número o una cabecera alfanumérica</string>
     <string name="probar_mensaje">Texto del SMS de ejemplo</string>
     <string name="probar_mensaje_obligatorio">Escribe un texto de ejemplo</string>
     <string name="probar_evaluar">Evaluar reglas</string>
     <string name="probar_veredicto_sin_coincidencia">Ninguna regla casa: este SMS no se reenviaría</string>
-    <string name="probar_envio_real_ayuda">La prueba real entrega un mensaje de verdad en el primer chat de destino.</string>
+    <string name="probar_envio_real_ayuda">La prueba real entrega un mensaje de verdad al primer número de destino, y consume cuota como cualquier otro.</string>
     <string name="probar_enviar">Enviar de prueba</string>
     <string name="regla_longitud">%1$d / %2$d caracteres</string>
     <string name="probar_enviar_confirmar">Se entregará un mensaje real a %1$s.</string>

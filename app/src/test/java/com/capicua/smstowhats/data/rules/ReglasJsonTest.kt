@@ -124,7 +124,21 @@ class ReglasJsonTest {
         )
 
         assertTrue(serializado.contains("\"version\""))
-        assertEquals(4, ReglasExportadas.VERSION_ACTUAL)
+        assertEquals(5, ReglasExportadas.VERSION_ACTUAL)
+    }
+
+    /**
+     * La versión mínima aceptada no es 1, y es la segunda vez que se rompe la compatibilidad
+     * hacia atrás a propósito.
+     *
+     * El test existe para que bajarla sea un acto deliberado y no un descuido: un fichero del
+     * formato 4 tiene exactamente la misma forma que uno del 5 —ningún campo cambió de nombre
+     * ni de tipo— y entraría sin un solo error de parseo dejando un juego de reglas cuyos
+     * destinos son chats de Telegram que aquí no existen.
+     */
+    @Test
+    fun `no se aceptan ficheros anteriores al formato 5`() {
+        assertEquals(5, ReglasExportadas.MINIMA_ACEPTADA)
     }
 
     // ── La configuración viaja con las reglas ─────────────────────────────────

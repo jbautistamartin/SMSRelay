@@ -12,6 +12,7 @@ import com.capicua.smstowhats.data.rules.ReglaJson
 import com.capicua.smstowhats.data.rules.ReglasExportadas
 import com.capicua.smstowhats.data.rules.aDominio
 import com.capicua.smstowhats.data.rules.aJson
+import com.capicua.smstowhats.data.whatsapp.DestinoDeWhatsApp
 import com.capicua.smstowhats.domain.rules.EvaluadorDeReglas
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -100,9 +101,10 @@ class ConfigBackup @Inject constructor(
     /**
      * Lee un fichero de copia y aplica lo que traiga.
      *
-     * Cada regla se valida antes de escribirla —expresiones que compilen y destino no vacío— y
-     * las que no pasan se cuentan aparte: una regla con una regex rota que entrase en silencio
-     * no reenviaría nunca y sería muy difícil de diagnosticar.
+     * Cada regla se valida antes de escribirla —expresiones que compilen y un destino con forma
+     * de teléfono— y las que no pasan se cuentan aparte: una regla con una regex rota o un
+     * número sin prefijo que entrase en silencio no reenviaría nunca y sería muy difícil de
+     * diagnosticar.
      */
     suspend fun importar(origen: Uri): ResultadoCopia = try {
         val contenido = withContext(Dispatchers.IO) {
@@ -119,13 +121,15 @@ class ConfigBackup @Inject constructor(
                     "entiende hasta el ${ReglasExportadas.VERSION_ACTUAL}"
             )
         } else if (fichero.version < ReglasExportadas.MINIMA_ACEPTADA) {
-            // Un fichero de SMStoSMS tiene la misma forma que uno de aquí, pero sus destinos
-            // son números de teléfono. Entraría sin un error de parseo y dejaría un juego de
-            // reglas que falla cuando llegue un SMS, sin que nada apunte al fichero importado.
+            // Un fichero de SMStoTelegram tiene la misma forma que uno de aquí, pero sus
+            // destinos son chats. Entraría sin un error de parseo y dejaría un juego de reglas
+            // que falla cuando llegue un SMS, sin que nada apunte al fichero importado.
             ResultadoCopia.Fallo(
-                "el fichero usa el formato ${fichero.version}, de una versión en la que los " +
-                    "destinos eran números de teléfono. En Telegram un destino es un chat, " +
-                    "así que esas reglas no servirían: hay que crearlas de nuevo"
+                "el fichero usa el formato ${fichero.version}, de una versión en la que un " +
+                    "destino era otra cosa: un chat de Telegram en el 4, un teléfono sin " +
+                    "prefijo internacional en el 3 y anteriores. Aquí un destino es un " +
+                    "teléfono con prefijo, así que esas reglas no servirían: hay que crearlas " +
+                    "de nuevo"
             )
         } else {
             // Las credenciales no viajan en el fichero y los ajustes se reemplazan: hay
@@ -155,9 +159,22 @@ class ConfigBackup @Inject constructor(
         ResultadoCopia.Fallo(e.message ?: "el fichero no tiene el formato esperado")
     }
 
+    /**
+     * Una regla que entra tiene que poder entregar.
+     *
+     * El destino se valida por **forma**, no solo por no estar vacío, y eso es nuevo de la
+     * versión 5. Antes bastaba con que hubiera algo escrito: un `chat_id` no se puede comprobar
+     * sin preguntarle a Telegram, así que validar la forma no habría atrapado nada que importara.
+     * Un teléfono sí se puede comprobar, y el fallo que atrapa es real: un fichero editado a
+     * mano, o uno del formato 5 generado por otra versión, con un número sin prefijo.
+     *
+     * Es el mismo criterio que ya se aplicaba a las expresiones regulares, por el mismo motivo:
+     * una regla que entra en silencio y no entrega nunca es mucho más difícil de diagnosticar
+     * que una que se rechaza al importar y se cuenta aparte.
+     */
     private fun esValida(regla: ReglaJson): Boolean =
-        regla.destino.isNotBlank() &&
-            regla.nombre.isNotBlank() &&
+        regla.nombre.isNotBlank() &&
+            DestinoDeWhatsApp.pareceValido(regla.destino) &&
             evaluador.validarPatron(regla.regexTelefono) == null &&
             evaluador.validarPatron(regla.regexMensaje) == null
 }
