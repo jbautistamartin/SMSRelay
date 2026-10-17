@@ -11,8 +11,10 @@
     Cambiar uno sin el otro deja el icono contradiciendo a la aplicación que abre.
 
     Los tonos son los de la paleta azul de Material 3 —primario en el tono 40, el contenedor en
-    el 90 y su contenido en el 10—, no el hexadecimal de marca de Telegram: lo que hace falta es
-    la familia de color, no reproducir una identidad ajena.
+    el 90 y su contenido en el 10—, y no el hexadecimal de marca de ningún servicio: lo que hace
+    falta es una familia de color propia, no reproducir una identidad ajena. El azul se hereda de
+    SMStoTelegram y se queda: el verde que le correspondería por destino sería indistinguible del
+    verde azulado de SMStoSMS en el lanzador (ver `ic_launcher_background.xml`).
 -->
 <resources>
     <color name="md_theme_primary">#0061A4</color>

@@ -31,6 +31,19 @@
             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
+        <!-- Lo entregado este mes contra el tope. Va en la primera pantalla porque es la
+             unica cifra de esta aplicacion que cuesta dinero: enterrada en Ajustes, la primera
+             noticia de haberse pasado seria la factura. -->
+        <TextView
+            android:id="@+id/text_view_mensajes_mes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
         <TextView
             android:id="@+id/text_view_aviso_transporte"
             android:layout_width="match_parent"
