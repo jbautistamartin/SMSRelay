@@ -516,7 +516,7 @@ Four of those deserve their own note:
   rather than a new `ResultadoEnvio` case, because `ResultadoEnvio` is read by `DispatchWorker` and
   the worker must not learn that there are two ways to deliver.
 
-**Over 4.096 characters** (free text) or **992** (inside a template) the text is split rather than
+**Over 4.096 characters** (free text) or **978** (inside a template) the text is split rather than
 truncated (`MapeoDeRespuestas.trocear`), cutting at the last newline and failing over to the last
 space. Truncating would lose content silently, and letting Meta answer `132005` would turn a long
 message into a failed delivery — **but splitting a template message costs money**, one billed
@@ -757,3 +757,13 @@ use the closest match:
   `MASTERPLAN-WHATSAPP.md` also carries two **corrections** written after the fact, where the plan
   turned out to be wrong once the code was there: the fate of an unrecognized `4xx`, and the fact
   that `limiteCaracteres` could not stay a property.
+- **Setting up the Meta account is documented in `docs/CUENTA-META.md`**, and that is the file to
+  update when Meta moves a button — not the README, which only enumerates the five prerequisites
+  and explains *why* they exist. The guide is written for whoever installs the APK, so it names
+  screens and clicks; it is the one document in the project that goes stale on its own, because
+  the console changes without anybody touching this repository.
+  It quotes two values that are **derived in code**, so changing either means changing the guide:
+  `PlantillaDeWhatsApp.PRESUPUESTO` (978 characters, the budget inside a template) and
+  `AppConfig.maxMensajesPorMes` (900). The budget had already drifted — `CLAUDE.md` and
+  `docs/ARCHITECTURE.md` both said 992 while the code computed 978, and nothing caught it because
+  `PlantillaDeWhatsAppTest` asserts only `> 900` and `< LIMITE_RENDERIZADO`, never the literal.

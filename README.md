@@ -17,6 +17,9 @@ expresiones regulares sobre el remitente y el texto.
 > **Antes de empezar, lee [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer).**
 > Entregar en WhatsApp no se parece a entregar en Telegram: hace falta una cuenta de empresa de
 > Meta, un número dedicado, y hay un límite de 24 horas que condiciona todo lo demás.
+>
+> Y cuando sepas a qué te enfrentas, la guía que lo monta paso a paso es
+> **[`docs/CUENTA-META.md`](docs/CUENTA-META.md)**.
 
 **Versión actual: [v1.0.0](https://github.com/jbautistamartin/SMStoWhats/releases/tag/v1.0.0)** —
 descarga el APK firmado desde la
@@ -77,6 +80,11 @@ Lo que hace falta tener, y no se puede hacer desde la aplicación:
 4. El **`Phone number ID`**, que no es el número de teléfono.
 5. Una **plantilla aprobada**, con el cuerpo exacto que la propia aplicación te deja copiar en
    **Ajustes → Entrega**.
+
+> **Esos cinco puntos, con cada clic y cada pantalla de la consola de Meta, están en
+> [`docs/CUENTA-META.md`](docs/CUENTA-META.md)**, que acaba con una lista de comprobación y una
+> tabla de los códigos de error de Meta que de verdad se ven. Si solo vas a leer un documento
+> antes de montar esto, es ese.
 
 Y lo que se pierde respecto a Telegram, sin adornos:
 
@@ -203,8 +211,9 @@ dependencia nueva para eso no se paga.
 - Android SDK con API 35
 - Dispositivo Android 8.0+ con SIM activa y conexión a internet
 - Una **cuenta de WhatsApp Business de Meta** con la Cloud API, un número dedicado y una
-  plantilla aprobada. Ver [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer):
-  es el requisito largo, y no se puede resolver desde la aplicación
+  plantilla aprobada. Es el requisito largo, y no se puede resolver desde la aplicación:
+  [`docs/CUENTA-META.md`](docs/CUENTA-META.md) lo monta paso a paso, y
+  [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer) explica por qué es así
 
 ---
 
@@ -218,10 +227,10 @@ La vía corta si no vas a tocar el código:
 3. **Abre la aplicación una vez** y concede los permisos que pide. Abrirla no es opcional: una
    aplicación recién instalada que nadie ha abierto todavía no recibe **ningún** broadcast de
    Android, los SMS incluidos. Es la causa número uno de «la he instalado y no recibe nada».
-4. **Monta la cuenta de Meta**: una app en Meta for Developers con el producto WhatsApp, un
-   número (el de prueba sirve para empezar), un token de usuario de sistema con caducidad «Nunca»
-   y el `Phone number ID`. Ver
-   [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer).
+4. **Monta la cuenta de Meta** siguiendo [`docs/CUENTA-META.md`](docs/CUENTA-META.md): una app en
+   Meta for Developers con el producto WhatsApp, un número (el de prueba sirve para empezar), un
+   token de usuario de sistema con caducidad «Nunca» y el `Phone number ID`. Es lo más largo de
+   todo el montaje, y los pasos 5 y 6 de aquí no se pueden hacer sin él.
 5. **Ajustes → Cuenta de WhatsApp** → pega el token y el id del número, y pulsa **Comprobar las
    credenciales**. Debe responder con el nombre verificado y el número.
 6. **Ajustes → Entrega** → copia el cuerpo de la plantilla, dale de alta esa plantilla en el
@@ -296,9 +305,8 @@ concede. Los pasos manuales por fabricante están en [`CLAUDE.md`](CLAUDE.md).
 
 ## Primeros pasos en la app
 
-0. **Antes de nada**, monta la cuenta de Meta: ver
-   [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer). Sin eso no hay nada que
-   hacer aquí.
+0. **Antes de nada**, monta la cuenta de Meta siguiendo
+   [`docs/CUENTA-META.md`](docs/CUENTA-META.md). Sin eso no hay nada que hacer aquí.
 1. **Ajustes → Cuenta de WhatsApp**: pega el **token de acceso** y el **id del número**, y pulsa
    **Comprobar las credenciales**. Debe contestar con el nombre y el número que esperas.
 2. **Ajustes → Entrega**: deja el modo en **Automático**, copia el cuerpo de la plantilla con
@@ -447,7 +455,8 @@ app/src/main/java/com/capicua/smstowhats/
 └── SmsToWhatsApplication.kt
 app/schemas/             # Esquemas Room exportados (versionados)
 docs/
-└── ARCHITECTURE.md      # Documentación técnica completa
+├── ARCHITECTURE.md      # Documentación técnica completa
+└── CUENTA-META.md       # Montar la cuenta de Meta, paso a paso
 ```
 
 ---

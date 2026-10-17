@@ -803,7 +803,7 @@ poder decir *por qué* no se puede entregar, y los motivos cambian con el medio.
 
 `limiteCaracteres` **suspende**, y es el único cambio de firma que la juntura ha sufrido en tres
 migraciones. Era una propiedad, y dejó de poder serlo cuando el límite pasó a depender de la
-configuración: 4.096 caracteres en texto libre y 992 dentro de una plantilla, así que el que
+configuración: 4.096 caracteres en texto libre y 978 dentro de una plantilla, así que el que
 aplica no se puede saber sin leer DataStore. Lo que lo forzó no fue el medio —fue que por primera
 vez **el límite es configurable**. Los dos ViewModel que lo pintan lo exponen como `StateFlow<Int>`
 con el valor del texto libre como inicial.

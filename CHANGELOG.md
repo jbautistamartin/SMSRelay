@@ -32,6 +32,10 @@ para poder publicar una 1.0.0.
 - **Comprobación de credenciales** que responde con el nombre verificado, el número y la calidad
   que Meta da al número emisor.
 - El cuerpo exacto que tiene que tener la plantilla, copiable al portapapeles desde Ajustes.
+- **`docs/CUENTA-META.md`**, la guía que monta la cuenta de Meta paso a paso: la app en Meta for
+  Developers, el número, el token permanente de usuario de sistema, la plantilla y el gasto, con
+  una lista de comprobación y los códigos de error de Meta que de verdad se ven. Es el requisito
+  más largo del montaje y el README solo lo enumeraba.
 
 ### Cambiado
 
