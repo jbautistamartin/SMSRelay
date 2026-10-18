@@ -50,8 +50,8 @@ android {
         applicationId = "com.capicua.smstowhats"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.10.0"
+        versionCode = 3
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

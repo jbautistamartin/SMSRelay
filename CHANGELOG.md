@@ -12,6 +12,37 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ---
 
+## [1.0.0] - 2026-10-18
+
+**La cadena funciona de punta a punta.** Un SMS recibido en la SIM del teléfono dedicado llega a
+un WhatsApp a través de la Cloud API de Meta. Eso es lo que separaba a esta aplicación del 1.0 y
+es lo único que cambia en esta versión: **no hay cambios de código respecto a la 0.10.0**.
+
+### Qué se ha validado, y con qué
+
+- Con el **número de prueba** de Meta y destinatarios en lista blanca, que es lo que permite
+  operar sin verificación de empresa.
+- Las ocho fases anteriores siguen cubiertas por los **138 tests unitarios**, todos en verde.
+- El APK de release compila, firma con la clave compartida de la casa y entra encima de la
+  instalación anterior conservando reglas, ajustes e historial.
+
+### Qué sigue pendiente, y conviene saberlo antes de instalar
+
+El 1.0.0 dice que **la aplicación funciona**, no que tu cuenta de Meta vaya a dejarte usarla en
+producción mañana. Para pasar de las pruebas a un número propio hacen falta dos cosas que no
+dependen de este código y que llevan días:
+
+1. **Verificación de empresa.** Sin ella Meta no deja registrar un número propio, y sin registrar
+   no se entrega nada. Es el paso 2 (Opción B) de
+   [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md).
+2. **Registrar el número** y dar de alta la plantilla **en la WABA de producción**: las
+   plantillas cuelgan de la WABA y la del número de prueba no viaja.
+
+Tampoco se puede saber todavía, porque el número de prueba no lo dice: si el nombre a mostrar
+será aceptable, cuáles son los límites reales de mensajería, ni cómo evolucionará la calidad del
+número con destinatarios que no te conocen. Eso último es el riesgo de verdad de esta
+aplicación y está explicado en el aviso de privacidad.
+
 ## [0.10.0] - 2026-10-18
 
 Sigue siendo un **preestreno**: la fase 9 del

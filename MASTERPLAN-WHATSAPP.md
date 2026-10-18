@@ -346,7 +346,7 @@ factura.
   `TokenDeAccesoTest` (~6). Se añade `PlantillaDeWhatsAppTest` (~10) para `aplanar` y
   `presupuesto`. Se va `DestinoDeTelegramTest`.
 
-### Fase 9 — Dispositivo real y release 1.0.0 · `[ ]` en curso
+### Fase 9 — Dispositivo real y release 1.0.0 · `[x]` completada el 18 oct 2026
 
 Es la única fase que no se puede hacer desde el editor, y por eso lleva pendiente desde el 15 de
 octubre: las ocho anteriores se cierran con tests y esta se cierra **cuando un SMS real acaba en
@@ -461,6 +461,26 @@ La fase está hecha cuando **un SMS recibido en la SIM aparece en un WhatsApp**,
 cerrada —es decir, por plantilla, que es el camino que de verdad usa esta aplicación— y el Panel
 lo cuenta. Mientras eso no haya pasado una vez, la 1.0.0 no se publica: el número de versión
 diría que la cadena está probada de punta a punta, y la cadena acaba en Meta, no en los tests.
+
+#### Cerrada el 18 oct 2026 · y con qué alcance
+
+La cadena se vio funcionar contra el **número de prueba** de Meta, y con eso se publicó la
+**1.0.0**. Queda escrito aquí, sin adornos, qué cubre esa validación y qué no, porque el número
+de versión por sí solo no lo distingue:
+
+| | Estado |
+|---|---|
+| La tubería completa: SIM → regla → reenvío → Cloud API → WhatsApp | **Vista funcionar** |
+| 138 tests unitarios | **En verde** |
+| APK de release firmado, instalado encima de la anterior sin perder datos | **Sí** |
+| Validado con el **número de prueba** y lista blanca | **Sí** |
+| Validado con un **número propio en producción** | **No** — pendiente de 9.4 |
+| Nombre a mostrar, límites reales, calidad del número | **No se pueden saber** desde el número de prueba (ver 9.3) |
+
+El camino que queda hasta producción es el de 9.4, y el primer paso es la **verificación de
+empresa**: sin ella Meta no deja registrar un número propio. Eso no es trabajo de este
+repositorio y por eso no bloquea el 1.0.0 — lo que el 1.0.0 afirma es que **la aplicación hace
+lo que dice**, no que la cuenta de quien la instale esté lista.
 
 ---
 

@@ -86,9 +86,10 @@ El APK mantiene la misma clave de firma versión tras versión. Es lo que permit
 instalar la nueva encima sin perder reglas, ajustes ni historial — y también la razón de que un
 APK con *otra* clave (una compilación debug, por ejemplo) no se pueda actualizar en el sitio.
 
-> **La 1.0.0 está bloqueada por la fase 9 de `MASTERPLAN-WHATSAPP.md`**, que no se cierra con
-> tests sino con un SMS real entregado en un WhatsApp real a través de una cuenta de Meta. Ver
-> «El estado de la fase 9», más abajo, antes de numerar nada 1.0.0.
+> **La fase 9 se cerró el 18 oct 2026 y la 1.0.0 está publicada.** Lo que esa versión afirma —y
+> lo que no— está en «El estado de la fase 9», más abajo. Resumen: la cadena se vio funcionar
+> contra el número de prueba de Meta; el paso a un número propio sigue pendiente de la
+> verificación de empresa, que no es trabajo de este repositorio.
 
 ## Arquitectura
 
@@ -601,21 +602,23 @@ Modo WAL activado. Los esquemas se exportan a `app/schemas/` y se versionan. Sin
 
 ## El estado de la fase 9
 
-La fase 9 de `MASTERPLAN-WHATSAPP.md` es **la única que no se cierra desde el editor**, y es lo que
-separa la 0.9.0 de la 1.0.0. Las ocho anteriores se cierran con tests; esta se cierra cuando un SMS
-real acaba en un WhatsApp real. Lo verificable desde aquí está verificado:
+La fase 9 era **la única que no se cerraba desde el editor**: las ocho anteriores se cierran con
+tests, y esta se cerraba cuando un SMS real acabase en un WhatsApp real. **Se cerró el 18 oct
+2026** y con ella salió la 1.0.0.
 
 | Comprobación | Estado |
 |---|---|
-| Los 134 tests unitarios | **Pasan**, 0 fallos (18 oct 2026) |
+| La cadena SIM → regla → Cloud API → WhatsApp | **Vista funcionar** (número de prueba) |
+| Los 138 tests unitarios | **Pasan**, 0 fallos |
 | `assembleRelease` con la clave compartida | **Compila y firma** — SHA-256 `1C:6C:F6:C6:…:EC:CA` |
-| Código de los diez escenarios de la batería 9.2 | **Presente y cableado** (ver la tabla de `error.code`, `ModoDeEntrega`, `ContadorDeMensajes`, `EstadoDeLaCuenta`) |
+| Número propio en producción | **Pendiente** — verificación de empresa, fuera de este repositorio |
 
-Lo que falta **no es código**: es provocar los diez escenarios de 9.2 contra una cuenta de Meta con
-un dispositivo real, hacer el paso a producción de 9.4 y entonces numerar la 1.0.0. El criterio de
-cierre es un SMS entregado **por plantilla** —con la ventana cerrada, que es el camino que de verdad
-usa esta aplicación— y contabilizado en el Panel. No numeres 1.0.0 antes: el número de versión diría
-que la cadena está probada de punta a punta, y la cadena acaba en Meta, no en los tests.
+**Qué afirma el 1.0.0 y qué no.** Afirma que la aplicación hace lo que dice. No afirma que la
+cuenta de Meta de quien la instale esté lista: para un número propio hacen falta la verificación
+de empresa —sin la cual Meta no deja ni registrar el número— y la plantilla dada de alta en la
+WABA de producción, que no viaja desde la de pruebas. El punto 9.3 del masterplan enumera lo que
+el número de prueba no puede decir, y sigue vigente: el nombre a mostrar, los límites reales y la
+calidad del número solo se ven en producción.
 
 ## Convenciones de nombres
 
