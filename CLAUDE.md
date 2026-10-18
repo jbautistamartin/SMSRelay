@@ -757,7 +757,7 @@ use the closest match:
   `MASTERPLAN-WHATSAPP.md` also carries two **corrections** written after the fact, where the plan
   turned out to be wrong once the code was there: the fate of an unrecognized `4xx`, and the fact
   that `limiteCaracteres` could not stay a property.
-- **Setting up the Meta account is documented in `docs/CUENTA-META.md`**, and that is the file to
+- **Setting up the Meta account is documented in `docs/CUENTA-WHATSAPP-BUSINESS.md`**, and that is the file to
   update when Meta moves a button — not the README, which only enumerates the five prerequisites
   and explains *why* they exist. The guide is written for whoever installs the APK, so it names
   screens and clicks; it is the one document in the project that goes stale on its own, because
