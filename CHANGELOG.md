@@ -28,6 +28,21 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
   que sirve. Con una tabla de rutas por pantalla y otra del orden correcto con lo que tarda cada
   paso.
 
+- **El «dónde exactamente» del token y de la plantilla, con enlace directo.** La guía daba rutas
+  de menú —*Configuración del negocio → Usuarios → Usuarios del sistema*, *WhatsApp Manager →
+  Plantillas*— y esos rótulos ya no son los de Meta: «Usuarios del sistema» es hoy un ítem de
+  primer nivel de la barra lateral, el botón de los activos se llama *Asignar activos* y la URL de
+  la configuración del negocio es `/latest/settings`. Verificado contra la documentación actual de
+  Meta: ahora cada una de las dos pantallas lleva su **URL directa** destacada, más una tabla de
+  enlaces directos a las siete pantallas de la consola, porque los menús cambian y las URL no.
+  Y los permisos del token son **tres**, no dos: `business_management` iba sin documentar.
+
+- **La plantilla se configura en dos sitios y la guía no lo decía de frente.** Darla de alta en
+  Meta (5.2) no basta —la aplicación no la descubre sola— y escribirla en Ajustes (5.4) sin haberla
+  dado de alta tampoco. Ahora el paso 5 abre con esa tabla, y la lista de comprobación lo pregunta.
+  Con los estados reales que enseña WhatsApp Manager, que son siete y no tres: *en pausa* y
+  *deshabilitada* dejan de entregar por quejas de los destinatarios.
+
 - **Los tres pasos que más se atascan, reescritos** con el síntoma de cada fallo, que casi siempre
   es silencioso:
   - *el número*: la lista blanca del número de prueba —Meta acepta el mensaje y lo descarta sin

@@ -91,20 +91,26 @@ El token que la aplicación necesita está en la **segunda**, aunque la primera 
 con un botón de copiar que parece justo lo que buscabas. Ese es el motivo número uno de
 «funcionaba ayer y hoy no entrega nada»: el de la primera consola caduca en 24 horas.
 
-### Donde está cada pantalla
+### Donde está cada pantalla · enlaces directos
 
-Meta cambia los nombres de los menús cada pocos meses, así que esto es una ayuda, no un contrato:
-si un rótulo no coincide, **busca por el concepto**, no por la palabra exacta.
+**Guárdate esta tabla.** Los menús de las consolas de Meta cambian de nombre y de sitio cada pocos
+meses, pero estas URL van directas a la pantalla y se han mantenido. Si llegas por los menús y no
+encuentras un rótulo, pega la URL en la barra de direcciones.
 
-| Lo que buscas | Consola | Ruta |
-|---|---|---|
-| Crear la app, añadir WhatsApp | developers | *Mis aplicaciones* → *Crear aplicación* |
-| **Id del número** | developers | tu app → *WhatsApp* → *Configuración de la API* |
-| Lista blanca del número de prueba | developers | misma pantalla, desplegable *Para* / *To* |
-| **Token permanente** | business | *Configuración del negocio* → *Usuarios* → *Usuarios del sistema* |
-| **Plantillas** | business | *WhatsApp Manager* → *Plantillas de mensajes* |
-| Verificación de la empresa | business | *Configuración del negocio* → *Centro de seguridad* |
-| Facturación y consumo | business | *WhatsApp Manager* → *Información general* / *Facturación* |
+| Lo que buscas | Enlace directo |
+|---|---|
+| Crear la app / tus apps | [developers.facebook.com/apps](https://developers.facebook.com/apps) |
+| **Id del número** y lista blanca | tu app → *WhatsApp* → *Configuración de la API* (no tiene URL fija: depende del id de la app) |
+| **Token permanente** · usuarios del sistema | [business.facebook.com/latest/settings/system-users](https://business.facebook.com/latest/settings/system-users) |
+| **Plantillas de mensajes** | [business.facebook.com/latest/whatsapp_manager/message_templates](https://business.facebook.com/latest/whatsapp_manager/message_templates) |
+| Números de la WABA | [business.facebook.com/latest/whatsapp_manager/phone_numbers](https://business.facebook.com/latest/whatsapp_manager/phone_numbers) |
+| Comprobar un token | [developers.facebook.com/tools/debug/accesstoken](https://developers.facebook.com/tools/debug/accesstoken) |
+| Verificación de la empresa | [business.facebook.com/latest/settings/security_center](https://business.facebook.com/latest/settings/security_center) |
+
+> **Si un enlace te deja en una pantalla vacía o te pide elegir**, es que tienes **más de una
+> cuenta de empresa** y has caído en la que no es. El selector está arriba a la izquierda, y la
+> correcta es **la que tiene tu WABA colgada**. Equivocarse de cuenta de empresa es la causa de
+> casi todos los «aquí no me aparece esa opción».
 
 ### El orden correcto, y lo que tarda cada cosa
 
@@ -245,44 +251,68 @@ Lo que sí se puede es **preguntárselo a Meta**, y conviene hacerlo antes de pe
 2. Pega el token y pulsa **Depurar**.
 3. Mira dos campos:
    - **Caduca** (*Expires*) → tiene que decir **Nunca**. Si dice una fecha, es el temporal.
-   - **Permisos** (*Scopes*) → tienen que estar **`whatsapp_business_messaging`** y
-     **`whatsapp_business_management`**.
+   - **Permisos** (*Scopes*) → tienen que estar **`whatsapp_business_messaging`**,
+     **`whatsapp_business_management`** y **`business_management`**. El imprescindible para
+     entregar es el primero.
 
 Si cualquiera de los dos no cuadra, el token no es el bueno y no hace falta seguir probando en la
 aplicación.
 
-### 3.2 · Generar el que sí vale
+### 3.2 · Generar el que sí vale · dónde exactamente
 
-Es un **token de usuario de sistema**, y se saca del Business Manager, **no** de la consola de
-desarrolladores:
+El token que sirve es un **token de usuario de sistema**, y vive en **otra consola**: en la de la
+empresa (`business.facebook.com`), no en la de desarrolladores donde acabas de sacar el id del
+número. No hay ningún botón en la consola de desarrolladores que lo genere.
 
-1. Ve a **[business.facebook.com/settings](https://business.facebook.com/settings)** y elige tu
-   cuenta de empresa arriba a la izquierda. Si tienes varias, asegúrate de que es **la que cuelga
-   de tu WABA** — con la cuenta equivocada el usuario de sistema no podrá ver la WABA en el paso 4
-   y no entenderás por qué.
-2. En la columna izquierda: **Usuarios** → **Usuarios del sistema** → **Añadir**.
-3. Ponle un nombre (`smstowhats-token`) y dale el rol **Empleado**. No necesita ser administrador.
-4. **Añadir activos.** Aquí es donde se queda casi todo el mundo: hay que conceder **dos** accesos,
-   y están en **dos pestañas distintas** del mismo diálogo.
+**Ve directo a esta URL**, que es la pantalla exacta:
 
-   | Pestaña | Qué seleccionar | Permiso |
+> ## [business.facebook.com/latest/settings/system-users](https://business.facebook.com/latest/settings/system-users)
+
+Si prefieres llegar por los menús: **business.facebook.com** → **Configuración del negocio**
+(*Business settings*) → en la **barra lateral**, **Usuarios del sistema** (*System users*).
+
+> **«Usuarios del sistema» está en el primer nivel de la barra lateral.** Durante años estuvo
+> dentro de un grupo llamado *Usuarios*, y la mitad de los manuales que hay por internet aún lo
+> cuentan así. Si buscas *Usuarios* y abres *Personas*, estás en el sitio equivocado: eso es para
+> dar de alta a compañeros, no para esto.
+
+**Si «Usuarios del sistema» no te aparece**, es una de estas tres, en este orden de probabilidad:
+
+1. Estás en la **cuenta de empresa equivocada** → cámbiala arriba a la izquierda.
+2. No eres **administrador** de esa cuenta de empresa → quien la creó tiene que darte el rol.
+3. Estás en *Meta Business Suite* y no en *Configuración del negocio* → usa la URL de arriba.
+
+#### Los cuatro clics
+
+1. Arriba a la derecha, **Añadir** / **Add+**. Ponle un nombre (`smstowhats-token`) y créalo.
+2. Selecciónalo en la lista y pulsa **Asignar activos** (*Assign assets*). **Son dos activos, y
+   están en dos pestañas distintas del mismo diálogo** — es aquí donde se atasca casi todo el
+   mundo:
+
+   | Pestaña | Qué seleccionar | Qué activar |
    |---|---|---|
-   | **Aplicaciones** | la app del paso 1 | **Gestionar la aplicación** |
-   | **Cuentas de WhatsApp** | tu WABA | **Control total** |
+   | **Aplicaciones** (*Apps*) | la app del paso 1 | **Gestionar la aplicación** (*Manage app*), bajo **Control total** |
+   | **Cuentas de WhatsApp** (*WhatsApp accounts*) | tu WABA | **Gestionar cuentas de WhatsApp Business**, bajo **Control total** |
 
-   Si falta el de **Cuentas de WhatsApp**, la lista de permisos del paso 7 no te ofrecerá los dos
-   `whatsapp_business_*`, o el token saldrá sin ellos y Meta rechazará los envíos como si el token
-   estuviera caducado —con un error de la familia `190` · `0` · `3`, los tres que la aplicación
-   traduce como «el token no vale»—. Es decir: **el síntoma de un permiso que falta es idéntico al
-   de un token caducado**, y por eso conviene comprobar los *scopes* en el depurador del punto 3.1
-   antes de darle más vueltas.
+   Y pulsa **Asignar activos** para confirmar. Si dejas el diálogo sin confirmar, no se guarda
+   nada y el token saldrá inútil.
 
-5. Con el usuario del sistema seleccionado, pulsa **Generar nuevo token**.
-6. Elige la app del paso 1, y en **Caducidad** selecciona **Nunca**.
-7. Marca los permisos **`whatsapp_business_messaging`** y **`whatsapp_business_management`**. Si la
-   lista no los ofrece, vuelve al punto 4: falta el activo de la WABA.
-8. Genera, y **copia el token ahora**: es la única vez que te lo enseña. Si lo pierdes, hay que
-   generar otro — no pasa nada, pero el anterior deja de usarse.
+3. Con el usuario del sistema seleccionado, **Generar token** (*Generate token*). Elige la **app**
+   del paso 1 y, en **caducidad del token**, **Nunca** (*Never*).
+4. Marca **los tres permisos** que pide la documentación de Meta:
+
+   - **`whatsapp_business_messaging`** — enviar mensajes. Sin este no entrega nada.
+   - **`whatsapp_business_management`** — leer la WABA, los números y las plantillas.
+   - **`business_management`** — el que la guía oficial añade además de los dos anteriores.
+
+   Si la lista no te ofrece los `whatsapp_*`, vuelve al punto 2: falta el activo de la WABA.
+
+5. Genera y **copia el token ahora mismo**. **Es la única vez que te lo enseña**: esa pantalla no
+   se puede volver a abrir. Si lo pierdes no se rompe nada —vuelves a *Generar token* y sacas
+   otro—, pero el anterior deja de servirte porque no lo tienes.
+
+Pégalo en **SMStoWhats → Ajustes → Cuenta de WhatsApp → Token de acceso**. Es una cadena larguísima
+que empieza por `EAA…`; cópiala entera y sin espacios al principio ni al final.
 
 ### 3.3 · Comprobarlo sin salir de la consola
 
@@ -340,6 +370,17 @@ texto libre durante las **24 horas** siguientes a que el destinatario escriba al
 Un SMS llega cuando llega, no cuando al destinatario le apetece escribirte, así que **sin
 plantilla la aplicación solo entrega de vez en cuando**, por casualidad.
 
+> **La plantilla se configura en dos sitios distintos, y hacen falta los dos.** Es la causa de la
+> mitad de las vueltas en este paso:
+>
+> | Dónde | Qué se hace | Apartado |
+> |---|---|---|
+> | **En la consola de Meta** | Darla de alta y esperar a que la aprueben | **5.2** |
+> | **En SMStoWhats → Ajustes → Entrega** | Escribir su **nombre** y su **idioma** | **5.4** |
+>
+> Darla de alta en Meta no basta: la aplicación no la descubre sola, hay que decirle cómo se llama.
+> Y escribirla en Ajustes sin haberla dado de alta tampoco: cada envío fallará con un `132xxx`.
+
 ### 5.1 · Copia el cuerpo exacto
 
 En la aplicación: **Ajustes → Entrega → Copiar el cuerpo**. Es este, y hay que darlo de alta
@@ -363,12 +404,22 @@ Las tres propiedades de ese cuerpo son deliberadas y **cambiarlo rompe cosas**:
 - **Una sola variable.** Remitente, fecha y texto en tres huecos maquetaría mejor y crearía una
   segunda vía de composición del mensaje que ignoraría la plantilla de cada regla.
 
-### 5.2 · Darla de alta
+### 5.2 · Darla de alta en Meta · dónde exactamente
 
-1. En **[business.facebook.com](https://business.facebook.com)** → **WhatsApp Manager** →
-   **Plantillas de mensajes** → **Crear plantilla**.
-   > Si no ves *WhatsApp Manager*, es que estás en la cuenta de empresa equivocada: cámbiala
-   > arriba a la izquierda. Es la misma confusión del paso 3.
+Las plantillas no están en la consola de desarrolladores: están en el **WhatsApp Manager**, dentro
+de la consola de la empresa. **Ve directo a esta URL**, que es la pantalla exacta:
+
+> ## [business.facebook.com/latest/whatsapp_manager/message_templates](https://business.facebook.com/latest/whatsapp_manager/message_templates)
+
+Por los menús: **business.facebook.com** → **WhatsApp Manager** → **Plantillas de mensajes**
+(*Message templates*) → **Crear plantilla** (*Create template*).
+
+> **Si no ves *WhatsApp Manager*** o la lista sale vacía, es la cuenta de empresa equivocada:
+> cámbiala arriba a la izquierda. Es la misma confusión del paso 3, y la WABA solo cuelga de una.
+
+Luego:
+
+1. Pulsa **Crear plantilla**.
 2. **Categoría: `Utility`** (*Utilidad*). No `Marketing`: las de utilidad se aprueban antes, cuestan
    menos por mensaje y no cuentan como publicidad. Si eliges mal, Meta puede recategorizarla por su
    cuenta y cambiarte el precio.
@@ -390,11 +441,18 @@ Las tres propiedades de ese cuerpo son deliberadas y **cambiarlo rompe cosas**:
 
 La plantilla tiene tres estados, y se ven en la misma lista de *Plantillas de mensajes*:
 
-| Estado | Qué significa |
+| Estado en WhatsApp Manager | Qué significa |
 |---|---|
-| **En revisión** (*Pending*) | No se puede usar todavía. Las de `Utility` suelen tardar **menos de media hora**, pero Meta se reserva **hasta 24 h** |
-| **Activa** (*Approved*) | Lista. Ya se puede escribir su nombre en Ajustes |
+| **En revisión** (*In-Review*) | No se puede usar todavía. Las de `Utility` suelen tardar **menos de media hora**, pero Meta se reserva **hasta 24 h** |
+| **Activa · calidad alta** (*Active – High Quality*) | Lista, y sin quejas de los destinatarios. Es el estado normal |
+| **Activa · calidad media o baja** | Sigue entregando, pero Meta ya ha visto quejas o mensajes sin leer. Es el aviso previo a lo siguiente |
+| **En pausa** (*Paused*) | **Deja de entregar temporalmente** por quejas de los destinatarios |
+| **Deshabilitada** (*Disabled*) | **Deja de entregar**, y no se recupera. Hay que crear otra |
 | **Rechazada** (*Rejected*) | Meta dice el motivo al abrirla. Se corrige y se vuelve a enviar, o se crea otra con otro nombre |
+
+Solo la que esté **Activa** entrega. Y esa escala de calidad no es decorativa: es el riesgo real de
+reenviar mensajes a quien no los ha pedido, porque lo que la mueve son las quejas de quien los
+recibe.
 
 Los rechazos que de verdad pasan con una plantilla como esta:
 
@@ -473,15 +531,18 @@ decírtelo:
 
 - [ ] Es de **usuario de sistema**, sacado de `business.facebook.com`, no el de la consola de
       desarrolladores
-- [ ] El usuario del sistema tiene **los dos activos**: la app (*Gestionar la aplicación*) y la
-      WABA (*Control total*)
-- [ ] El depurador de tokens dice **Caduca: Nunca** y enseña los dos permisos
-      `whatsapp_business_messaging` y `whatsapp_business_management`
+- [ ] El usuario del sistema tiene **los dos activos**, confirmados con *Asignar activos*: la app
+      (*Gestionar la aplicación*) y la WABA (*Gestionar cuentas de WhatsApp Business*), las dos
+      bajo **Control total**
+- [ ] El depurador de tokens dice **Caduca: Nunca** y enseña los tres permisos
+      `whatsapp_business_messaging`, `whatsapp_business_management` y `business_management`
 
 **La plantilla**
 
 - [ ] Está **Activa**, no *En revisión*
 - [ ] El cuerpo es **exactamente** el del punto 5.1, con sus líneas en blanco
+- [ ] La he dado de alta **en Meta** (5.2) **y** he escrito su nombre e idioma **en Ajustes →
+      Entrega** (5.4). Hacen falta los dos sitios
 - [ ] El **nombre** y el **idioma** de Ajustes coinciden carácter por carácter con los de Meta
       (`es` **no** es `es_ES`)
 
