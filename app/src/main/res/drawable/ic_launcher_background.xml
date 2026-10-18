@@ -2,19 +2,32 @@
 <!--
     Fondo del icono adaptativo.
 
-    Azul, el color primario de la aplicación (`md_theme_primary`). La regla viene de antes y se
+    Verde, el color primario de la aplicación (`md_theme_primary`). La regla viene de antes y se
     mantiene: **el fondo del icono es el primario del tema**, no un color elegido aparte. Si
     algún día cambia uno, tienen que cambiar los dos.
 
-    El color es lo que identifica a esta aplicación de un vistazo, y por eso ha cambiado dos
-    veces por el mismo motivo. SMSGateway era azul #1565C0; SMStoSMS pasó a verde azulado
-    porque las dos podían convivir en el mismo teléfono; SMStoTelegram vuelve a la familia azul
-    —la de Telegram— porque es la que dice a dónde entrega, y porque con el teal sería
-    indistinguible de SMStoSMS en el lanzador, que es justo el problema que el teal resolvía.
+    El color es lo que identifica a esta aplicación de un vistazo, y por eso ha ido cambiando.
+    SMSGateway era azul #1565C0 —hoy es violeta, porque entrega a una API y no a una aplicación
+    de mensajería—; SMStoSMS pasó a verde azulado porque las dos podían convivir en
+    el mismo teléfono; SMStoTelegram volvió a la familia azul —la de Telegram— porque es la que
+    dice a dónde entrega.
+
+    SMStoWhats **deja ese azul** y pasa al verde. Heredarlo de SMStoTelegram la dejaba con el
+    icono exacto de aquella —mismo fondo, mismo dibujo, misma capa monocroma—, y a 48 dp el
+    usuario distingue el color antes que el dibujo, así que dos azules del mismo autor se leen
+    como la misma aplicación. El argumento que antes descartaba
+    el verde —que se confundiría con el verde azulado de SMStoSMS— se resuelve eligiendo un verde
+    lejos del azul: el teal de SMStoSMS está en el tono ~186°, casi cian, y este verde en ~140°,
+    que es separación de sobra para leerlos distintos de un vistazo. Y de paso el color vuelve a
+    decir a dónde entrega.
+
+    **No es el verde de marca de WhatsApp** (#25D366, claro y saturado). Es el tono 40 del verde
+    de Material 3, el que corresponde a un primario en esta paleta: hace falta una familia de
+    color propia, no reproducir una identidad ajena.
 
     El degradado es sutil a propósito. A 48 dp no se percibe como degradado, solo evita que el
     icono se vea plano junto a los demás. Los dos extremos se derivan del primario con el mismo
-    reparto que tenía el teal: uno aclarado y otro oscurecido alrededor de él.
+    reparto que tenían el teal y el azul: uno aclarado y otro oscurecido alrededor de él.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
@@ -31,8 +44,8 @@
                 android:startY="0"
                 android:endX="108"
                 android:endY="108"
-                android:startColor="#0079CD"
-                android:endColor="#003E69" />
+                android:startColor="#008A23"
+                android:endColor="#004612" />
         </aapt:attr>
     </path>
 

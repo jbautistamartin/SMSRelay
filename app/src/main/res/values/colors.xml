@@ -2,23 +2,28 @@
 <!--
     Paleta de la aplicación.
 
-    El primario pasó del verde azulado de SMStoSMS (#006874) a la familia azul por el mismo
-    motivo por el que aquel dejó el azul de SMSGateway: las dos aplicaciones pueden convivir en
-    el mismo teléfono y hay que distinguirlas sin leer el nombre. Aquí el azul además dice a
-    dónde entrega.
+    El primario pasó del verde azulado de SMStoSMS (#006874) al azul de SMStoTelegram, y de ahí
+    al verde, por el mismo motivo por el que cada una de estas aplicaciones ha cambiado de color:
+    pueden convivir en el mismo teléfono y hay que distinguirlas sin leer el nombre. Heredar el
+    azul de SMStoTelegram dejaba a SMStoWhats con el icono idéntico al de aquella. El verde las
+    separa y además dice a dónde entrega. Las cuatro quedan en un color cada una: verde azulado
+    SMStoSMS, azul SMStoTelegram, verde SMStoWhats y violeta SMSGateway, que entrega a una API.
 
     **El fondo del icono adaptativo se deriva del primario** (ver `ic_launcher_background.xml`).
     Cambiar uno sin el otro deja el icono contradiciendo a la aplicación que abre.
 
-    Los tonos son los de la paleta azul de Material 3 —primario en el tono 40, el contenedor en
-    el 90 y su contenido en el 10—, no el hexadecimal de marca de Telegram: lo que hace falta es
-    la familia de color, no reproducir una identidad ajena.
+    Los tonos son los de la paleta verde de Material 3 —primario en el tono 40, el contenedor en
+    el 90 y su contenido en el 10—, y no el hexadecimal de marca de ningún servicio: lo que hace
+    falta es una familia de color propia, no reproducir una identidad ajena. El verde de WhatsApp
+    (#25D366) es claro y saturado; este es el verde oscuro que corresponde a un primario. Y no se
+    confunde con el verde azulado de SMStoSMS, que está casi en el cian (ver
+    `ic_launcher_background.xml`).
 -->
 <resources>
-    <color name="md_theme_primary">#0061A4</color>
+    <color name="md_theme_primary">#006E1C</color>
     <color name="md_theme_on_primary">#FFFFFF</color>
-    <color name="md_theme_primary_container">#D1E4FF</color>
-    <color name="md_theme_on_primary_container">#001D36</color>
+    <color name="md_theme_primary_container">#94F990</color>
+    <color name="md_theme_on_primary_container">#002204</color>
     <color name="md_theme_secondary">#535F70</color>
     <color name="md_theme_on_secondary">#FFFFFF</color>
     <color name="md_theme_background">#FDFCFF</color>
@@ -35,7 +40,12 @@
     <color name="status_failed">#BA1A1A</color>
     <color name="status_dispatching">#0061A4</color>
 
-    <!-- Indicadores de color por tipo de entrada del registro -->
+    <!--
+        Indicadores de color por tipo de entrada del registro. El azul de «recibido» y de
+        «enviando» ya no es el primario —ahora el primario es verde—, y es a propósito: en verde
+        serían indistinguibles de «entregado» y «reenviado» (#186A2E), que es justo la diferencia
+        que el registro tiene que dejar ver. Azul es «en curso», verde es «hecho».
+    -->
     <color name="log_recibido">#0061A4</color>
     <color name="log_regla">#535F70</color>
     <color name="log_reenviado">#186A2E</color>

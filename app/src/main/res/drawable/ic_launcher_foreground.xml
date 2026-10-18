@@ -2,14 +2,15 @@
 <!--
     Primer plano del icono adaptativo: un bocadillo de mensaje con un avión de papel calado.
 
-    Dice lo que hace la aplicación: entra un mensaje y sale hacia Telegram. El bocadillo se
+    Dice lo que hace la aplicación: entra un mensaje y sale hacia otra parte. El bocadillo se
     hereda de SMStoSMS porque la **entrada** no ha cambiado —sigue siendo un SMS— y lo que
     cambia es por dónde sale, así que lo que cambia es lo de dentro: donde aquella tenía una
     flecha de reenvío, esta tiene el avión.
 
-    **No es el logotipo de Telegram.** Es un avión de papel, que es el símbolo universal de
-    «enviar»; el de Telegram es un avión dentro de un círculo y no se reproduce aquí. Lo que
-    identifica a esta aplicación como la de Telegram es el color del fondo, no una marca ajena.
+    **No es el logotipo de nadie.** Es un avión de papel, que es el símbolo universal de
+    «enviar». Se dibujó cuando la salida era Telegram y se queda al cambiar a WhatsApp, porque
+    nunca dijo «Telegram»: dice «sale de aquí». Reproducir el teléfono verde de WhatsApp sería
+    usar una marca ajena, y además haría el icono indistinguible del de WhatsApp en el lanzador.
 
     El avión es un **hueco**, no una figura encima: ambas subrutas van en el mismo `pathData`
     con `fillType="evenOdd"`, de modo que por el avión se ve el fondo. Hacerlo así evita tener

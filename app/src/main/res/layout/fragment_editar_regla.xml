@@ -179,32 +179,20 @@
             android:hint="@string/regla_destino"
             app:helperText="@string/regla_destino_ayuda">
 
-            <!-- Sin icono de teléfono: lo llevaba cuando el destino era un número, y aquí
-                 señalaría a lo que no es. Un destino es un chat de Telegram.
-
-                 inputType=text y no phone, por un motivo distinto al de antes: el teclado
-                 numérico no tiene arroba, y un @canal es un destino válido. El signo menos de
-                 los grupos sí lo tendría, pero no basta. -->
+            <!-- inputType=phone, y vuelve a serlo después de una vuelta completa: lo era en
+                 SMStoSMS, dejó de serlo con Telegram porque el teclado numérico no tiene arroba
+                 y un @canal era un destino válido, y lo es otra vez porque un destino es un
+                 teléfono. El teclado de teléfono sí trae el «+», que aquí es obligatorio. -->
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edit_text_destino"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textNoSuggestions"
+                android:inputType="phone"
                 android:imeOptions="actionNext"
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Nadie se sabe su chat_id: es un numero que Telegram no muestra en ninguna
-             pantalla. Esto pregunta al bot quien le ha escrito y ofrece la lista. Sin este
-             boton, configurar una regla exige salir de la aplicacion a buscar el dato. -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_descubrir_chats"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="-8dp"
-            android:layout_marginBottom="8dp"
-            android:text="@string/regla_descubrir_chats" />
+        
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_plantilla"

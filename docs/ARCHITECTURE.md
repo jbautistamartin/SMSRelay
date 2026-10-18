@@ -1,4 +1,4 @@
-# SMStoTelegram — Documentación Técnica
+# SMStoWhats — Documentación Técnica
 
 ## Índice
 
@@ -12,7 +12,7 @@
 8. [Permisos requeridos](#8-permisos-requeridos)
 9. [Reglas de entrega](#9-reglas-de-entrega)
 10. [Mecanismo de entrega](#10-mecanismo-de-entrega)
-11. [El límite por minuto](#11-el-límite-por-minuto)
+11. [Los dos topes](#11-los-dos-topes)
 12. [Base de datos](#12-base-de-datos)
 13. [Mantenimiento](#13-mantenimiento)
 14. [Posibles incidencias](#14-posibles-incidencias)
@@ -21,8 +21,8 @@
 
 ## 1. Descripción del sistema
 
-**SMStoTelegram** es una aplicación Android diseñada para ejecutarse en un **dispositivo con
-SIM** cuya función es recibir los SMS que llegan a su número y entregarlos en Telegram —a una
+**SMStoWhats** es una aplicación Android diseñada para ejecutarse en un **dispositivo con
+SIM** cuya función es recibir los SMS que llegan a su número y entregarlos en WhatsApp —a una
 persona, un grupo o un canal— a través de un bot propio, decidiendo el destino mediante reglas
 con expresiones regulares.
 
@@ -45,18 +45,18 @@ otro medio.
 | Garantía | Mecanismo |
 |----------|-----------|
 | Ningún SMS entrante se pierde aunque el proceso sea eliminado | `ForegroundService` + outbox en Room |
-| Una entrega solo se da por buena si Telegram la confirma | Espera de la respuesta HTTP del Bot API |
+| Una entrega solo se da por buena si Meta la confirma | Espera de la respuesta HTTP de la Cloud API |
 | Ningún SMS se entrega dos veces por un reintento | Comprobación del estado al inicio de cada intento |
 | Lo que se queda atascado se recupera solo | `OrphanRescueWorker` cada 30 s |
-| No se superan los límites de tasa del Bot API | Tope por minuto, descrito en §11 |
-| Un fallo de credencial se ve, en lugar de repetirse 400 veces | `EstadoDelBot` + aviso en el Panel |
+| No se superan los límites de la Cloud API ni la cuota del mes | Los dos topes de §11 |
+| Un fallo de credencial se ve, en lugar de repetirse 400 veces | `EstadoDeLaCuenta` + aviso en el Panel |
 | La app arranca sola tras un reinicio del dispositivo | `BootReceiver` + WorkManager |
 
 ### Lo que el sistema **no** garantiza
 
-- **Lectura por el destinatario.** Un `200 ok:true` confirma que Telegram aceptó el mensaje y lo
+- **Lectura por el destinatario.** Un `2xx` confirma que Meta aceptó el mensaje y lo
   puso en el chat, no que alguien lo haya visto.
-- **Confidencialidad frente a Telegram.** El contenido de los SMS pasa por sus servidores. Es
+- **Confidencialidad frente a Meta.** El contenido de los SMS pasa por sus servidores. Es
   inherente al diseño y está dicho en el aviso de privacidad de la propia aplicación.
 - **Ausencia de duplicados en textos de más de 4.096 caracteres.** En ese caso el mensaje se
   trocea; si un trozo falla después de que otro saliera, el reenvío se reintenta completo y el
@@ -86,26 +86,26 @@ La aplicación sigue **Clean Architecture** con separación estricta en tres cap
                             │ implementadas por
 ┌───────────────────────────▼─────────────────────────────┐
 │  DATA                                                   │
-│  Room · Bot API de Telegram · DataStore · WorkManager   │
+│  Room · Cloud API de WhatsApp · DataStore · WorkManager │
 └─────────────────────────────────────────────────────────┘
 ```
 
 **`EnviadorDeMensajes` es la juntura del sistema, y está en `domain` a propósito.** Define tres
 cosas —entregar y esperar, el límite de caracteres, y por qué no se puede entregar ahora— y nada
-en ella nombra el medio. `data/telegram/TelegramSender` la implementa y `di/TransportModule` es la
+en ella nombra el medio. `data/whatsapp/WhatsAppSender` la implementa y `di/TransportModule` es la
 **única** clase del proyecto que menciona una implementación concreta.
 
-Eso no es arquitectura por gusto: es lo que hizo que pasar de `SmsManager` a Telegram fuera una
+Eso no es arquitectura por gusto: es lo que ha hecho que los dos cambios de medio fueran una
 fase de transporte y no una reescritura. El outbox, la idempotencia de cliente, el rescate de
 huérfanos, la política de reintentos y el historial se escribieron para una pasarela HTTP,
-sobrevivieron al SMS y sobrevivieron a Telegram sin tocarse.
+sobrevivieron al SMS, sobrevivieron a Telegram y han sobrevivido a la Cloud API sin tocarse.
 
 ### Principios aplicados
 
 - **La capa de dominio no conoce Android.** `EvaluadorDeReglas` es Kotlin puro, y por eso se
   puede probar con JUnit a secas: sin Robolectric, sin instrumentación y sin base de datos en
   memoria. El mismo criterio llevó a separar `MapeoDeRespuestas` del código que hace la petición
-  HTTP: la clasificación de las respuestas del Bot API es la pieza que más importa que esté bien
+  HTTP: la clasificación de las respuestas de la Cloud API es la pieza que más importa que esté bien
   y la única del transporte que se puede probar sin red.
 - **El evaluador recibe la fecha ya formateada**, no un `Instant`. Es lo que lo mantiene
   determinista: no depende de la zona horaria ni del idioma del dispositivo, y quien llama
@@ -164,7 +164,7 @@ sobrevivieron al SMS y sobrevivieron a Telegram sin tocarse.
                                └────────────┬─────────────┘
                                             │ EnviadorDeMensajes
                                ┌────────────▼─────────────┐
-                               │      TelegramSender      │
+                               │      WhatsAppSender      │
                                │  POST /sendMessage       │
                                │  texto plano, sin        │
                                │  parse_mode              │
@@ -215,7 +215,7 @@ presentation/
 ├── dashboard/      SMS recibidos, con regla aplicada, destinos y estado por reenvío
 ├── rules/          Lista ordenada, editor con validación en vivo, panel de prueba
 ├── logs/           Registro con filtros por tipo y exportación a fichero
-├── settings/       Token del bot, recepción, límites, reintentos y copia de seguridad
+├── settings/       Credenciales, entrega, recepción, topes, reintentos y copia
 └── about/          Versión, autoría, página del proyecto, licencia
 
 domain/
@@ -230,9 +230,9 @@ data/
 ├── local/db/       SmsDatabase · entidades · DAOs · relaciones · Migraciones
 ├── repository/     Sms · Regla · Reenvio · Log (contrato + implementación)
 ├── rules/          ReglasJson: formato de intercambio versionado
-├── telegram/       TelegramSender · MapeoDeRespuestas · TokenDeBot
-│                   DestinoDeTelegram · ComprobadorDelBot
-│                   DescubridorDeChats · EstadoDelBot
+├── whatsapp/       WhatsAppSender · MapeoDeRespuestas · PlantillaDeWhatsApp · TokenDeAcceso
+│                   DestinoDeWhatsApp · ComprobadorDeCuenta
+│                   DescubridorDeChats · EstadoDeLaCuenta
 └── update/         ComprobadorDeActualizaciones · DescargaDeApk · VersionPublicada
 
 worker/             DispatchWorker · ColaDeEnvios
@@ -272,8 +272,9 @@ util/               Constants · Extensions · OptimizacionBateria
 `gradle/libs.versions.toml` es la única fuente de verdad de las versiones.
 
 **La red se usa sin ninguna dependencia de red.** OkHttp y Retrofit se eliminaron cuando
-desapareció la capa HTTP de SMSGateway y **no han vuelto**: toda la comunicación con Telegram son
-tres peticiones —`sendMessage`, `getMe` y `getUpdates`—, cada una una docena de líneas de
+desapareció la capa HTTP de SMSGateway y **no han vuelto**: toda la comunicación con Meta son
+tres peticiones —enviar un texto, enviar una plantilla y consultar el número emisor—, cada una
+una docena de líneas de
 `HttpURLConnection`, con `kotlinx.serialization` para las respuestas, que ya estaba aquí por el
 formato de exportación de reglas. Una dependencia nueva para eso no se paga. El permiso `INTERNET`
 sí se declara, y es el permiso central de la aplicación.
@@ -343,8 +344,8 @@ conseguir primero el almacén de claves.
 
 | Variante | applicationId | Minificación | Firma |
 |----------|---------------|--------------|-------|
-| `debug` | `com.capicua.smstotelegram.debug` | No | Clave de depuración |
-| `release` | `com.capicua.smstotelegram` | R8 activado | Clave propia, si está configurada |
+| `debug` | `com.capicua.smstowhats.debug` | No | Clave de depuración |
+| `release` | `com.capicua.smstowhats` | R8 activado | Clave propia, si está configurada |
 
 Los dos `applicationId` son distintos, así que las dos variantes pueden convivir en el mismo
 dispositivo. **No comparten base de datos**: son aplicaciones separadas para Android.
@@ -365,12 +366,12 @@ adb devices
 adb install app/build/outputs/apk/debug/app-debug.apk
 
 # 4. Conceder permisos sin diálogos
-adb shell pm grant com.capicua.smstotelegram android.permission.RECEIVE_SMS
-adb shell pm grant com.capicua.smstotelegram android.permission.READ_SMS
-adb shell pm grant com.capicua.smstotelegram android.permission.POST_NOTIFICATIONS
+adb shell pm grant com.capicua.smstowhats android.permission.RECEIVE_SMS
+adb shell pm grant com.capicua.smstowhats android.permission.READ_SMS
+adb shell pm grant com.capicua.smstowhats android.permission.POST_NOTIFICATIONS
 
 # 5. Eximir del modo Doze (OBLIGATORIO)
-adb shell dumpsys deviceidle whitelist +com.capicua.smstotelegram
+adb shell dumpsys deviceidle whitelist +com.capicua.smstowhats
 
 # Verificar
 adb shell dumpsys deviceidle whitelist | grep capicua
@@ -413,7 +414,7 @@ Para probar también el envío, dos emuladores pueden mandarse SMS usando su nú
 |---------|------|----------|
 | `RECEIVE_SMS` | Peligroso | Recibir el broadcast de SMS entrantes |
 | `READ_SMS` | Peligroso | Leer el contenido de las PDU |
-| `INTERNET` | Normal | **Entregar los mensajes a Telegram**, y comprobar versiones |
+| `INTERNET` | Normal | **Entregar los mensajes a WhatsApp**, y comprobar versiones |
 | `POST_NOTIFICATIONS` | Peligroso (API 33+) | Notificación del foreground service |
 | `REQUEST_INSTALL_PACKAGES` | Normal | Abrir el instalador con el APK de una versión nueva |
 | `FOREGROUND_SERVICE` | Normal | Ejecutar el servicio de ingesta |
@@ -439,13 +440,16 @@ sin telefonía no entra ningún SMS y la aplicación no tiene nada que hacer.
 solo el proceso del sistema (radio/teléfono) puede dispararlo. Ninguna aplicación de terceros
 puede inyectar un SMS falso.
 
-El receptor de confirmaciones de envío que tenía `SmsSender` ya no existe: con Telegram la
+El receptor de confirmaciones de envío que tenía `SmsSender` ya no existe: con la Cloud API la
 confirmación es la respuesta HTTP de la propia petición, así que no hay ningún broadcast que
 pueda falsificarse ni respuestas que puedan cruzarse entre dos entregas simultáneas.
 
-**El token del bot es la credencial del sistema**, y de ahí tres reglas que el código respeta:
-no se escribe nunca en el registro —va dentro de la URL, así que la URL tampoco—, se enmascara en
-pantalla, y no viaja en el fichero de copia de seguridad.
+**El token de acceso es la credencial del sistema**, y de ahí tres reglas que el código respeta:
+no se escribe nunca en el registro —va en la cabecera `Authorization`, así que la cabecera
+tampoco—, se enmascara en pantalla, y no viaja en el fichero de copia de seguridad.
+
+El `phone_number_id` no es secreto, pero tampoco se registra —va en la URL— ni viaja en la copia,
+por un motivo distinto: identifica al número emisor de *esta* cuenta.
 
 ---
 
@@ -463,7 +467,7 @@ pestaña **Reglas**.
 | `regexTelefono` | No | Expresión sobre el remitente. Vacío = no filtra |
 | `regexMensaje` | No | Expresión sobre el cuerpo. Vacío = no filtra |
 | `ignorarMayusculas` | — | true = las dos expresiones se aplican sin distinguir mayúsculas |
-| `destino` | Sí | Chat de Telegram: `chat_id` o `@usuario` de canal. **No admite marcadores** |
+| `destino` | Sí | Número de WhatsApp en formato internacional: `+34600112233`. **No admite marcadores** |
 | `plantilla` | Sí | Texto a enviar. Por defecto `{telefono} · {fecha}` y el mensaje debajo |
 | `activa` | — | Si es false, la regla se ignora sin borrarla |
 | `continuar` | — | Si es true, tras casar sigue evaluando las siguientes |
@@ -520,57 +524,55 @@ caso no llegue a producción.
 
 ### Destino
 
-Un chat de Telegram, usado **tal cual**. `DestinoDeTelegram` admite las tres formas que acepta el
-Bot API:
+Un número de teléfono en formato internacional, usado **tal cual**. `DestinoDeWhatsApp` admite
+una sola forma:
 
 | Forma | Ejemplo | Qué es |
 |-------|---------|--------|
-| Id positivo | `123456789` | Una persona |
-| Id negativo | `-1001234567890` | Un grupo o un canal (`-100…` en supergrupos y canales) |
-| `@usuario` | `@mi_canal` | Un canal **público**, si el bot es administrador |
+| E.164 | `+34600112233` | Una persona con WhatsApp en ese número |
 
-El id negativo es el que más se escribe mal: quitarle el signo al copiarlo manda el mensaje a una
-persona que no tiene nada que ver, o a ninguna parte. Y un `@usuario` **no sirve para una
-persona**: un bot necesita su `chat_id` numérico, que solo existe cuando esa persona le ha
-escrito antes.
+Los separadores con los que la gente escribe un teléfono —espacios, guiones, puntos, paréntesis—
+se normalizan al guardar. Lo que **no** se admite es un número sin prefijo internacional, y eso es
+una decisión de diseño que conviene no deshacer.
 
-**En el destino no se resuelve ningún marcador**, y eso es una propiedad de seguridad, no una
-simplificación: el cuerpo del SMS es contenido ajeno y no puede influir en a dónde se entrega
-nada. SMStoSMS sí resolvía `{telefono}` ahí, para contestar a quien escribió; con Telegram no hay
-forma de convertir el remitente de un SMS en un chat —son identidades sin relación— así que el
-marcador salió del destino y el botón «Contestar al remitente» se fue con él.
+#### Por qué el `+` es obligatorio
 
-#### Cómo se encuentra un `chat_id`
+La Cloud API acepta el número con `+` y sin él, así que exigirlo no es un requisito técnico: es lo
+que hace posible dar un error útil.
 
-Nadie se lo sabe. Telegram no lo muestra en ninguna de sus pantallas, y obtenerlo «a mano» exige
-hablar con un bot de terceros o leer una URL de la API en el navegador. El editor de reglas tiene
-un botón **Elegir de los chats del bot** que llama a `getUpdates` y ofrece la lista
-(`DescubridorDeChats`). Es el sustituto directo del botón de contestar al remitente, y responde
-al mismo principio: un dato que hay que conocer de antemano no se usa.
+`600112233` son nueve dígitos que podrían ser un móvil español escrito a pelo —inservible, le
+falta el prefijo— o un número internacional completo de un país con prefijo corto. No hay forma de
+distinguirlos mirándolos. Exigiendo el `+` la ambigüedad desaparece y se puede decir exactamente
+lo que pasa: *«falta el prefijo internacional, escribe +34…»*, que es el error que comete todo el
+mundo. Decirle «no tiene forma de teléfono» sería verdad y no serviría de nada.
 
-Dos límites que ese botón no puede esconder, y que por eso la pantalla dice en voz alta:
+`DestinoDeWhatsApp.faltaPrefijo()` existe solo para ese mensaje, y **no se dispara con lo que
+empieza por `-`**: un `chat_id` de Telegram como `-1001234567890` merece el otro mensaje, porque
+no es un teléfono al que le falte el prefijo. Lo pilló un test.
 
-- **Un bot no puede escribir primero.** Hasta que una persona le manda algo —un `/start` basta—
-  el chat no existe y no aparece en la lista. Una lista vacía **no es un error**: significa que
-  falta ese paso del otro lado. Es el problema de soporte número uno de cualquier aplicación con
-  bot.
-- **Telegram guarda esos updates 24 horas.** Un chat que escribió la semana pasada no sale. Si no
-  aparece, basta con que vuelva a escribir al bot.
+#### Solo personas, nunca grupos
 
-`getUpdates` se llama **sin `offset`** y sin confirmar los updates a propósito: confirmarlos los
-borraría de la cola, y un segundo descubrimiento no vería nada.
+Por decisión, no por limitación encontrada. La Cloud API admite grupos desde 2026, pero solo
+creados por ella, invite-only, de hasta ocho participantes y exigiendo Cuenta Oficial de Empresa.
+Mantenerse en personas deja una forma que validar en lugar de dos y fija `recipient_type` en
+`individual` sin ramificación.
 
-#### Una ambigüedad deliberada
+#### En el destino no se resuelve ningún marcador
 
-`600112233` son nueve dígitos seguidos: es a la vez un móvil español escrito a pelo y un `chat_id`
-de persona perfectamente legítimo. No hay forma de distinguirlos, y **gana el chat**. Rechazar un
-`chat_id` válido rompería una configuración correcta con un mensaje de error que además sería
-falso; un teléfono que se cuele acaba en un `400 chat not found` con su motivo en el registro.
+Es una propiedad de seguridad, y es el único punto de esta migración donde el argumento hubo que
+**reescribirlo** en lugar de heredarlo.
 
-`DestinoDeTelegram.pareceTelefono()` solo reconoce lo que **no puede** ser un chat —lo que lleva
-`+`, espacios, paréntesis o guiones— y existe para poder dar el mensaje de error útil en el caso
-más probable de todos: quien viene de SMStoSMS, o quien simplemente supone que un «destino» es un
-teléfono. Hay un test con su KDoc fijando esto para que nadie lo «arregle» al revés.
+SMStoSMS sí resolvía `{telefono}` ahí, para contestar a quien escribió. Con Telegram el marcador
+se fue porque la sustitución era imposible: el remitente de un SMS y un chat son identidades sin
+relación. Ahora el destino vuelve a ser un teléfono, así que **sí sería posible** — y sigue sin
+hacerse, por un motivo mejor: el cuerpo de un SMS ajeno no puede decidir a dónde se entrega nada,
+y menos sobre una cuenta de empresa que factura por mensaje.
+
+#### `NormalizadorTelefono` no vuelve
+
+El destino vuelve a ser un teléfono, pero las dos preguntas que aquella clase contestaba siguen sin
+existir: no hay bucle que detectar —un mensaje de WhatsApp no vuelve nunca como SMS— y «alcanzable»
+solo lo sabe Meta. Lo que hace falta es validar una forma, no comparar dos valores.
 
 ### Plantilla
 
@@ -594,14 +596,14 @@ resultado: "De +34600112233: hoy es {fecha}"   ← el marcador del cuerpo queda 
 ### Por qué la plantilla por defecto dejó de ser `{mensaje}`
 
 Con el SMS bastaba el cuerpo: el reenvío llegaba como un SMS más y el teléfono ya enseñaba de
-quién venía. Por Telegram **todos los avisos llegan del mismo bot**, así que cuatro mensajes
+quién venía. Por WhatsApp **todos los avisos llegan del mismo número**, así que cuatro mensajes
 seguidos sin el remitente dentro son cuatro mensajes indistinguibles, y hay que adivinar cuál era
 del banco. El contexto que el SMS daba gratis hay que ponerlo a mano, y de ahí que
 `Regla.PLANTILLA_POR_DEFECTO` sea ahora `{telefono} · {fecha}` con el mensaje debajo.
 
 ### Longitud
 
-Un mensaje de Telegram admite **4.096 caracteres**, frente a los 160 de un SMS GSM-7, así que en
+Un mensaje de texto libre admite **4.096 caracteres**, frente a los 160 de un SMS GSM-7, así que en
 la práctica la plantilla no tiene techo: hace falta un SMS concatenado muy largo más una plantilla
 generosa para pasarse. El editor y el panel de prueba muestran la longitud contra ese límite —ya
 no el número de partes, que era una cuenta de fragmentos de SMS—, y en rojo si se pasa, porque
@@ -609,7 +611,7 @@ pasarse **no** es un cargo extra: es un fallo permanente.
 
 Si aun así se supera, `MapeoDeRespuestas.trocear()` parte el texto por el último salto de línea
 del trozo, o por el último espacio si no hay ninguno, y solo parte una palabra cuando no queda
-hueco. Cortar y tirar el resto perdería contenido en silencio, y dejar que Telegram conteste
+hueco. Cortar y tirar el resto perdería contenido en silencio, y dejar que Meta conteste
 `400` convertiría un mensaje largo en una entrega fallida.
 
 ### Exportar e importar
@@ -653,6 +655,7 @@ Un fichero completo (formato 4):
 | 2 | La regla gana `ignorar_mayusculas`. | SMStoSMS |
 | 3 | El fichero gana el bloque `configuracion`. | SMStoSMS |
 | 4 | **`destino` es un chat de Telegram, no un teléfono.** | SMStoTelegram |
+| 5 | **`destino` vuelve a ser un teléfono, en E.164.** | SMStoWhats |
 
 #### La 4 es la primera versión que rompe la compatibilidad hacia atrás
 
@@ -671,21 +674,32 @@ explicando el motivo.
 Los **ids** no viajan: son locales a la base de datos de cada dispositivo y reutilizarlos
 provocaría colisiones.
 
-**El token del bot tampoco**, y aquí hay un detalle que cuesta caro si se pasa por alto. Los
-ajustes se *reemplazan* al importar, así que un token ausente del fichero entraría como cadena
-vacía y la aplicación se quedaría muda sin que nadie lo hubiera tocado. `ConfiguracionJson.aDominio()`
-recibe el token actual como argumento precisamente para devolvérselo. Hereda el papel que tenía
-`simActual` cuando el transporte era el SMS —aquel identificaba una tarjeta de *este* teléfono—
-por un motivo peor: este fichero es JSON en claro y el token es permiso para escribir en nombre
-del bot.
+**Las dos credenciales tampoco**, y aquí hay un detalle que cuesta caro si se pasa por alto. Los
+ajustes se *reemplazan* al importar, así que una credencial ausente del fichero entraría como
+cadena vacía y la aplicación se quedaría muda sin que nadie lo hubiera tocado.
+`ConfiguracionJson.aDominio()` recibe **las dos** actuales como argumentos precisamente para
+devolvérselas; son dos parámetros y no uno porque olvidar cualquiera deja la aplicación igual de
+callada.
+
+La línea que separa lo que viaja de lo que no es «¿describe *cómo* reenviar, o identifica a *este*
+teléfono?»:
+
+| Dato | ¿Viaja? | Por qué |
+|------|---------|---------|
+| Modo de entrega, nombre e idioma de la plantilla | **Sí** | Describen cómo reenviar. Quien clone esto a otro teléfono querrá lo mismo |
+| Los dos topes, reintentos, timeout | **Sí** | Igual |
+| Token de acceso | No | Este fichero es JSON en claro y el token es permiso para escribir en nombre del número |
+| `phone_number_id` | No | Hereda el papel de `simActual`: identifica *esta* cuenta, y restaurado en otra enviaría por donde no es |
 
 Los dos bloques se tratan distinto al importar, y no por capricho:
 
 - **Los ajustes se sustituyen.** Son un juego de valores único: mezclarlos no significa nada.
 - **Las reglas se añaden** al final, conservando el orden relativo del fichero. Importar nunca
   borra: una importación equivocada que vaciara la lista dejaría el teléfono sin reenviar nada.
-  Cada regla se valida antes de escribir —expresiones que compilen, destino y nombre no
-  vacíos— y las rechazadas se cuentan aparte.
+  Cada regla se valida antes de escribir —expresiones que compilen, nombre no vacío y un destino
+  con **forma de teléfono E.164**— y las rechazadas se cuentan aparte. La validación del destino
+  por forma es nueva del formato 5: un `chat_id` no se podía comprobar sin preguntar a Telegram,
+  un teléfono sí, y lo que atrapa es un fichero editado a mano con un número sin prefijo.
 
 Un fichero de los formatos 1 y 2 no lleva `configuracion` y se sigue importando: entran sus
 reglas y los ajustes del teléfono se quedan como estén.
@@ -693,6 +707,84 @@ reglas y los ajustes del teléfono se quedan como estén.
 ---
 
 ## 10. Mecanismo de entrega
+
+### Modo de entrega: texto libre, plantillas, y por qué las plantillas son el camino principal
+
+**Esta es la subsección que hay que leer antes que ninguna otra de las que siguen.** La Cloud API
+tiene dos clases de mensaje y no son intercambiables:
+
+| | Mensaje de servicio (texto libre) | Mensaje de plantilla |
+|---|---|---|
+| Cuándo se puede mandar | Solo dentro de una **ventana de 24 h** que abre el destinatario escribiendo al número emisor | **Siempre**, sin contacto previo |
+| Contenido | Texto libre, hasta **4.096** caracteres | Un cuerpo que Meta ha aprobado, hasta **1.024** renderizados |
+| Saltos de línea en la parte variable | Sí | **No**, ni tabuladores, ni más de cuatro espacios seguidos |
+| Aprobación previa | No | Sí, por plantilla y por idioma |
+| Coste | Los primeros **1.000 al mes y por número**, gratis; el resto se factura desde el 1 oct 2026 | **Cada** mensaje se factura |
+
+Un reenviador de SMS es, por definición, un emisor **no solicitado**: el SMS llega cuando llega y
+hay que entregarlo entonces, no cuando al destinatario le apetezca abrir una ventana. Por tanto:
+
+> **Las plantillas no son el plan B de esta aplicación: son el camino principal.** El texto libre
+> es la optimización que se aplica cuando resulta que la ventana está abierta.
+
+Eso invierte lo que uno supondría, y es la razón de que `PlantillaDeWhatsApp` no sea un añadido
+opcional.
+
+#### El contrato de la plantilla: una sola variable
+
+La plantilla la crea el operador en el Business Manager —esta aplicación no puede crearla— y su
+cuerpo tiene que ser exactamente `PlantillaDeWhatsApp.CUERPO_RECOMENDADO`:
+
+```
+Reenvío de SMS
+
+{{1}}
+
+— SMStoWhats
+```
+
+Tres propiedades, y las tres son a propósito:
+
+1. **Los saltos de línea están en la plantilla, no en la variable.** Meta aprueba el cuerpo una
+   vez, con su maquetación dentro. Lo que **no** puede llevar saltos de línea, tabuladores ni más
+   de cuatro espacios seguidos es el *valor* que se pasa en `{{1}}`: hacerlo devuelve un `132007`
+   y el reenvío muere. De ahí `aplanar()`, que convierte los saltos en ` · ` y colapsa el resto.
+2. **No empieza ni acaba con la variable**, que Meta no admite. De ahí el texto fijo a los dos
+   lados.
+3. **Una variable y no tres.** Remitente, fecha y texto en tres huecos daría mejor maquetación y
+   rompería algo que importa más: habría una **segunda** vía de composición del mensaje, la de la
+   plantilla, que ignoraría la `plantilla` de cada regla. Con una variable el texto lo compone
+   siempre `EvaluadorDeReglas`, en los dos modos, y la plantilla de la regla sigue significando lo
+   mismo. Se paga en estética y se cobra en no tener dos caminos.
+
+`PlantillaDeWhatsApp.PRESUPUESTO` se deriva de ese contrato —1.024 menos el texto fijo menos un
+margen— porque la aplicación **no conoce el cuerpo aprobado**: vive en la cuenta de Meta. Si se
+cambia `CUERPO_RECOMENDADO`, el presupuesto se recalcula solo.
+
+#### Los tres modos
+
+`ModoDeEntrega`, en `data/config`, porque es configuración del transporte y la lee el transporte:
+`DispatchWorker` no se entera de que existen dos formas de entregar.
+
+| Modo | Qué hace |
+|------|----------|
+| `AUTOMATICO` | Intenta texto libre; si Meta contesta `131047`, reenvía como plantilla |
+| `SOLO_TEXTO_LIBRE` | Nunca gasta una plantilla. Con la ventana cerrada, no entrega |
+| `SOLO_PLANTILLA` | No prueba el texto libre. Entrega siempre y factura siempre |
+
+**El salto a plantilla en `AUTOMATICO` ocurre dentro del mismo intento del worker**, no como
+reintento. Devolver un `ErrorTransitorio` y dejar que `DispatchWorker` lo reintentara tendría el
+mismo resultado diez veces: la ventana seguiría cerrada, porque lo que la abre es que el
+destinatario escriba.
+
+Es la primera vez que este transporte hace **dos peticiones distintas** para un reenvío. El worker
+no se entera, y eso es lo correcto. Para conseguirlo, el transporte tiene un tipo interno `Entrega`
+que lleva el `ResultadoEnvio` más un booleano `ventanaCerrada`: eso es lo único que `ResultadoEnvio`
+no puede decir, y se queda dentro del transporte en lugar de subir hasta el worker.
+
+**`AUTOMATICO` sin plantilla configurada se comporta como `SOLO_TEXTO_LIBRE`**, porque no hay nada
+a lo que saltar. No es un fallo silencioso: el motivo que queda en el registro dice que hace falta
+una plantilla y dónde se configura.
 
 ### El interfaz, y qué le debe el transporte al worker
 
@@ -702,30 +794,43 @@ declara tres cosas:
 | Miembro | Para qué |
 |---------|----------|
 | `enviar(destino, texto, timeoutSegundos)` | Entregar y **esperar** el desenlace |
-| `limiteCaracteres` | Avisar mientras se escribe la plantilla, que es cuando se puede hacer algo |
+| `limiteCaracteres(): Int` | Avisar mientras se escribe la plantilla, que es cuando se puede hacer algo |
 | `motivoNoDisponible(): String?` | Avisar **antes** de pulsar enviar, y en el Panel |
 
 Los tres salieron de necesidades reales de quien llama, no de imaginar un interfaz genérico.
 `motivoNoDisponible` devuelve el **motivo en texto** y no un booleano porque la pantalla tiene que
 poder decir *por qué* no se puede entregar, y los motivos cambian con el medio.
 
+`limiteCaracteres` **suspende**, y es el único cambio de firma que la juntura ha sufrido en tres
+migraciones. Era una propiedad, y dejó de poder serlo cuando el límite pasó a depender de la
+configuración: 4.096 caracteres en texto libre y 978 dentro de una plantilla, así que el que
+aplica no se puede saber sin leer DataStore. Lo que lo forzó no fue el medio —fue que por primera
+vez **el límite es configurable**. Los dos ViewModel que lo pintan lo exponen como `StateFlow<Int>`
+con el valor del texto libre como inicial.
+
 **Esperar el desenlace no es un detalle del medio.** Con `SmsManager` significaba suspender hasta
 que llegara el broadcast del `sentIntent`, porque la llamada de envío retornaba antes de que el
-mensaje saliera del dispositivo; con Telegram significa esperar la respuesta HTTP. El motivo es el
+mensaje saliera del dispositivo; con la Cloud API significa esperar la respuesta HTTP. El motivo es el
 mismo en los dos casos: si la llamada retornase antes de conocer el resultado, **todas las
 entregas parecerían correctas y los fallos reales desaparecerían**.
 
-### Texto plano, sin `parse_mode`
+### Texto plano, y `preview_url` en false
 
-Es la decisión que más fácil sería tomar mal, así que queda escrita aquí.
+El cuerpo del SMS es contenido de un tercero y **no se interpreta nunca**. Es la misma regla que
+el evaluador ya aplica sustituyendo `{mensaje}` en último lugar, y aquí se concreta en dos cosas.
 
-Con `parse_mode` en `Markdown` o `HTML`, cualquier SMS que lleve un `_`, un `*`, un `[` o un `<`
-—un enlace de un banco, una fórmula, una carita— hace que Telegram devuelva
-`400 Bad Request: can't parse entities`, y el reenvío se cierra como **fallido permanente**: el
-mensaje *no se entrega* por haber querido ponerlo en negrita.
+**El formato se acepta tal como salga.** Con Telegram el peligro era `parse_mode`: ponerlo hacía
+que cualquier SMS con un `_` o un `*` devolviera `400 can't parse entities` y el reenvío muriera
+por haber querido ponerlo en negrita. WhatsApp no tiene ese interruptor: **interpreta `*negrita*`
+y `_cursiva_` siempre**, y un SMS con asteriscos llegará con medio texto en negrita. Se acepta.
+Escapar el cuerpo sería *interpretar* contenido ajeno para modificarlo, que es lo que este
+proyecto no hace en ningún sitio, y el mensaje llega entero de las dos formas.
 
-El cuerpo del SMS es contenido de un tercero y no se interpreta nunca. Es la misma regla que el
-evaluador ya aplica sustituyendo `{mensaje}` en último lugar, y se toma aquí por el mismo motivo.
+**`preview_url` va en `false`, y eso no es estética.** En `true`, WhatsApp **descarga** el primer
+enlace que encuentre en el cuerpo para pintar su tarjeta de vista previa. Como el cuerpo es un SMS
+ajeno, entregar un mensaje provocaría una petición de los servidores de Meta a una URL que ha
+puesto quien mandó ese SMS: desde confirmar que un enlace de phishing tiene público hasta quemar
+un enlace de un solo uso. No es configurable.
 
 ### Mapeo de respuestas
 
@@ -733,54 +838,80 @@ Lo implementa `MapeoDeRespuestas.interpretarEnvio()`, una función **pura** de (
 cuerpo) a `ResultadoEnvio`, separada a propósito de quien hace la petición para que se pueda
 probar sin red. `MapeoDeRespuestasTest` la cubre caso por caso.
 
-| Respuesta | Interpretación | Acción WorkManager | Estado |
-|-----------|----------------|--------------------|--------|
-| `200` con `ok:true` | Entregado | `success()` | `ENVIADO` |
-| `429 Too Many Requests` | Demasiado tráfico | `retry()` **tras `retry_after`** | `PENDIENTE`, intentos++ |
-| `5xx` | Avería de Telegram | `retry()` | `PENDIENTE`, intentos++ |
-| Timeout, `IOException` | Sin red | `retry()` | `PENDIENTE`, intentos++ |
-| `400` | Chat inexistente, texto vacío o excesivo | `failure()` | `FALLIDO` |
-| `401` / `404` | **Token inválido o revocado** | `failure()` | `FALLIDO` |
-| `403` | Bot bloqueado o expulsado del grupo | `failure()` | `FALLIDO` |
-| Cualquier otro | Desconocido, por prudencia | `retry()` | `PENDIENTE`, intentos++ |
+**La diferencia de fondo con la versión de Telegram: el código HTTP ya no basta.** La Cloud API
+mete **cuatro averías distintas en el mismo `400`** y las distingue en `error.code` del cuerpo. El
+estado HTTP queda como red de seguridad para lo que no traiga cuerpo legible.
+
+| `error.code` | Interpretación | Acción WorkManager | Estado |
+|--------------|----------------|--------------------|--------|
+| — (2xx sin bloque `error`) | Entregado | `success()` | `ENVIADO` |
+| `131047` | **Ventana de 24 h cerrada** | En `AUTOMATICO`, reenvía por plantilla | — |
+| `131026` | El destino no tiene WhatsApp | `failure()` | `FALLIDO` |
+| `131021` | Destino igual al número emisor | `failure()` | `FALLIDO` |
+| `132000` `132001` `132005` `132007` `132012` `132015` `132016` | La plantilla y sus parámetros no cuadran | `failure()` | `FALLIDO` |
+| `0` `3` `190` | **El token** | `failure()` | `FALLIDO` |
+| `100` | **El `phone_number_id`** | `failure()` | `FALLIDO` |
+| `130429` `80007` `131048` `131056` | Límite de caudal | `retry()`, sin espera sugerida | `PENDIENTE`, intentos++ |
+| `131000` `133004`, timeout, `IOException` | Avería de Meta o sin red | `retry()` | `PENDIENTE`, intentos++ |
+| Un `4xx` desconocido | La petición está mal | `failure()` | `FALLIDO` |
+| Cualquier otra cosa | Desconocido, por prudencia | `retry()` | `PENDIENTE`, intentos++ |
 | `runAttemptCount >= maxReintentos` | Agotado | `failure()` | `FALLIDO` |
 
-El `description` que devuelve Telegram se incorpora al motivo tal cual. Es texto en inglés y poco
-bonito —«Bad Request: chat not found»—, pero es exactamente lo que hace falta leer en el registro
-para entender qué pasó, y traducirlo sería inventarse un diccionario que se queda corto en cuanto
-Telegram añada un caso.
+El `message` que devuelve Meta se incorpora al motivo tal cual, con el `error.code` por delante.
+Es texto en inglés y poco bonito —«(#131026) Unable to deliver message»—, pero es exactamente lo
+que hace falta leer en el registro, y el código es la clave con la que se busca en la
+documentación de Meta.
 
-Tres filas de esa tabla merecen explicación aparte.
+Cuatro filas de esa tabla merecen explicación aparte.
 
-#### Un `404` es un token malo, no un chat que falta
+#### Un `100` es un `phone_number_id` malo, no un recurso que falta
 
-El token va **dentro de la URL** del Bot API (`/bot<token>/sendMessage`), así que la ruta entera
-depende de él: un «no existe» ahí significa que el token no existe.
-`MapeoDeRespuestas.esFalloDeCredencial()` agrupa 401 y 404.
+Llega como un `400` con un texto genérico («Unsupported post request. Object with ID … does not
+exist»). Es el equivalente exacto del `404` de Telegram: lo que no existe es la **ruta**, y la
+ruta la forma la credencial. `MapeoDeRespuestas.esFalloDeCredencial()` agrupa por tanto los dos
+grupos — `190`/`0`/`3` para el token y `100` para el id — porque la Cloud API necesita dos
+credenciales donde el Bot API necesitaba una, y fallan por sitios distintos.
+
+#### Un `4xx` desconocido se cierra, no se reintenta
+
+Apartándose de lo que el MASTERPLAN esbozó. El reintento manda los **mismos bytes** a la misma
+URL, así que un «tu petición está mal» no puede cambiar de respuesta por esperar: diez intentos
+acaban en el mismo sitio gastando diez líneas de registro. Lo desconocido que **no** es un `4xx`
+sí se reintenta, por prudencia.
+
+#### El `131047` no se clasifica, se intercepta
+
+`MapeoDeRespuestas.esVentanaCerrada()` es un predicado aparte y no un caso nuevo de
+`ResultadoEnvio`, porque `ResultadoEnvio` lo lee `DispatchWorker` y el worker no debe enterarse de
+que hay dos formas de entregar. Ver «Modo de entrega».
 
 #### Un fallo de credencial no es un fallo de este reenvío
 
-Con un token mal puesto **fallan todos los reenvíos por igual**, y enterrar eso en el registro del
-primero de cuatrocientos desperdicia la única información útil que hay. `TelegramSender` lo anota
-en `EstadoDelBot`, que lo persiste —esta aplicación no está «abierta»: cada SMS despierta el
+Con una credencial mal puesta **fallan todos los reenvíos por igual**, y enterrar eso en el
+registro del primero de cuatrocientos desperdicia la única información útil que hay. `WhatsAppSender` lo anota
+en `EstadoDeLaCuenta`, que lo persiste —esta aplicación no está «abierta»: cada SMS despierta el
 proceso y lo deja morir, así que un flag en memoria se habría olvidado antes de que nadie mirase—
 y el Panel lo enseña en rojo por encima de todo lo demás.
 
-Un envío correcto lo borra, porque es la mejor prueba posible de que el token sirve. Guardar un
-token nuevo en Ajustes también, porque es el gesto de quien viene a arreglarlo.
+Un envío correcto lo borra, porque es la mejor prueba posible de que las credenciales sirven.
+Guardarlas de nuevo en Ajustes también, porque es el gesto de quien viene a arreglarlo.
 
-Solo 401 y 404 lo encienden. Un `400` o un `403` son problemas de **ese destino concreto**, y
-mandar a revisar el token sería mandar a mirar donde no es.
+Solo los códigos de credencial lo encienden. Un `131026` es un problema de **ese destino
+concreto**, y mandar a revisar los ajustes sería mandar a mirar donde no es.
 
-#### `retry_after` se respeta durmiendo
+#### Meta no manda ninguna espera
 
-Un `429` dice en `parameters.retry_after` cuántos segundos hay que esperar, y reintentar antes
-solo gasta otro `429`. El dato llega al worker en `ErrorTransitorio.esperaSegundos`.
+Telegram decía en `parameters.retry_after` cuántos segundos había que esperar ante un `429`, y
+`ResultadoEnvio.ErrorTransitorio` sigue teniendo un `esperaSegundos` para eso. **La Cloud API no
+manda nada equivalente**, así que hoy llega siempre null, que es lo que ya significaba «aplica el
+backoff de siempre».
 
-WorkManager cuenta su backoff **desde que el worker termina**, así que dormir dentro del worker es
-la única forma que tiene de retrasar el siguiente intento. Con un tope de **120 segundos**: un
-worker tiene unos diez minutos antes de que el sistema lo pare, y bloquear uno un cuarto de hora
-para respetar un `retry_after` enorme cambiaría un problema por otro peor.
+`DispatchWorker.esperarSiLoPiden()` por tanto no duerme nunca: retorna en su primera línea. Se
+queda escrito, con su tope de **120 segundos**, porque el contrato de `ResultadoEnvio` admite la
+espera y el día que un medio la pida otra vez el worker ya sabe respetarla. El razonamiento sigue
+siendo válido: WorkManager cuenta su backoff desde que el worker termina, así que dormir dentro es
+la única forma de retrasar el siguiente intento, y un worker tiene unos diez minutos antes de que
+el sistema lo pare.
 
 ### Textos de más de 4.096 caracteres
 
@@ -804,7 +935,7 @@ simultáneos.
 
 ---
 
-## 11. El límite por minuto
+## 11. Los dos topes
 
 Esta sección era **«Protecciones antibucle y de coste»** y describía tres protecciones. Dos han
 desaparecido. Esto explica por qué, porque desde fuera parecen una omisión y no lo son.
@@ -823,12 +954,18 @@ de configuración se convertía en una factura. De ahí tres protecciones:
 ### Por qué las dos primeras ya no existen
 
 Las dos comparaban el `destino` de una regla con el remitente del SMS. En el momento en que
-`destino` pasó a ser un `chat_id`, **esa comparación dejó de significar nada**: un chat de
-Telegram y un número de teléfono son identidades sin relación, así que no pueden ser «el mismo» ni
-cerrar un círculo.
+`destino` pasó a ser un `chat_id`, esa comparación dejó de significar nada: un chat de Telegram y
+un número de teléfono son identidades sin relación.
 
-Y el bucle en sí se volvió imposible por construcción: **un mensaje de Telegram no vuelve nunca
-como SMS**. Se entrega y se queda ahí. No hay realimentación que detectar.
+**Ahora el `destino` vuelve a ser un teléfono, así que la comparación sería posible otra vez — y
+sigue sin merecer la pena.** El motivo cambió, y es más fuerte que el anterior: el bucle es
+imposible por construcción, porque **un mensaje de WhatsApp no vuelve nunca como SMS**. El SMS
+entra por la radio y el reenvío sale por la red; no hay realimentación que detectar. Lo único de
+esa forma lo vigila Meta sola, rechazando con el error `131021` un envío del número emisor a sí
+mismo.
+
+Así que **no se restauran**, y esta vez el argumento no depende de que los identificadores sean
+incomparables.
 
 Se fueron con ellas `AppConfig.protegerBucles` —un interruptor que ya no apagaba nada—,
 `NormalizadorTelefono` entero con sus dieciocho tests, y `ReglaDao.obtenerDestinosActivos()`, que
@@ -837,33 +974,71 @@ solo servía a la primera.
 > Mantener código que no puede ejecutarse no es prudencia: es dejar una trampa para quien lea el
 > fichero el año que viene y dé por hecho que algo lo protege.
 
-### Lo que queda: `maxReenviosPorMinuto`
+### El primero: `maxReenviosPorMinuto`
 
 `AppConfig.maxReenviosPorMinuto` (10 por defecto, rango 1–100) limita cuántos reenvíos pueden
 crearse en los últimos 60 segundos. El exceso se descarta, el SMS queda `DESCARTADO` con su motivo
 y se registra como `LogTipo.LIMITE_ALCANZADO`.
 
-**Sigue vivo, pero no por el motivo original.** Entregar por Telegram es gratis, así que ya no es
-un cortafuegos económico: protege de los límites de quien recibe. El Bot API admite del orden de
+**Cambia de significado por tercera vez**, y es la tercera vez que sobrevive por un motivo
+distinto del que lo hizo nacer:
 
-| Límite del Bot API | Valor aproximado |
-|--------------------|------------------|
-| Total, todos los chats | 30 mensajes por segundo |
-| Por chat | **1 mensaje por segundo** |
-| En un grupo | ~20 mensajes por minuto |
+| Transporte | Para qué servía |
+|------------|-----------------|
+| SMS | Cortafuegos económico: un bucle con reintentos detrás era una factura |
+| Telegram | Los límites del Bot API: un mensaje por segundo y chat. Entregar era gratis |
+| Cloud API | Las dos cosas a la vez, y la económica aprieta más que nunca |
 
-Pasarse no cuesta dinero, cuesta `429 Too Many Requests`, y con un grupo como destino eso llega
-enseguida. El valor por defecto queda holgadamente por debajo de los tres techos y es más que
-suficiente para los SMS que recibe un teléfono real.
+Lo que sigue haciendo es cortar una **avalancha**: una ráfaga de SMS en un minuto. El caudal de la
+propia Cloud API es holgado —del orden de 80 mensajes por segundo— así que ese no es el techo; el
+que existe es el `131056`, demasiados mensajes al mismo destinatario en poco tiempo.
 
-Cuando aun así aparece un `429`, Telegram dice en la respuesta cuánto hay que esperar y el worker
-lo respeta (§10).
+### El segundo: `maxMensajesPorMes`
+
+Y es el que de verdad importa ahora. **Es la primera protección de este proyecto que mide
+dinero.**
+
+| Qué | Cuánto |
+|-----|--------|
+| Mensajes de servicio gratis | **1.000 al mes y por número** |
+| Mensajes de servicio pasados los mil | Se facturan (desde el 1 oct 2026) |
+| Mensajes de plantilla | Se facturan **todos**, siempre |
+
+Mil al mes son **treinta y tres al día**. El tope por minuto no protege de esto en absoluto: 10
+por minuto son 14.400 al día, tres órdenes de magnitud por encima del primer techo que se va a
+encontrar. Son dos protecciones distintas porque miden cosas distintas: **una corta una ráfaga, la
+otra corta un mes**.
+
+`AppConfig.maxMensajesPorMes` vale 900 por defecto —por debajo del tramo gratuito, para que una
+instalación que nadie ha configurado no llegue a facturar nada— y un `0` lo desactiva. Se
+comprueba en el mismo sitio y con el mismo mecanismo que el tope por minuto: descartar el SMS y
+dejar el motivo en el registro, en lugar de inventar una tercera forma de fallar.
+
+`ContadorDeMensajes` lleva la cuenta, por mes natural y separando servicio de plantilla:
+
+- Cuenta **mensajes entregados y no reenvíos**. Un SMS largo se trocea y Meta factura por mensaje,
+  así que contar reenvíos daría una cifra que no se parece a la factura, que es justo lo que esto
+  existe para anticipar.
+- Distingue servicio de plantilla porque tienen precios distintos, y porque la cifra interesante
+  no es el total: es **cuántos han tenido que ir por plantilla**, que mide cuánto se está
+  entregando fuera de la ventana de 24 h.
+- El cambio de mes se resuelve **dentro de la misma transacción** que el incremento, no con un
+  trabajo programado: una pieza más que puede no ejecutarse, en una aplicación cuyos trabajos
+  periódicos ya pelean con Doze.
+- Vive en el DataStore de los ajustes con sus propias claves, igual que `EstadoDeLaCuenta`, porque
+  no es configuración: es un hecho sobre *este* teléfono y *este* mes.
+
+El Panel lo enseña en la primera pantalla. Es la única cifra de esta aplicación que cuesta dinero
+y que nadie va a ir a buscar a propósito; enterrada en Ajustes, la primera noticia de haberse
+pasado sería la factura.
 
 ### El tipo de log, renombrado
 
-`BUCLE_EVITADO` pasó a `LIMITE_ALCANZADO`. Se llamaba por una protección que ya no existe, y con
-las dos primeras fuera el único descarte que queda es el del límite de frecuencia. El filtro de la
-pantalla de Logs se llama ahora **Descartados** en lugar de **Bucles**.
+`BUCLE_EVITADO` pasó a `LIMITE_ALCANZADO`. Se llamaba por una protección que ya no existe, y el
+filtro de la pantalla de Logs se llama ahora **Descartados** en lugar de **Bucles**.
+
+El nombre ha envejecido mejor que su motivo: cuando se renombró había **un** descarte posible, el
+del límite de frecuencia, y ahora hay dos. «Un tope dijo que no» es exactamente lo que registra.
 
 Renombrar un valor de enum que se guarda como texto en la base de datos habría sido una migración
 si hubiera datos instalados. No los había, y era la última ocasión de hacerlo gratis.
@@ -944,7 +1119,7 @@ EstadoSms
 
 EstadoReenvio
   PENDIENTE   pendiente de entregar, o con un intento fallido que se reintentará
-  ENVIADO     Telegram confirmó la entrega
+  ENVIADO     Meta confirmó la entrega
   FALLIDO     fallo permanente, no se volverá a intentar
 
 LogTipo
@@ -968,10 +1143,10 @@ LogTipo
 
 Es la segunda vez que pasa, y por el mismo motivo. SMSGateway llegó a la v2 con una migración
 1→2 y el esquema volvió a la v1 al nacer SMStoSMS; SMStoSMS llegó otra vez a la v2 —la que añadió
-`reglas.ignorar_mayusculas`— y el esquema vuelve a la v1 al nacer SMStoTelegram.
+`reglas.ignorar_mayusculas`— y el esquema vuelve a la v1 al nacer SMStoWhats.
 
-Con `applicationId = com.capicua.smstotelegram`, Android trata esto como una aplicación distinta,
-con su propio directorio de datos, y el fichero se llama `smstotelegram.db`. Ningún dispositivo
+Con `applicationId = com.capicua.smstowhats`, Android trata esto como una aplicación distinta,
+con su propio directorio de datos, y el fichero se llama `smstowhats.db`. Ningún dispositivo
 tiene esta base de datos: no hay nada que migrar, y arrastrar la historia de migraciones de otra
 aplicación obligaría a mantener código que nunca se ejecutaría. Se colapsó en un esquema v1 limpio
 con `ignorar_mayusculas` ya dentro.
@@ -999,7 +1174,7 @@ datos de quien ya la tenía.
 Dos cosas que el esquema de esta aplicación **no** tiene, y conviene saber que es a propósito:
 
 - **`reenvios.partes` no existe.** Contaba los fragmentos de un SMS concatenado. Un mensaje de
-  Telegram admite 4.096 caracteres y no se tarifica por partes.
+  la Cloud API admite 4.096 caracteres de texto libre y no se tarifica por partes.
 - **`reglas.plantilla` no tiene `defaultValue`.** Lo tenía —`'{mensaje}'`— y eso significaba que la
   plantilla por defecto estaba escrita dos veces: ahí y en `Regla.PLANTILLA_POR_DEFECTO`. Al
   cambiar la del dominio habrían dejado de coincidir. Ninguna inserción usa la de la entidad
@@ -1041,18 +1216,37 @@ En **Configuración**, persistidos en DataStore:
 
 | Parámetro | Por defecto | Rango | Qué controla |
 |-----------|-------------|-------|--------------|
-| Token del bot | Vacío | — | La credencial del bot de @BotFather. Sin él no se entrega nada |
+| Token de acceso | Vacío | — | La credencial de la Cloud API. Sin ella no se entrega nada |
+| Id del número | Vacío | — | El `phone_number_id`. **No es el número de teléfono** |
+| Modo de entrega | Automático | — | Texto libre, plantilla, o texto libre con salto a plantilla |
+| Nombre de la plantilla | Vacío | — | Vacío significa «solo entrego dentro de la ventana de 24 h» |
+| Idioma de la plantilla | `es` | — | El código con el que se dio de alta |
 | Leer los SMS que llegan | Activado | — | Interruptor general: al apagarlo se deshabilita el componente `SmsReceiver` |
-| Máximo de reenvíos por minuto | 10 | 1–100 | El límite de §11 |
-| Espera de confirmación | 60 s | 10–300 | Cuánto se espera la respuesta de Telegram |
+| Máximo de reenvíos por minuto | 10 | 1–100 | Corta una ráfaga. §11 |
+| Tope de mensajes al mes | 900 | 0–100.000 | Corta un mes. `0` lo desactiva. §11 |
+| Espera de confirmación | 60 s | 10–300 | Cuánto se espera la respuesta de Meta |
 | Máximo de reintentos | 10 | 1–100 | Cuándo se da una entrega por perdida |
 | Intervalo inicial de reintento | 30 s | 5–3600 | Backoff lineal de WorkManager |
 
 El token se enmascara en pantalla —con el ojo para comprobar lo que se ha pegado—, **no se
-escribe nunca en el registro** y **no viaja en la copia de seguridad**. El botón *Comprobar el
-token* llama a `getMe` y responde con el nombre y el `@usuario` del bot, en lugar de un «correcto»
-que obligase a creerse la pantalla. Distingue cuatro resultados, y no dos: que no haya red no es
-que el token esté mal, y decirlo mandaría a cambiar un token que funciona.
+escribe nunca en el registro** y **no viaja en la copia de seguridad**. El id del número no se
+enmascara, porque no es secreto y a cambio hay que poder compararlo de un vistazo con el que
+enseña la consola de Meta, que es donde está el error más frecuente de toda la configuración.
+
+El botón *Comprobar las credenciales* consulta el objeto del número y responde con su **nombre
+verificado** y su **teléfono**, en lugar de un «correcto» que obligase a creerse la pantalla. No
+hay `getMe` en la Cloud API, y lo que hay es mejor: esa consulta ejercita **las dos credenciales a
+la vez** —el token en la cabecera, el id en la ruta—, así que si cualquiera de las dos está mal,
+falla.
+
+De paso trae el `quality_rating` del número (`GREEN`/`YELLOW`/`RED`), que es información que
+Telegram no daba. Meta puntúa cada número emisor según cuánta gente lo bloquea o lo denuncia, y
+cuando baja a rojo **limita o bloquea el número**. Es el riesgo real de entregar mensajes que el
+destinatario no ha pedido, y el único de los riesgos de este proyecto que avisa antes de
+materializarse.
+
+Distingue cuatro resultados, y no dos: que no haya red no es que las credenciales estén mal, y
+decirlo mandaría a cambiar algo que funciona.
 
 Apagar «Leer los SMS que llegan» no pone un `if` al principio de `onReceive`: deshabilita el
 componente con el `PackageManager` (`util/ControlRecepcion`), de modo que el sistema deja de
@@ -1060,7 +1254,7 @@ entregarle el broadcast. Ni se arranca el proceso, ni hay que leer DataStore —
 en el hilo principal del broadcast, ni puede colarse un SMS por una carrera entre el ajuste y el
 mensaje. Corta la **entrada**: lo que ya estaba guardado y encolado se sigue reenviando. El
 estado del componente lo persiste el sistema y sobrevive a los reinicios; lo único que lo
-devuelve al valor del manifiesto es una reinstalación, y por eso `SmsToTelegramApplication` lo
+devuelve al valor del manifiesto es una reinstalación, y por eso `SmsToWhatsApplication` lo
 vuelve a sincronizar con el ajuste guardado al arrancar.
 
 ### Lo que el teléfono tiene que permitir
@@ -1086,17 +1280,17 @@ que abrirla una vez.
 
 ```bash
 # Logs en tiempo real
-adb logcat -s "SmsReceiver" "SmsIngestionService" "TelegramSender" \
+adb logcat -s "SmsReceiver" "SmsIngestionService" "WhatsAppSender" \
               "DispatchWorker" "OrphanRescueWorker" "HealthMonitorWorker"
 
 # Base de datos
-adb shell run-as com.capicua.smstotelegram ls databases/
-adb exec-out run-as com.capicua.smstotelegram cat databases/smstotelegram.db > smstotelegram.db
-sqlite3 smstotelegram.db "SELECT estado, COUNT(*) FROM sms GROUP BY estado;"
-sqlite3 smstotelegram.db "SELECT destino, estado, intentos, ultimo_error FROM reenvios;"
+adb shell run-as com.capicua.smstowhats ls databases/
+adb exec-out run-as com.capicua.smstowhats cat databases/smstowhats.db > smstowhats.db
+sqlite3 smstowhats.db "SELECT estado, COUNT(*) FROM sms GROUP BY estado;"
+sqlite3 smstowhats.db "SELECT destino, estado, intentos, ultimo_error FROM reenvios;"
 
-# Configuración — OJO: este fichero contiene el token del bot
-adb shell run-as com.capicua.smstotelegram cat files/datastore/smstotelegram_config.preferences_pb
+# Configuración — OJO: este fichero contiene el token de acceso
+adb shell run-as com.capicua.smstowhats cat files/datastore/smstowhats_config.preferences_pb
 
 # Estado de los workers
 adb shell dumpsys jobscheduler | grep -A 5 capicua
@@ -1120,7 +1314,8 @@ evitar. Ese fallo no se ve al compilar: aparece al instalar.
 
 ### El SMS se recibe pero no se entrega
 
-Antes de mirar las reglas, **mira el Panel**: si falta el token, o Telegram lo ha rechazado, hay
+Antes de mirar las reglas, **mira el Panel**: si faltan las credenciales, o Meta las ha
+rechazado, o se ha agotado el tope del mes, hay
 un aviso en rojo arriba y nada se va a entregar hasta que se arregle en Ajustes.
 
 Si no hay aviso, lo más probable es que **ninguna regla case**. La pantalla de Inicio lo dice: el
@@ -1133,7 +1328,8 @@ SMS aparece como «Sin regla». Para confirmarlo:
 4. Comprueba el remitente: si llega como `BANCO` y tu patrón espera `^\+34`, no casará nunca.
 
 Si la regla sí casa pero la entrega no sale, revisa el registro filtrando por **Errores**: el
-motivo lleva el `description` que devolvió Telegram, que suele decir exactamente qué pasó.
+motivo lleva el `error.code` y el `message` que devolvió Meta, que suelen decir exactamente qué
+pasó. El código es con lo que se busca en la documentación.
 
 ### El SMS aparece como «Descartado»
 
@@ -1141,32 +1337,54 @@ Solo hay un motivo posible: **se superó el límite de reenvíos por minuto**. E
 propia fila de Inicio y en el registro, filtrando por **Descartados**.
 
 Si pasa con tráfico normal, sube el límite en Configuración. Si pasa en ráfagas, es lo que el
-límite existe para evitar: los `429` de Telegram.
+límite existe para evitar. **Mira también el contador del Panel**: si el descarte dice «tope de
+mensajes del mes», lo que se ha agotado es la cuota, y subir el tope por minuto no arregla nada.
 
-### El registro dice «chat not found»
+### El registro dice «error 131026»
 
-El `chat_id` de la regla no corresponde a ningún chat que el bot pueda usar. Las tres causas, por
-frecuencia:
+«Unable to deliver message. This may be because the recipient is not a valid WhatsApp user.» Las
+causas, por frecuencia:
 
-1. **El destinatario nunca escribió al bot.** Un bot no puede escribir primero. Que le mande un
-   `/start` y vuelve a elegir el chat de la lista.
-2. **Se perdió el signo menos.** Los grupos y canales tienen `chat_id` negativo; copiarlo sin el
-   signo apunta a otra parte.
-3. **Es un `@usuario` de una persona.** Solo vale para canales públicos; para una persona hace
-   falta su id numérico.
+1. **Falta el prefijo internacional.** El editor de reglas lo avisa al escribir, pero una regla
+   importada o editada de otra forma puede colarse. El destino va siempre `+34600112233`.
+2. **Ese número no tiene WhatsApp.** No hay nada que la aplicación pueda hacer.
+3. **El prefijo está mal.** Un `+1` donde iba un `+34` apunta a un número que existe y no es el
+   que se quería.
 
-Lo más rápido es borrar el destino y volver a usar **Elegir de los chats del bot**.
+Es un fallo permanente: no se reintenta, porque reintentar no lo arregla.
 
-### El registro dice «bot was blocked by the user»
+### El registro dice «error 131047»
 
-El destinatario bloqueó el bot, o lo echaron del grupo. Es un `403` y se trata como fallo
-permanente: no se reintenta, porque no hay nada que reintentar. Hasta que el bot vuelva a estar
-autorizado, esa regla no entregará nada.
+La **ventana de 24 h está cerrada**: ese destinatario no ha escrito al número emisor en las
+últimas 24 horas, así que Meta no permite mandarle texto libre.
+
+Qué hacer depende del modo de entrega:
+
+- En **Automático** con plantilla configurada, esto no debería llegar al registro como fallo: la
+  aplicación reenvía por plantilla en el mismo intento. Si aparece, es que no hay plantilla
+  configurada.
+- En **Solo texto libre**, es el comportamiento esperado y el motivo lo dice. Para que se
+  entregue, o el destinatario escribe al número, o hay que cambiar de modo.
+
+### El registro dice «error 132001» o «132012»
+
+La plantilla. Un `132001` es que **no existe en ese idioma**: comprueba el nombre y el código de
+idioma en Ajustes contra lo que diga el Business Manager. Un `132012` es que **el parámetro no
+tiene el formato válido**, que casi siempre significa un salto de línea donde no puede haberlo —y
+eso no debería pasar, porque `PlantillaDeWhatsApp.aplanar()` lo evita; si pasa, es un fallo de la
+aplicación y hay un test que escribir.
+
+### El registro dice «error 100»
+
+El **id del número** no existe para Meta. El error de configuración número uno de la Cloud API es
+pegar el número de teléfono donde va el `phone_number_id`: la consola los enseña uno debajo del
+otro. El Panel lo marca como fallo de credencial precisamente para mandar a mirar ahí.
 
 ### Las entregas fallan con «Too Many Requests»
 
-Un `429`. Se trata como transitorio, se respeta el `retry_after` que Telegram pide y se reintenta.
-Si es constante, hay más tráfico del que el chat de destino admite —recuerda que el límite por
+Un `429`. Se trata como transitorio y se reintenta con el backoff de WorkManager; Meta no dice
+cuánto esperar, al contrario que Telegram.
+Si es constante, hay más tráfico del que el destinatario admite —recuerda que el límite por
 chat es de **un mensaje por segundo**, y en un grupo unos 20 por minuto— y lo que toca es bajar
 `Máximo de reenvíos por minuto` o repartir los avisos en varios chats.
 
@@ -1187,7 +1405,7 @@ Falta la exención del modo Doze:
 ```bash
 adb shell dumpsys deviceidle whitelist | grep capicua
 # Si no aparece:
-adb shell dumpsys deviceidle whitelist +com.capicua.smstotelegram
+adb shell dumpsys deviceidle whitelist +com.capicua.smstowhats
 ```
 
 En Xiaomi, Huawei y Samsung hace falta además activar el **inicio automático** y quitar la app de
@@ -1197,7 +1415,7 @@ la lista de aplicaciones suspendidas. Ver [`CLAUDE.md`](../CLAUDE.md).
 
 ```bash
 # Verificar que el permiso de arranque está declarado y concedido
-adb shell dumpsys package com.capicua.smstotelegram | grep -i boot
+adb shell dumpsys package com.capicua.smstowhats | grep -i boot
 
 # Verificar que los workers están programados
 adb shell dumpsys jobscheduler | grep -A 5 capicua
@@ -1220,7 +1438,7 @@ Dos causas posibles:
 1. **El texto pasaba de 4.096 caracteres** y se troceó: si un trozo falló después de que otro
    saliera, el reenvío se reintenta completo y el principio se repite. Es el comportamiento
    documentado (§10). Para evitarlo, acorta la plantilla: el editor muestra la longitud.
-2. **Telegram aceptó el mensaje y la respuesta se perdió** por un corte de red justo después. El
+2. **Meta aceptó el mensaje y la respuesta se perdió** por un corte de red justo después. El
    worker lo da por transitorio y reintenta, que es lo correcto: perder un mensaje es peor que
    duplicarlo. La idempotencia de cliente solo protege de reintentos sobre un reenvío ya marcado
    como `ENVIADO`, y en este caso nunca llegó a marcarse.
@@ -1245,7 +1463,7 @@ hay reenvíos atascados reintentándose en bucle. Revisa los pendientes y sus `u
 son fallos permanentes mal clasificados, el worker seguirá insistiendo hasta agotar los
 reintentos.
 
-El caso más probable con Telegram es un **token rechazado**: cada reenvío intenta, falla y vuelve.
+El caso más probable es una **credencial rechazada**: cada reenvío intenta, falla y vuelve.
 El aviso del Panel está precisamente para que eso se vea antes de notarlo en la batería.
 
 Subir `Intervalo inicial de reintento` y bajar `Máximo de reintentos` reduce el consumo a costa

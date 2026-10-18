@@ -32,7 +32,7 @@ ksp {
 }
 
 android {
-    namespace = "com.capicua.smstotelegram"
+    namespace = "com.capicua.smstowhats"
     compileSdk = 35
 
     signingConfigs {
@@ -47,11 +47,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.capicua.smstotelegram"
+        applicationId = "com.capicua.smstowhats"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.0"
+        versionCode = 1
+        versionName = "0.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -71,7 +71,7 @@ android {
                 if (buildType.name == "release") {
                     outputs.all {
                         (this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl)
-                            ?.outputFileName = "smstotelegram-${versionName}.apk"
+                            ?.outputFileName = "smstowhats-${versionName}.apk"
                     }
                 }
             }
