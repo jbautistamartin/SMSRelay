@@ -346,15 +346,96 @@ factura.
   `TokenDeAccesoTest` (~6). Se añade `PlantillaDeWhatsAppTest` (~10) para `aplanar` y
   `presupuesto`. Se va `DestinoDeTelegramTest`.
 
-### Fase 9 — Dispositivo real y release 1.0.0 · `[ ]` pendiente: necesita la cuenta de Meta y un dispositivo
+### Fase 9 — Dispositivo real y release 1.0.0 · `[ ]` en curso
 
-1. Con el **número de prueba** de Meta y 5 destinatarios en lista blanca: ventana abierta (texto
-   libre), ventana cerrada (salto a plantilla), token revocado a mano (aviso del Panel),
-   destinatario que no tiene WhatsApp, modo avión, reinicio del teléfono.
-2. Exención de Doze, inicio automático, el interruptor de recepción.
-3. Número de producción, verificación de empresa si hace falta, plantilla aprobada en producción
-   —que es una plantilla **distinta** de la del número de prueba—.
-4. Tag en `main` y `gh release create`.
+Es la única fase que no se puede hacer desde el editor, y por eso lleva pendiente desde el 15 de
+octubre: las ocho anteriores se cierran con tests y esta se cierra **cuando un SMS real acaba en
+un WhatsApp real**. Todo lo que verifican los 114 tests es que el código hace lo que dice; lo que
+falta por saber es si lo que dice es lo que Meta espera.
+
+#### 9.1 · Lo que ya está hecho
+
+- **La cuenta de WhatsApp Business montada** —app en Meta for Developers, número, token
+  permanente de usuario de sistema y plantilla—. Costó bastante más de lo previsto, y de ahí
+  salió la reescritura de `docs/CUENTA-WHATSAPP-BUSINESS.md`: el orden de los pasos, los enlaces
+  directos a cada pantalla de las dos consolas y los cuatro sitios donde el montaje se atasca en
+  silencio. Esa guía **es** el entregable de esta parte: la cuenta se monta una vez y se olvida,
+  y sin ella escrita habría que volver a pelearla.
+- **El APK de release, firmado e instalado en un dispositivo real** (17 oct 2026). Compila con
+  R8, pasa el lint vital y entra encima de la instalación anterior sin perder datos, que es lo
+  que confirma que la clave de firma compartida está bien puesta.
+
+#### 9.2 · La batería de pruebas, con el número de prueba
+
+Con el **número de prueba** de Meta y el destinatario confirmado en la lista blanca. Cada fila
+dice qué hay que provocar, qué tiene que pasar y **dónde se mira**, porque «no llega» y «llega y
+el registro no lo cuenta» son fallos distintos:
+
+| # | Qué se provoca | Qué tiene que pasar | Dónde se comprueba |
+|---|---|---|---|
+| 1 | SMS con la ventana de 24 h **abierta** (el destinatario ha escrito al número hace poco) | Entrega como **texto libre**, que es gratis | Logs: entrega sin `131047` · Panel: sube el contador de servicio |
+| 2 | SMS con la ventana **cerrada** | Meta responde `131047`, la app **salta a plantilla sola** dentro del mismo intento y entrega | Logs: las dos líneas, el salto y la entrega · Panel: sube el contador de plantilla |
+| 3 | Token revocado a mano desde el Business Manager | Error `190` y **aviso en rojo en el Panel**, por encima de todo lo demás | Panel y Logs |
+| 4 | Destinatario sin WhatsApp | `131026`, marcado **permanente**: no se reintenta | Logs: un solo intento |
+| 5 | Destinatario fuera de la lista blanca | Meta **acepta** y no entrega nada | Es el fallo mudo del número de prueba. Sirve para confirmar que no hay forma de detectarlo desde la app |
+| 6 | Modo avión durante el envío | Reintento con backoff, y entrega al volver la red | Logs: intentos sucesivos del mismo reenvío |
+| 7 | Reinicio del teléfono con un reenvío a medias | `BootReceiver` reencola y el rescate de huérfanos lo recupera | Logs tras el arranque |
+| 8 | SMS que no casa ninguna regla | Queda registrado y **no se entrega** | Logs: `SIN_REGLA` |
+| 9 | Ráfaga por encima del tope por minuto | El exceso se descarta **y queda escrito** | Logs: `límite alcanzado` |
+| 10 | Mensaje más largo que el presupuesto de la plantilla (978 caracteres) | Se entrega troceado, y **cada parte se factura** | Panel: el contador sube más de uno |
+
+Y las tres de sistema, que no son de la Cloud API pero tumban la aplicación igual:
+
+- **Exención de Doze** concedida desde Ajustes → Fiabilidad en segundo plano, y comprobada con la
+  pantalla apagada un rato largo: sin ella los reenvíos se retrasan horas y no hay error que
+  mirar.
+- **Inicio automático** en el fabricante (este teléfono es Xiaomi, así que viene vacía) y un
+  reinicio de verdad para comprobar que arranca solo.
+- **El interruptor de recepción**: apagarlo deja de aceptar SMS nuevos y **termina de entregar lo
+  que ya estaba en cola**.
+
+#### 9.3 · Lo que el número de prueba no puede decir
+
+Conviene saberlo antes de dar nada por validado:
+
+- **Que el nombre a mostrar sea aceptable.** Lo revisa una persona en Meta y solo ocurre con un
+  número propio.
+- **Los límites de mensajería reales.** El número de prueba escribe a cinco destinatarios de una
+  lista blanca; los escalones de Meta no se ven desde ahí.
+- **La calidad del número.** Es lo que Meta baja por denuncias de quien recibe, y es el riesgo de
+  verdad de esta aplicación. Con cinco destinatarios conocidos no se mueve.
+- **La plantilla de producción es otra plantilla.** Las plantillas cuelgan de la WABA, y la del
+  número de prueba no viaja. Hay que darla de alta otra vez, con el **mismo cuerpo exacto**, y
+  esperar su aprobación.
+
+#### 9.4 · El paso a producción
+
+1. Número propio, con su verificación por SMS o llamada, y **sin WhatsApp registrado** en él.
+2. Verificación de empresa si hacen falta los límites altos. Es un trámite de días y lo revisa
+   una persona: no se puede planificar como si fuera un paso más.
+3. Plantilla aprobada **en la WABA de producción**, y su nombre e idioma escritos en Ajustes →
+   Entrega.
+4. Repetir las filas 1, 2 y 4 de la tabla contra el número real, que es lo mínimo que distingue
+   «funciona» de «funcionaba en el entorno de pruebas».
+
+#### 9.5 · La release 1.0.0
+
+Solo cuando lo anterior pase. El orden importa y está en `CLAUDE.md`:
+
+1. Subir `versionCode` **y** `versionName` en `app/build.gradle.kts`: Android no instala encima
+   un APK cuyo `versionCode` no sea mayor.
+2. Cerrar el `[No publicado]` del `CHANGELOG.md` como `[1.0.0]` con su fecha.
+3. `./gradlew assembleRelease` y comprobar que el APK entra **encima** de la instalación de
+   pruebas conservando reglas, ajustes y registro. Si no entra, la clave de firma no es la misma
+   y eso hay que descubrirlo aquí y no después de publicar.
+4. Merge de `develop` a `main`, tag y `gh release create vX.Y.Z --notes-file <notas> <apk>`.
+
+#### Criterio de cierre
+
+La fase está hecha cuando **un SMS recibido en la SIM aparece en un WhatsApp**, con la ventana
+cerrada —es decir, por plantilla, que es el camino que de verdad usa esta aplicación— y el Panel
+lo cuenta. Mientras eso no haya pasado una vez, la 1.0.0 no se publica: el número de versión
+diría que la cadena está probada de punta a punta, y la cadena acaba en Meta, no en los tests.
 
 ---
 

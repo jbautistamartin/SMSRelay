@@ -21,9 +21,13 @@ expresiones regulares sobre el remitente y el texto.
 > Y cuando sepas a qué te enfrentas, la guía que monta esa cuenta de WhatsApp Business paso a
 > paso es **[`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md)**.
 
-**Versión actual: [v1.0.0](https://github.com/jbautistamartin/SMStoWhats/releases/tag/v1.0.0)** —
-descarga el APK firmado desde la
-[página de releases](https://github.com/jbautistamartin/SMStoWhats/releases). No está en
+**Versión actual: [v0.9.0](https://github.com/jbautistamartin/SMStoWhats/releases/tag/v0.9.0)**,
+un **preestreno** — descarga el APK firmado desde la
+[página de releases](https://github.com/jbautistamartin/SMStoWhats/releases). Lleva el 0.9 y no el
+1.0 por una razón concreta: la aplicación está completa y cubierta por sus tests, pero la cadena
+entera —SMS recibido en la SIM, entregado en un WhatsApp a través de la Cloud API— **todavía no se
+ha visto funcionar con una cuenta de Meta real**. Esa es la fase 9 del
+[`MASTERPLAN-WHATSAPP.md`](MASTERPLAN-WHATSAPP.md), y es lo que falta para numerarla 1.0.0. No está en
 Google Play: `RECEIVE_SMS` pertenece a un grupo de permisos restringido cuya publicación exige
 una declaración aprobada. Lo que cambia en cada versión está en [`CHANGELOG.md`](CHANGELOG.md).
 
