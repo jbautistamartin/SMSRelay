@@ -21,7 +21,7 @@ expresiones regulares sobre el remitente y el texto.
 > Y cuando sepas a qué te enfrentas, la guía que monta esa cuenta de WhatsApp Business paso a
 > paso es **[`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md)**.
 
-**Versión actual: [v0.9.0](https://github.com/jbautistamartin/SMStoWhats/releases/tag/v0.9.0)**,
+**Versión actual: [v0.10.0](https://github.com/jbautistamartin/SMStoWhats/releases/tag/v0.10.0)**,
 un **preestreno** — descarga el APK firmado desde la
 [página de releases](https://github.com/jbautistamartin/SMStoWhats/releases). Lleva el 0.9 y no el
 1.0 por una razón concreta: la aplicación está completa y cubierta por sus tests, pero la cadena
@@ -258,11 +258,11 @@ La vía corta si no vas a tocar el código:
 # Si el JDK del PATH es más nuevo que el 21
 export JAVA_HOME="/ruta/al/jdk-21"
 
-# Build debug
+# Compilación debug
 ./gradlew assembleDebug
 # APK → app/build/outputs/apk/debug/app-debug.apk
 
-# Build release (requiere claves de firma en local.properties; ver CLAUDE.md)
+# Compilación release (requiere claves de firma en local.properties; ver CLAUDE.md)
 ./gradlew assembleRelease
 # APK → app/build/outputs/apk/release/smstowhats-<versionName>.apk
 ```

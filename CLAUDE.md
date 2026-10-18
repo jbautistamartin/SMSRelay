@@ -2,216 +2,239 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build & run commands
+> Toda la documentación de este proyecto está en español, igual que los comentarios y el KDoc
+> del código. La línea de arriba se conserva en inglés porque es la cabecera estándar que
+> identifica el fichero.
 
-> **Toolchain:** the project targets JVM 17 and builds with AGP 8.5.2. If the JDK on `PATH` is
-> newer than 21, point `JAVA_HOME` at a JDK 17 or 21 — AGP 8.5.2 does not support JDK 25.
-> `local.properties` is not versioned; if it is missing, set `ANDROID_HOME` instead.
+## Comandos de compilación y ejecución
+
+> **Toolchain:** el proyecto apunta a JVM 17 y se compila con AGP 8.5.2. Si el JDK del `PATH` es
+> más nuevo que el 21, apunta `JAVA_HOME` a un JDK 17 o 21 — AGP 8.5.2 no soporta JDK 25. En esta
+> máquina sirve el JBR de Android Studio:
+> `JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" ./gradlew …`.
+> `local.properties` no se versiona; si falta, define `ANDROID_HOME` en su lugar.
 
 ```bash
-# Debug build
+# Compilación debug
 ./gradlew assembleDebug
 
-# Install on connected device
+# Instalar en el dispositivo conectado
 ./gradlew installDebug
 
-# Release build (requiere las siguientes claves en local.properties):
-#   KEYSTORE_PATH=<ruta al almacén, absoluta o relativa al módulo app/>
+# Compilación release (requiere las siguientes claves en local.properties):
+#   KEYSTORE_PATH=../../Claves/capicua.jks
 #   KEYSTORE_PASSWORD=<contraseña del almacén>
-#   KEY_ALIAS=<alias de la clave>
+#   KEY_ALIAS=capicua          ← el alias es «capicua», no el nombre de la aplicación
 #   KEY_PASSWORD=<contraseña de la clave>
 # El almacén está fuera del repositorio y se comparte con las demás aplicaciones de
-# la casa, así que KEYSTORE_PATH va relativa (`../../Claves/capicua.jks`): el file()
-# de app/build.gradle.kts la resuelve desde el módulo, no desde la raíz.
+# la casa, así que KEYSTORE_PATH va relativa: el file() de app/build.gradle.kts la
+# resuelve desde el módulo app/, no desde la raíz del proyecto.
 # Sin las cuatro claves el build NO falla: el APK sale sin firmar.
+# Con las cuatro claves pero una ruta o un alias equivocados, el build SÍ falla,
+# en validateSigningRelease.
 # El APK resultante se genera como smstowhats-<versionName>.apk
 ./gradlew assembleRelease
 
-# Unit tests
+# Comprobar que el APK lleva la clave compartida (SHA-256 1C:6C:F6:C6:…:EC:CA)
+apksigner verify --print-certs app/build/outputs/apk/release/smstowhats-<versionName>.apk
+
+# Tests unitarios
 ./gradlew test
 
-# Single test class
+# Una sola clase de test
 ./gradlew test --tests "com.capicua.smstowhats.domain.rules.EvaluadorDeReglasTest"
 
-# Grant runtime permissions on a dedicated device (run after install)
-# There is no SEND_SMS and no READ_PHONE_STATE: this app receives over the radio and
-# delivers over the network. See "Permissions" below.
+# Conceder permisos en tiempo de ejecución en un dispositivo dedicado (tras instalar)
+# No hay SEND_SMS ni READ_PHONE_STATE: esta app recibe por la radio y
+# entrega por la red. Ver «Notas importantes», más abajo.
 adb shell pm grant com.capicua.smstowhats android.permission.RECEIVE_SMS
 adb shell pm grant com.capicua.smstowhats android.permission.READ_SMS
 adb shell pm grant com.capicua.smstowhats android.permission.POST_NOTIFICATIONS
 
-# Exempt the app from Doze mode / battery optimization (REQUIRED for reliable dispatch)
-# Without this, WorkManager may be deferred indefinitely when the screen is off.
-# See "Device setup" section below for the on-device UI alternative.
+# Eximir la app del modo Doze / optimización de batería (OBLIGATORIO para un despacho fiable)
+# Sin esto, WorkManager puede posponerse indefinidamente con la pantalla apagada.
+# La alternativa por interfaz está en la sección «Preparación del dispositivo», más abajo.
 adb shell dumpsys deviceidle whitelist +com.capicua.smstowhats
 
-# Verify the app is in the whitelist
+# Verificar que la app está en la lista de exentas
 adb shell dumpsys deviceidle whitelist
-# Expected: a line containing "com.capicua.smstowhats"
+# Se espera: una línea que contenga "com.capicua.smstowhats"
 
-# Remove from whitelist (if needed)
+# Quitarla de la lista (si hiciera falta)
 adb shell dumpsys deviceidle whitelist -com.capicua.smstowhats
 
-# Real-time log monitoring
+# Seguimiento del log en tiempo real
 adb logcat -s "SmsReceiver" "SmsIngestionService" "WhatsAppSender" "DispatchWorker" "OrphanRescueWorker" "HealthMonitorWorker"
 
-# Simulate an incoming SMS on an emulator (no SIM required)
+# Simular un SMS entrante en un emulador (no hace falta SIM)
 adb emu sms send +34600112233 "Tu codigo es 4821"
 ```
 
-## Releases
+## Publicar una versión
 
-1. Bump `versionCode` and `versionName` in `app/build.gradle.kts` (they go together: Android
-   refuses to install an APK whose `versionCode` is not higher than the installed one).
-2. **Write the entry in `CHANGELOG.md`**: what sits under `[No publicado]` becomes the new version
-   with its date. That file is the summary of *what* changed; the GitHub release notes are the long
-   form — how to install it, how to update from the previous version — and may repeat it.
+1. Sube `versionCode` y `versionName` en `app/build.gradle.kts` (van juntos: Android se niega a
+   instalar un APK cuyo `versionCode` no sea mayor que el instalado).
+2. **Escribe la entrada en `CHANGELOG.md`**: lo que está bajo `[No publicado]` pasa a ser la
+   versión nueva con su fecha. Ese fichero es el resumen de *qué* ha cambiado; las notas del
+   release de GitHub son la versión larga —cómo instalarlo, cómo actualizar desde la anterior— y
+   pueden repetirlo.
 3. `./gradlew assembleRelease` → `app/build/outputs/apk/release/smstowhats-<versionName>.apk`,
-   signed with the shared keystore (see the build commands above).
-4. Tag on `main` and publish: `gh release create vX.Y.Z --notes-file <notes> <apk>`.
+   firmado con el almacén compartido (ver los comandos de compilación, más arriba).
+4. Etiqueta sobre `main` y publica: `gh release create vX.Y.Z --notes-file <notas> <apk>`.
 
-The APK keeps the same signing key release after release. That is what lets a user install the new
-one on top without losing rules, settings or history — and also why an APK of a *different* key
-(a debug build, say) cannot be upgraded in place.
+El APK mantiene la misma clave de firma versión tras versión. Es lo que permite al usuario
+instalar la nueva encima sin perder reglas, ajustes ni historial — y también la razón de que un
+APK con *otra* clave (una compilación debug, por ejemplo) no se pueda actualizar en el sitio.
 
-## Architecture
+> **La 1.0.0 está bloqueada por la fase 9 de `MASTERPLAN-WHATSAPP.md`**, que no se cierra con
+> tests sino con un SMS real entregado en un WhatsApp real a través de una cuenta de Meta. Ver
+> «El estado de la fase 9», más abajo, antes de numerar nada 1.0.0.
 
-Clean Architecture with strict 3-layer separation and MVVM in the presentation layer. Dependency injection throughout via Hilt.
+## Arquitectura
 
-```
-Presentation  (Fragments + ViewModels)
-    ↓ uses
-Domain        (UseCases + rules engine + pure Kotlin models)
-    ↓ uses interfaces, implemented by
-Data          (Room · SmsManager · DataStore · WorkManager)
-```
-
-### SMS lifecycle
+Clean Architecture con separación estricta en tres capas y MVVM en la capa de presentación.
+Inyección de dependencias con Hilt en todo el proyecto.
 
 ```
-SIM → SmsReceiver.onReceive()           ← BroadcastReceiver (main thread, < 10 s)
+Presentación  (Fragments + ViewModels)
+    ↓ usa
+Dominio       (UseCases + motor de reglas + modelos de Kotlin puro)
+    ↓ usa interfaces, implementadas por
+Datos         (Room · SmsManager · DataStore · WorkManager)
+```
+
+### Ciclo de vida de un SMS
+
+```
+SIM → SmsReceiver.onReceive()           ← BroadcastReceiver (hilo principal, < 10 s)
         ↓ startForegroundService()
-      SmsIngestionService               ← ForegroundService (must call startForeground() < 5 s)
+      SmsIngestionService               ← ForegroundService (debe llamar a startForeground() < 5 s)
         ↓ ProcesarSmsEntranteUseCase
-      Room INSERT (SmsEntity)           ← outbox: persists BEFORE doing anything else
-        ↓ rate limit
+      INSERT en Room (SmsEntity)        ← outbox: persiste ANTES de hacer nada más
+        ↓ límites
         ↓ EvaluadorDeReglas
-      Room INSERT (ReenvioEntity × N)   ← one row per destination number
+      INSERT en Room (ReenvioEntity × N) ← una fila por número de destino
         ↓ ColaDeEnvios.encolar()
-      DispatchWorker.doWork()           ← one worker per reenvío, with linear backoff
-        ↓ EnviadorDeMensajes.enviar()   ← the interface; WhatsAppSender implements it
-      POST graph.facebook.com/v22.0/<phone_number_id>/messages → update Room
+      DispatchWorker.doWork()           ← un worker por reenvío, con backoff lineal
+        ↓ EnviadorDeMensajes.enviar()   ← el interfaz; WhatsAppSender lo implementa
+      POST graph.facebook.com/v26.0/<phone_number_id>/messages → actualizar Room
 ```
 
-**Everything above the interface is medium-agnostic, and that is the point.** The outbox, the
-client-side idempotency, the orphan rescue, the retry policy and the history were written for an
-HTTP gateway, survived the move to `SmsManager`, survived the move to Telegram and survived the
-move to the Cloud API without being touched. `TransportModule` is the only class in the project
-that names a concrete transport, so changing the medium is changing one `@Binds`.
+**Todo lo que está por encima del interfaz es agnóstico del medio, y esa es la gracia.** El
+outbox, la idempotencia de cliente, el rescate de huérfanos, la política de reintentos y el
+historial se escribieron para una pasarela HTTP, sobrevivieron a la mudanza a `SmsManager`,
+sobrevivieron a la mudanza a Telegram y sobrevivieron a la mudanza a la Cloud API sin que nadie
+los tocara. `TransportModule` es la única clase del proyecto que nombra un transporte concreto,
+así que cambiar de medio es cambiar un `@Binds`.
 
-The rate-limit step in that diagram is now **two** steps: a per-minute cap that cuts a burst and a
-per-month cap that cuts a bill. See "The two caps" below.
+El paso de límites de ese diagrama son ahora **dos** pasos: un tope por minuto que corta una
+ráfaga y un tope por mes que corta una factura. Ver «Los dos topes», más abajo.
 
-`OrphanRescueWorker` self-chains every 30 s and rescues **two** things: SMS left in `PENDIENTE`
-whose rule evaluation never completed, and `PENDIENTE` reenvíos with no live WorkManager job.
+`OrphanRescueWorker` se reencadena cada 30 s y rescata **dos** cosas: SMS que se quedaron en
+`PENDIENTE` cuya evaluación de reglas nunca terminó, y reenvíos en `PENDIENTE` sin tarea viva de
+WorkManager.
 
-`HealthMonitorWorker` runs every 15 minutes and purges confirmed reenvíos, already-handled SMS
-(> `RETENTION_DELIVERED_DAYS`, currently **30 days**) and old log entries
-(> `RETENTION_LOGS_DAYS`, also 30 days).
+`HealthMonitorWorker` se ejecuta cada 15 minutos y purga los reenvíos confirmados, los SMS ya
+atendidos (de más de `RETENTION_DELIVERED_DAYS`, hoy **30 días**) y las entradas de log antiguas
+(de más de `RETENTION_LOGS_DAYS`, también 30 días).
 
-`BootReceiver` re-enables WorkManager tasks after device restart.
+`BootReceiver` reactiva las tareas de WorkManager tras reiniciar el dispositivo.
 
-### Forwarding mechanism
+### Mecanismo de reenvío
 
-The operator configures an ordered list of **rules** on the Reglas screen; each rule decides,
-for a given incoming SMS, **which WhatsApp number** receives it and with what text.
+Quien opera la app configura una lista ordenada de **reglas** en la pantalla de Reglas; cada regla
+decide, para un SMS entrante dado, **qué número de WhatsApp** lo recibe y con qué texto.
 
-A rule matches when **both** criteria hold. An empty criterion always holds, so a rule with both
-empty matches every SMS:
+Una regla casa cuando se cumplen **los dos** criterios. Un criterio vacío se cumple siempre, así
+que una regla con ambos vacíos casa con todos los SMS:
 
-- `regexTelefono` — applied to the sender **as the PDU delivers it**, unnormalized. May be
-  alphanumeric (`BANCO`, `AMAZON`).
-- `regexMensaje` — applied to the full SMS body.
+- `regexTelefono` — se aplica al remitente **tal como lo entrega la PDU**, sin normalizar. Puede
+  ser alfanumérico (`BANCO`, `AMAZON`).
+- `regexMensaje` — se aplica al cuerpo completo del SMS.
 
-Matching is **partial** (`Regex.containsMatchIn`): `codigo` matches "Tu codigo es 4821". Anchor
-with `^…$` to require the whole text. Patterns are case-sensitive unless the rule sets
-`ignorarMayusculas`, which applies `RegexOption.IGNORE_CASE` to **both** expressions at once;
-an inline `(?i)` still works and the two are cumulative, not conflicting.
+La coincidencia es **parcial** (`Regex.containsMatchIn`): `codigo` casa con "Tu codigo es 4821".
+Ancla con `^…$` para exigir el texto entero. Los patrones distinguen mayúsculas salvo que la regla
+active `ignorarMayusculas`, que aplica `RegexOption.IGNORE_CASE` a **las dos** expresiones a la
+vez; un `(?i)` en línea sigue funcionando y los dos son acumulativos, no incompatibles.
 
-Rules are evaluated in ascending `orden`. The first match wins and evaluation stops, **unless**
-the rule has `continuar = true`, in which case evaluation carries on and the same SMS can reach
-several destinations.
+Las reglas se evalúan por `orden` ascendente. La primera que casa gana y la evaluación se detiene,
+**salvo** que la regla tenga `continuar = true`, en cuyo caso la evaluación sigue y el mismo SMS
+puede llegar a varios destinos.
 
-The rule's `destino` is a **phone number in E.164 form**, used verbatim, and **no marker is
-resolved in it**. `DestinoDeWhatsApp` accepts one single shape — `+`, country code, 8 to 15
-digits — and normalizes away the spaces, dashes and parentheses people write numbers with.
+El `destino` de la regla es un **número de teléfono en forma E.164**, usado literalmente, y **en él
+no se resuelve ningún marcador**. `DestinoDeWhatsApp` acepta una sola forma —`+`, prefijo de país,
+de 8 a 15 dígitos— y normaliza quitando los espacios, guiones y paréntesis con que la gente
+escribe los números.
 
-**The leading `+` is mandatory, and that is a design decision rather than an API requirement.**
-The Cloud API takes the number either way. What requiring it buys is an unambiguous error
-message: `600112233` is nine digits that could be a Spanish mobile written bare (useless, the
-country code is missing) or a complete international number from a short-prefix country, and
-there is no way to tell by looking. With the `+` required the ambiguity disappears and the screen
-can say the thing that actually fixes it — *«falta el prefijo internacional, escribe +34…»* — which
-is the error everybody makes. `faltaPrefijo()` exists for exactly that message, and it refuses to
-fire on anything starting with `-`, because a Telegram `chat_id` deserves the other message.
+**El `+` inicial es obligatorio, y eso es una decisión de diseño, no una exigencia de la API.** La
+Cloud API acepta el número de las dos maneras. Lo que se gana exigiéndolo es un mensaje de error
+sin ambigüedad: `600112233` son nueve dígitos que podrían ser un móvil español escrito a pelo
+(inútil, falta el prefijo de país) o un número internacional completo de un país de prefijo corto,
+y no hay forma de saberlo a simple vista. Con el `+` obligatorio la ambigüedad desaparece y la
+pantalla puede decir lo que de verdad lo arregla —*«falta el prefijo internacional, escribe
++34…»*— que es el error que comete todo el mundo. `faltaPrefijo()` existe exactamente para ese
+mensaje, y se niega a dispararse con cualquier cosa que empiece por `-`, porque un `chat_id` de
+Telegram merece el otro mensaje.
 
-**Destinations are always individual people, never groups.** A decision, not a limitation found:
-the Cloud API has supported groups since 2026, but only invite-only ones it created itself, up to
-eight participants, and only for an Official Business Account. Keeping to people leaves one shape
-to validate instead of two and fixes `recipient_type` at `individual` with no branching.
+**Los destinos son siempre personas individuales, nunca grupos.** Es una decisión, no una
+limitación encontrada: la Cloud API admite grupos desde 2026, pero solo los que ella misma haya
+creado y sean por invitación, de hasta ocho participantes, y solo para una Official Business
+Account. Ceñirse a personas deja una sola forma que validar en lugar de dos y fija
+`recipient_type` en `individual` sin ramificaciones.
 
-That no marker is resolved in the destination is a **security property**, and it is the one place
-where the argument had to be rewritten rather than inherited. SMStoSMS resolved `{telefono}` there
-to reply to whoever wrote in; under Telegram the marker left because an SMS sender and a chat are
-unrelated identities and the substitution was impossible. Now the destination is a phone number
-again, so it **would** be possible — and it still does not happen, for a better reason: the body
-of a third party's SMS must never decide where anything is sent, least of all on a business
-account that bills per message.
+Que en el destino no se resuelva ningún marcador es una **propiedad de seguridad**, y es el único
+punto en el que el argumento hubo que reescribirlo en vez de heredarlo. SMStoSMS resolvía ahí
+`{telefono}` para contestar a quien escribía; con Telegram el marcador se fue porque el remitente
+de un SMS y un chat son identidades sin relación y la sustitución era imposible. Ahora el destino
+vuelve a ser un número de teléfono, así que **sí** sería posible — y sigue sin hacerse, por una
+razón mejor: el cuerpo del SMS de un tercero no debe decidir nunca adónde se envía nada, y menos
+en una cuenta de empresa que factura por mensaje.
 
-**There is no chat discovery any more, and nothing replaces it.** `DescubridorDeChats` existed
-because nobody knows their own `chat_id`. Everybody knows their own phone number. There is no
-`getUpdates` in the Cloud API and enumerating who has written would mean running a public webhook;
-it is not needed.
+**Ya no hay descubrimiento de chats, y no lo sustituye nada.** `DescubridorDeChats` existía porque
+nadie conoce su propio `chat_id`. Su propio número de teléfono lo conoce todo el mundo. En la
+Cloud API no hay `getUpdates`, y enumerar quién ha escrito exigiría levantar un webhook público;
+no hace falta.
 
-The delivered text comes from the rule's `plantilla`, with three optional markers:
+El texto que se entrega se compone con la `plantilla` de la regla, con tres marcadores opcionales:
 
-- `{mensaje}` — the received SMS body
-- `{telefono}` — the sender's number
-- `{fecha}` — reception date, formatted for display in **local** time (not ISO UTC: a person
-  reads it on their phone)
+- `{mensaje}` — el cuerpo del SMS recibido
+- `{telefono}` — el número del remitente
+- `{fecha}` — fecha de recepción, formateada para mostrarse en hora **local** (no ISO UTC: la lee
+  una persona en su teléfono)
 
-`{mensaje}` is substituted **last** on purpose, so the SMS body — third-party content — is never
-re-scanned and cannot inject markers.
+`{mensaje}` se sustituye **el último** a propósito, para que el cuerpo del SMS —contenido de
+terceros— no se vuelva a escanear y no pueda inyectar marcadores.
 
-**The default template is `{telefono} · {fecha}\n{mensaje}`, not `{mensaje}`.** With SMS the body
-was enough: the forward arrived as another SMS and the phone already showed who sent it. Over
-WhatsApp everything arrives from the same number, so four alerts in a row without the sender
-inside are four indistinguishable messages. The context SMS gave for free has to be put there by
-hand — and with a template it matters more still, because the body Meta approved is identical in
-every single forward and the variable is the only thing that tells them apart.
+**La plantilla por defecto es `{telefono} · {fecha}\n{mensaje}`, no `{mensaje}`.** Con SMS bastaba
+con el cuerpo: el reenvío llegaba como otro SMS y el teléfono ya mostraba quién lo mandaba. Por
+WhatsApp todo llega del mismo número, así que cuatro avisos seguidos sin el remitente dentro son
+cuatro mensajes indistinguibles. El contexto que el SMS daba gratis hay que ponerlo a mano — y con
+una plantilla importa todavía más, porque el cuerpo que Meta aprobó es idéntico en todos y cada uno
+de los reenvíos y la variable es lo único que los distingue.
 
-### Delivery mode: free text, templates, and why templates are the main road
+### Modo de entrega: texto libre, plantillas, y por qué las plantillas son el camino principal
 
-**This is the section to read before anything else about delivery.** The Cloud API has two kinds
-of message and they are not interchangeable:
+**Esta es la sección que hay que leer antes que ninguna otra sobre la entrega.** La Cloud API tiene
+dos clases de mensaje y no son intercambiables:
 
-| | Service message (free text) | Template message |
+| | Mensaje de servicio (texto libre) | Mensaje de plantilla |
 |---|---|---|
-| When it can be sent | Only inside a **24 h window** opened by the recipient writing to the sending number | **Always**, with no prior contact |
-| Content | Free text, up to **4.096** characters | A body Meta approved, up to **1.024** rendered |
-| Newlines in the variable part | Yes | **No** — nor tabs, nor more than 4 consecutive spaces |
-| Cost | First **1.000 per month per number** free; the rest billed since 1 Oct 2026 | **Every** message billed |
+| Cuándo se puede enviar | Solo dentro de una **ventana de 24 h** que abre el destinatario escribiendo al número emisor | **Siempre**, sin contacto previo |
+| Contenido | Texto libre, hasta **4.096** caracteres | Un cuerpo aprobado por Meta, hasta **1.024** renderizados |
+| Saltos de línea en la parte variable | Sí | **No** — ni tabuladores, ni más de 4 espacios seguidos |
+| Coste | Los primeros **1.000 al mes y por número** gratis; el resto se factura desde el 1 oct 2026 | **Todos** se facturan |
 
-An SMS forwarder is by definition an **unsolicited** sender: the SMS arrives when it arrives and
-has to go out then, not when the recipient feels like opening a window. Therefore:
+Un reenviador de SMS es por definición un emisor **no solicitado**: el SMS llega cuando llega y
+tiene que salir entonces, no cuando al destinatario le apetezca abrir una ventana. Por tanto:
 
-> **Templates are not this app's fallback. They are the main road.** Free text is the optimization
-> that applies when the window happens to be open.
+> **Las plantillas no son el plan B de esta aplicación. Son el camino principal.** El texto libre
+> es la optimización que aplica cuando la ventana resulta estar abierta.
 
-That inverts what you would assume, and it is why `PlantillaDeWhatsApp` is not an optional extra.
+Eso invierte lo que uno supondría, y es la razón de que `PlantillaDeWhatsApp` no sea un extra
+opcional.
 
-**The template contract is one single variable**, and the body the operator must register in the
-Business Manager is exactly `CUERPO_RECOMENDADO`:
+**El contrato de la plantilla es una sola variable**, y el cuerpo que quien opera tiene que dar de
+alta en el Business Manager es exactamente `CUERPO_RECOMENDADO`:
 
 ```
 Reenvío de SMS
@@ -221,409 +244,440 @@ Reenvío de SMS
 — SMStoWhats
 ```
 
-Three properties, all deliberate:
+Tres propiedades, las tres deliberadas:
 
-1. **The newlines live in the template, not in the variable.** Meta approves the body once, with
-   its layout inside. What may not contain a newline, a tab or more than four consecutive spaces
-   is the *value* passed in `{{1}}` — doing so returns `132007` and kills the reenvío. Hence
-   `aplanar()`, which turns newlines into ` · ` and collapses the rest.
-2. **It neither starts nor ends with the variable**, which Meta does not allow.
-3. **One variable and not three.** Sender, date and body in three slots would lay out better and
-   would break something that matters more: there would be a **second** message-composition path,
-   the template's, ignoring each rule's `plantilla`. With one variable `EvaluadorDeReglas` composes
-   the text in both modes and the rule's template keeps meaning the same thing.
+1. **Los saltos de línea viven en la plantilla, no en la variable.** Meta aprueba el cuerpo una
+   vez, con su maquetación dentro. Lo que no puede contener un salto de línea, un tabulador ni más
+   de cuatro espacios seguidos es el *valor* que se pasa en `{{1}}`: hacerlo devuelve un `132007` y
+   mata el reenvío. De ahí `aplanar()`, que convierte los saltos de línea en ` · ` y colapsa el
+   resto.
+2. **Ni empieza ni termina con la variable**, cosa que Meta no permite.
+3. **Una variable y no tres.** Remitente, fecha y cuerpo en tres huecos maquetarían mejor y
+   romperían algo que importa más: habría una **segunda** vía de composición del mensaje, la de la
+   plantilla, que ignoraría la `plantilla` de cada regla. Con una variable, `EvaluadorDeReglas`
+   compone el texto en los dos modos y la plantilla de la regla sigue significando lo mismo.
 
-`PRESUPUESTO` is derived from that contract (1.024 minus the fixed text minus a margin) because
-the app does not know the approved body — it lives in the Meta account. Change
-`CUERPO_RECOMENDADO` and the budget recomputes.
+`PRESUPUESTO` se deriva de ese contrato (1.024 menos el texto fijo menos un margen) porque la
+aplicación no conoce el cuerpo aprobado: vive en la cuenta de Meta. Cambia `CUERPO_RECOMENDADO` y
+el presupuesto se recalcula. Hoy vale **978**.
 
-`ModoDeEntrega` has three values. `AUTOMATICO` tries free text and, on a `131047`, resends as a
-template **inside the same worker attempt** — not as a retry, because the window would still be
-closed ten attempts later: what opens it is the recipient writing. That makes this the first
-transport in the project that issues two different requests for one reenvío, and the worker never
-finds out, which is correct: the delivery mode belongs to the transport.
+`ModoDeEntrega` tiene tres valores. `AUTOMATICO` prueba el texto libre y, ante un `131047`,
+reenvía como plantilla **dentro del mismo intento del worker** — no como reintento, porque la
+ventana seguiría cerrada diez intentos después: lo que la abre es que el destinatario escriba. Eso
+hace de este el primer transporte del proyecto que emite dos peticiones distintas para un solo
+reenvío, y el worker no se entera, que es lo correcto: el modo de entrega es del transporte.
 
-### The two caps, and the two guards that no longer exist
+### Los dos topes, y las dos guardas que ya no existen
 
-SMStoSMS had three protections. **Two of them are gone, and deleting them was correct** — read
-this before "restoring" anything that looks missing:
+SMStoSMS tenía tres protecciones. **Dos han desaparecido, y borrarlas fue lo correcto** — lee esto
+antes de "restaurar" nada que parezca que falta:
 
-1. *An SMS whose sender is one of the configured destinations is discarded.*
-2. *A matched rule whose destination equals the sender is skipped.*
+1. *Un SMS cuyo remitente sea uno de los destinos configurados se descarta.*
+2. *Una regla que casa cuyo destino sea igual al remitente se salta.*
 
-Both compared a rule's `destino` against the SMS sender. The moment `destino` became a `chat_id`
-that comparison stopped meaning anything: a Telegram chat and a phone number are unrelated
-identities. `AppConfig.protegerBucles`, `NormalizadorTelefono` and
-`ReglaDao.obtenerDestinosActivos()` went with them.
+Las dos comparaban el `destino` de una regla con el remitente del SMS. En el momento en que
+`destino` pasó a ser un `chat_id`, esa comparación dejó de significar nada: un chat de Telegram y
+un número de teléfono son identidades sin relación. `AppConfig.protegerBucles`,
+`NormalizadorTelefono` y `ReglaDao.obtenerDestinosActivos()` se fueron con ellas.
 
-**`destino` is a phone number again, so that comparison would now be possible — and it is still
-not worth making.** The reason changed: a WhatsApp message never comes back as an SMS. The SMS
-arrives over the radio and the forward leaves over the network; there is no circle to close. The
-only thing of that shape is policed by Meta itself, which rejects a send from the number to itself
-with error `131021`. **Do not "restore" the guards.** `NormalizadorTelefono` does not come back
-either: what is needed is validating an E.164 shape, not comparing.
+**`destino` vuelve a ser un número de teléfono, así que esa comparación sería ahora posible — y
+sigue sin merecer la pena.** La razón ha cambiado: un mensaje de WhatsApp no vuelve nunca como un
+SMS. El SMS llega por la radio y el reenvío sale por la red; no hay círculo que cerrar. Lo único
+con esa forma lo vigila la propia Meta, que rechaza un envío del número a sí mismo con el error
+`131021`. **No "restaures" las guardas.** `NormalizadorTelefono` tampoco vuelve: lo que hace falta
+es validar una forma E.164, no comparar.
 
-`AppConfig.maxReenviosPorMinuto` survives, and its meaning changes for the **third** time:
+`AppConfig.maxReenviosPorMinuto` sobrevive, y su significado cambia por **tercera** vez:
 
-| Transport | What it was for |
+| Transporte | Para qué servía |
 |-----------|-----------------|
-| SMS | Cost firewall: a loop with retries behind it was a phone bill |
-| Telegram | The Bot API's limits — one message per second per chat. Delivery was free |
-| Cloud API | Both at once, and the cost side bites harder than ever |
+| SMS | Cortafuegos de coste: un bucle con reintentos detrás era una factura de teléfono |
+| Telegram | Los límites de la Bot API — un mensaje por segundo y por chat. Entregar era gratis |
+| Cloud API | Las dos cosas a la vez, y el lado del coste muerde más que nunca |
 
-What it still does is cut a **burst**: a flurry of SMS inside one minute. The Cloud API's own
-throughput is generous (around 80 messages/second), so that is not the ceiling; `131056` —
-too many messages to the same recipient too fast — is.
+Lo que sigue haciendo es cortar una **ráfaga**: un aluvión de SMS dentro de un mismo minuto. El
+rendimiento de la propia Cloud API es generoso (unos 80 mensajes por segundo), así que ese no es el
+techo; el techo es `131056` —demasiados mensajes al mismo destinatario demasiado deprisa—.
 
-**`AppConfig.maxMensajesPorMes` is new, and it is the cap that actually matters.** It is the first
-protection in this project that measures **money**: Meta gives away the first 1.000 service
-messages per month per number and bills every template message, and going over does not produce
-an error, it produces an invoice. A thousand a month is **thirty-three a day**; 10 per minute is
-14.400 a day, three orders of magnitude above the first ceiling you will meet. They are two
-different protections because they measure different things: one cuts a burst, the other cuts a
-month. The default is 900 — under the free tier, so an unconfigured install never bills anything —
-and `0` disables it.
+**`AppConfig.maxMensajesPorMes` es nuevo, y es el tope que de verdad importa.** Es la primera
+protección del proyecto que mide **dinero**: Meta regala los primeros 1.000 mensajes de servicio al
+mes y por número y factura todos los de plantilla, y pasarse no produce un error, produce una
+factura. Mil al mes son **treinta y tres al día**; 10 por minuto son 14.400 al día, tres órdenes de
+magnitud por encima del primer techo con el que te vas a encontrar. Son dos protecciones distintas
+porque miden cosas distintas: una corta una ráfaga, la otra corta un mes. El valor por defecto es
+900 —por debajo del tramo gratuito, así que una instalación sin configurar no factura nunca nada— y
+`0` lo desactiva.
 
-`ContadorDeMensajes` keeps the count, in the settings DataStore under its own keys (same reasoning
-as `EstadoDeLaCuenta`: it is not configuration, it is a fact about *this* phone and *this* month).
-It counts **delivered messages and not reenvíos**, because a long SMS is split and Meta bills per
-message — counting reenvíos would give a number that does not resemble the invoice, which is the
-one thing it exists to anticipate. The month rolls over inside the same transaction as the
-increment, with no scheduled job: one more piece that might not run, in an app whose periodic work
-already fights Doze.
+`ContadorDeMensajes` lleva la cuenta, en el DataStore de ajustes y bajo sus propias claves (el
+mismo razonamiento que `EstadoDeLaCuenta`: no es configuración, es un hecho sobre *este* teléfono y
+*este* mes). Cuenta **mensajes entregados y no reenvíos**, porque un SMS largo se trocea y Meta
+factura por mensaje: contar reenvíos daría un número que no se parece a la factura, que es lo único
+para lo que existe. El mes cambia dentro de la misma transacción que el incremento, sin tarea
+programada: una pieza menos que pueda no ejecutarse, en una aplicación cuyo trabajo periódico ya
+pelea con Doze.
 
-The Panel shows it, because it is the only figure in this app that costs money and that nobody
-would go looking for. Buried in Ajustes, the first notice of having gone over would be the bill.
+El Panel lo muestra, porque es la única cifra de esta aplicación que cuesta dinero y que nadie iría
+a buscar. Enterrada en Ajustes, el primer aviso de haberse pasado sería la factura.
 
-The excess is discarded and logged as `LogTipo.LIMITE_ALCANZADO` — renamed from `BUCLE_EVITADO`,
-after a protection that no longer exists. The name has aged better than its original reason: there
-are now two caps that can trigger it, so "a cap said no" is exactly what it records.
+El exceso se descarta y se registra como `LogTipo.LIMITE_ALCANZADO` — renombrado desde
+`BUCLE_EVITADO`, que llevaba el nombre de una protección que ya no existe. El nombre ha envejecido
+mejor que su razón original: ahora hay dos topes que pueden dispararlo, así que «un tope dijo que
+no» es exactamente lo que registra.
 
-### Tab navigation
+### Navegación por pestañas
 
-The five top-level screens — Panel, Reglas, Logs, Ajustes, Acerca de — are **pages of a
-`ViewPager2`**, not destinations of the navigation graph, so each is reachable both by tapping the
-Bottom Navigation and by swiping left or right.
+Las cinco pantallas principales —Panel, Reglas, Logs, Ajustes y Acerca de— son **páginas de un
+`ViewPager2`**, no destinos del grafo de navegación, así que a cada una se llega tanto tocando la
+Bottom Navigation como deslizando a izquierda o derecha.
 
-`nav_graph.xml` therefore holds only three destinations: `homeFragment`, which hosts the pager,
-plus the two rule sub-screens `editarReglaFragment` and `probarReglasFragment`. Both actions hang
-off `homeFragment`, because when `ReglasFragment` navigates, the NavController's current
-destination is the one hosting the pager and not the rules list. `findNavController()` still
-resolves from inside a page: it walks up the parent-fragment chain.
+`nav_graph.xml` contiene por tanto solo tres destinos: `homeFragment`, que hospeda el pager, más
+las dos subpantallas de reglas `editarReglaFragment` y `probarReglasFragment`. Las dos acciones
+cuelgan de `homeFragment`, porque cuando `ReglasFragment` navega, el destino actual del
+NavController es el que hospeda el pager y no la lista de reglas. `findNavController()` sigue
+resolviendo desde dentro de una página: sube por la cadena de fragments padre.
 
-`Pestana` (`presentation/home/Pestana.kt`) is the single source of truth tying together three
-things that used to have to agree by hand — pager position, Bottom Navigation menu id and
-Fragment. Declaration order **is** page order, and `bottom_nav_menu.xml` must list its items in
-that same order or the bar reads differently from the way it swipes.
+`Pestana` (`presentation/home/Pestana.kt`) es la única fuente de verdad que ata tres cosas que
+antes tenían que coincidir a mano: la posición en el pager, el id del menú de Bottom Navigation y
+el Fragment. El orden de declaración **es** el orden de las páginas, y `bottom_nav_menu.xml` tiene
+que listar sus elementos en ese mismo orden o la barra se lee distinta de como se desliza.
 
-`setupWithNavController` is gone. The bar belongs to `MainActivity` and the pager to
-`HomeFragment`, and they do not share a lifetime — the pager is destroyed the moment you navigate
-to the rule editor — so they coordinate through `PestanasViewModel`, an activity-scoped
-`StateFlow` of the current tab. Re-selecting the tab that is already active emits nothing, and
-that is what keeps the two-way sync (bar → pager, swipe → bar) from feeding back on itself.
+`setupWithNavController` ya no está. La barra es de `MainActivity` y el pager de `HomeFragment`, y
+no comparten tiempo de vida —el pager se destruye en cuanto navegas al editor de reglas—, así que
+se coordinan a través de `PestanasViewModel`, un `StateFlow` con alcance de actividad que lleva la
+pestaña actual. Volver a seleccionar la pestaña que ya está activa no emite nada, y eso es lo que
+evita que la sincronización en dos sentidos (barra → pager, deslizamiento → barra) se realimente.
 
-Back on any tab other than Panel returns to Panel instead of closing the app; on Panel the gesture
-keeps its normal meaning. The NavController back stack used to give that for free by undoing
-visited tabs — a pager has no stack, so `HomeFragment` defines the behaviour explicitly.
+Atrás en cualquier pestaña que no sea Panel vuelve a Panel en lugar de cerrar la app; en Panel el
+gesto conserva su significado normal. La pila de retroceso del NavController daba eso gratis
+deshaciendo las pestañas visitadas — un pager no tiene pila, así que `HomeFragment` define el
+comportamiento de forma explícita.
 
-**The master switch for reception lives in Ajustes**, at the top because everything below it is
-moot while it is off. `recepcionActiva` is persisted like any other setting, but turning it off
-does more than store a flag: `ControlRecepcion` disables the `SmsReceiver` **component** through
-the `PackageManager`. An `if` at the top of `onReceive` would wake the app for every message that
-reaches the phone just to drop it, and would force an async DataStore read on the main thread
-inside the broadcast's ten-second budget. Disabling the component means the system stops
-delivering the broadcast at all — nothing to race, nothing to decide. It stops the **inbound**
-side only: whatever was already queued still gets forwarded, because discarding it would lose
-messages the app had already accepted. The component state is persisted by the system and
-survives reboots, so `SmsToSmsApplication.sincronizarRecepcion()` only matters after a
-**reinstall**, where the component reverts to its manifest value and the saved setting has to win
-again.
+**El interruptor general de la recepción está en Ajustes**, arriba del todo porque todo lo que hay
+debajo es irrelevante mientras esté apagado. `recepcionActiva` se persiste como cualquier otro
+ajuste, pero apagarlo hace algo más que guardar un flag: `ControlRecepcion` desactiva el
+**componente** `SmsReceiver` a través del `PackageManager`. Un `if` al principio de `onReceive`
+despertaría a la app con cada mensaje que llegase al teléfono solo para descartarlo, y obligaría a
+una lectura asíncrona de DataStore en el hilo principal dentro del presupuesto de diez segundos del
+broadcast. Desactivar el componente significa que el sistema deja de entregar el broadcast: nada
+que competir, nada que decidir. Detiene solo el lado **entrante**: lo que ya estuviera en cola se
+sigue reenviando, porque descartarlo perdería mensajes que la app ya había aceptado. El sistema
+persiste el estado del componente y sobrevive a los reinicios, así que
+`SmsToSmsApplication.sincronizarRecepcion()` solo importa después de una **reinstalación**, donde
+el componente vuelve al valor del manifiesto y el ajuste guardado tiene que volver a imponerse.
 
-**«Acerca de» is where the donation link lives**, and the only screen that mentions it: a card
-with an *Invitar a un café* button that opens `https://paypal.me/jbautistamartin` in the browser
-(`URL_DONATIVO`, a private const in `AboutFragment`). The button's heart (`drawable/ic_corazon.xml`)
-is the same four-Bézier path and the same gold as the one SilentRunner draws in its tray menu, so
-the icon reads the same across the house; it carries `app:iconTint="@null"`, because tinting it with
-the theme colour would throw away the only thing that identifies it. The intent is fired and
-`ActivityNotFoundException` caught instead of asking the `PackageManager` first — same reasoning as
-`OptimizacionBateria`: since Android 11 package visibility can claim there is no browser when there
-is one. If nothing resolves, a Snackbar says so rather than leaving a dead button. It is optional
-end to end: the app never nags and no feature depends on it.
+**En «Acerca de» vive el enlace de donación**, y es la única pantalla que lo menciona: una tarjeta
+con un botón *Invitar a un café* que abre `https://paypal.me/jbautistamartin` en el navegador
+(`URL_DONATIVO`, una const privada de `AboutFragment`). El corazón del botón
+(`drawable/ic_corazon.xml`) es el mismo trazado de cuatro béziers y el mismo dorado que el que
+SilentRunner dibuja en su menú de bandeja, de modo que el icono se lee igual en toda la casa; lleva
+`app:iconTint="@null"`, porque teñirlo con el color del tema tiraría por la borda lo único que lo
+identifica. El intent se lanza capturando `ActivityNotFoundException` en lugar de preguntar antes al
+`PackageManager` —el mismo razonamiento que en `OptimizacionBateria`: desde Android 11 la
+visibilidad de paquetes puede afirmar que no hay navegador cuando sí lo hay—. Si no resuelve nada,
+un Snackbar lo dice en vez de dejar un botón muerto. Es opcional de principio a fin: la app no
+insiste nunca y ninguna funcionalidad depende de ello.
 
-**The same screen carries a *Código abierto* card** with a *Ver el proyecto en GitHub* button
-(`URL_PROYECTO`, beside `URL_DONATIVO` in `AboutFragment`), and it sits immediately above the
-donation card because it is what gives the donation its context: the code is published, and the
-card says where. Its icon (`drawable/ic_codigo.xml`) is the opposite case to the heart — there is
-no colour that identifies it, so it is left to be tinted by the theme. Both buttons go through the
-same `abrirEnlace(url)`, and they share the Snackbar for a device with no browser: that string was
-renamed from `about_donativo_sin_navegador` to `about_sin_navegador` when the second link arrived,
-because it never said anything about donating.
+**La misma pantalla lleva una tarjeta de *Código abierto*** con un botón *Ver el proyecto en
+GitHub* (`URL_PROYECTO`, al lado de `URL_DONATIVO` en `AboutFragment`), y va justo encima de la de
+donación porque es lo que da contexto a la donación: el código está publicado, y la tarjeta dice
+dónde. Su icono (`drawable/ic_codigo.xml`) es el caso contrario al del corazón: no hay color que lo
+identifique, así que se deja teñir por el tema. Los dos botones pasan por el mismo `abrirEnlace(url)`
+y comparten el Snackbar para un dispositivo sin navegador: esa cadena pasó de llamarse
+`about_donativo_sin_navegador` a `about_sin_navegador` cuando llegó el segundo enlace, porque nunca
+dijo nada sobre donar.
 
-**«Acerca de» also checks for new versions**, over the same `INTERNET` permission the delivery
-uses. That permission used to carry a disclaimer here — *the app forwards SMS over the phone's
-radio and no message content ever travels over the network* — and **that sentence is now false**.
-It was true of SMStoSMS and it was kept written down for exactly as long as it was true. In this
-app the SMS body goes out over the network by design, to Meta's servers, and the privacy notice
-in «Acerca de» says so in plain words because whoever installs it needs to know.
+**«Acerca de» comprueba además si hay versión nueva**, por el mismo permiso `INTERNET` que usa la
+entrega. Ese permiso llevaba aquí un descargo —*la app reenvía SMS por la radio del teléfono y el
+contenido de los mensajes no viaja nunca por la red*— y **esa frase ahora es falsa**. Era cierta en
+SMStoSMS y se mantuvo escrita exactamente mientras lo fue. En esta app el cuerpo del SMS sale por la
+red por diseño, hacia los servidores de Meta, y el aviso de privacidad de «Acerca de» lo dice con
+todas las letras porque quien la instala necesita saberlo.
 
-What the version check adds on top of that is `data/update/ComprobadorDeActualizaciones` asking
-`api.github.com` for the latest release, and `DescargaDeApk` downloading the APK when someone
-presses the button. Retrofit and OkHttp are still **not** here — both that request and the Cloud
-API calls are a dozen lines of `HttpURLConnection` each, with `kotlinx.serialization` for the
-responses, which was already present for the rule export.
+Lo que la comprobación de versión añade encima de eso es
+`data/update/ComprobadorDeActualizaciones` preguntando a `api.github.com` por el último release, y
+`DescargaDeApk` descargando el APK cuando alguien pulsa el botón. Retrofit y OkHttp siguen **sin**
+estar: tanto esa petición como las llamadas a la Cloud API son una docena de líneas de
+`HttpURLConnection` cada una, con `kotlinx.serialization` para las respuestas, que ya estaba aquí
+para la exportación de reglas.
 
-How it behaves, and why:
+Cómo se comporta, y por qué:
 
-- **`MainActivity` asks at startup** and, if there is a newer version, puts a **badge on the
-  «Acerca de» tab** — no dialog and no notification. This runs on a phone that forwards SMS with
-  nobody looking at it; anything that puts itself in front at startup hides exactly what you came
-  to see. The card in «Acerca de» is where it is explained, with the switch that turns the
-  automatic question off and a *Buscar ahora* that ignores the daily interval.
-- **One question a day, with `If-None-Match`.** The unauthenticated API allows 60 requests an hour
-  per IP and a 304 does not count. The timestamp and the ETag live in `EstadoActualizacion`, in the
-  **same DataStore** as the settings but with their own keys — deliberately **not** in `AppConfig`:
-  that is forwarding configuration, it travels in the backup file, and whether this phone wants
-  update notices has nothing to do with how another phone should forward SMS.
-- **What was found is remembered, not just when it was asked.** `EstadoActualizacion` also stores
-  the tag, the page and the APK of the release that was found, and `comprobar()` returns it from
-  there while it still beats the installed version. Without that the notice lived only in the
-  process that discovered it: the badge showed on the first launch of the day and was gone on the
-  second, because the daily gate answered `SinPreguntar` and nothing remembered the finding. It is
-  also the right answer to a **304** — «the latest release has not changed» does not mean it is the
-  one installed — and it clears itself, because once the update is installed the comparison stops
-  holding and `olvidarNovedad()` runs.
-- **Versions are compared as numbers** (`VersionPublicada`), never as text: `"1.10.0" < "1.9.0"`
-  alphabetically, which would silently stop the notice at the tenth release. It is the one piece of
-  this that can be unit-tested without a network, and `VersionPublicadaTest` covers it.
-- **A 404 means there are no releases yet**, not an error. No network means say nothing.
-- **Installing is the system's job.** `DownloadManager` downloads the APK into the app's private
-  external dir (no storage permission) and `REQUEST_INSTALL_PACKAGES` lets the app open Android's
-  own installer dialog — silent installs need a device owner, which this is not. Since Android 8
-  the manifest permission is not enough either: the user has to authorise *this* app in Settings,
-  and that is checked **before** downloading three megabytes for nothing.
-- **The signature is the security model.** Android only upgrades an APK signed with the same key,
-  so nobody can slip a forged APK over this one and there are no hashes to verify here. The flip
-  side is that it cannot install over a debug build (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), which
-  is why the card says the update keeps rules, settings and history.
+- **`MainActivity` pregunta al arrancar** y, si hay una versión más nueva, pone una **marca en la
+  pestaña «Acerca de»** — ni diálogo ni notificación. Esto corre en un teléfono que reenvía SMS sin
+  que nadie lo mire; cualquier cosa que se ponga delante al arrancar tapa justo lo que venías a ver.
+  La tarjeta de «Acerca de» es donde se explica, con el interruptor que apaga la pregunta automática
+  y un *Buscar ahora* que ignora el intervalo diario.
+- **Una pregunta al día, con `If-None-Match`.** La API sin autenticar permite 60 peticiones por hora
+  y por IP, y un 304 no cuenta. La marca de tiempo y el ETag viven en `EstadoActualizacion`, en el
+  **mismo DataStore** que los ajustes pero con sus propias claves — deliberadamente **fuera** de
+  `AppConfig`: eso es configuración de reenvío, viaja en el fichero de copia de seguridad, y que
+  este teléfono quiera avisos de actualización no tiene nada que ver con cómo deba reenviar SMS otro
+  teléfono.
+- **Lo que se encontró se recuerda, no solo cuándo se preguntó.** `EstadoActualizacion` guarda
+  también la etiqueta, la página y el APK del release encontrado, y `comprobar()` lo devuelve desde
+  ahí mientras siga ganando a la versión instalada. Sin eso, el aviso vivía solo en el proceso que
+  lo descubrió: la marca salía en el primer arranque del día y ya no estaba en el segundo, porque la
+  barrera diaria respondía `SinPreguntar` y nada recordaba el hallazgo. Es además la respuesta
+  correcta a un **304** —«el último release no ha cambiado» no significa que sea el instalado— y se
+  limpia sola, porque una vez instalada la actualización la comparación deja de cumplirse y se
+  ejecuta `olvidarNovedad()`.
+- **Las versiones se comparan como números** (`VersionPublicada`), nunca como texto: `"1.10.0" <
+  "1.9.0"` alfabéticamente, lo que dejaría el aviso mudo a partir del décimo release. Es la única
+  pieza de todo esto que puede probarse con tests unitarios sin red, y `VersionPublicadaTest` la
+  cubre.
+- **Un 404 significa que todavía no hay releases**, no un error. Sin red, no decir nada.
+- **Instalar es cosa del sistema.** `DownloadManager` descarga el APK al directorio externo privado
+  de la app (sin permiso de almacenamiento) y `REQUEST_INSTALL_PACKAGES` permite abrir el diálogo
+  del instalador de Android — las instalaciones silenciosas necesitan ser device owner, y esto no lo
+  es. Desde Android 8 el permiso del manifiesto tampoco basta: el usuario tiene que autorizar a
+  *esta* app en Ajustes, y eso se comprueba **antes** de descargar tres megas para nada.
+- **La firma es el modelo de seguridad.** Android solo actualiza un APK firmado con la misma clave,
+  así que nadie puede colar un APK falsificado encima de este y aquí no hay hashes que verificar. La
+  otra cara es que no puede instalarse sobre una compilación debug
+  (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), que es por lo que la tarjeta dice que la actualización
+  conserva reglas, ajustes e historial.
 
-**A horizontally scrollable child inside the pager needs `NestedScrollableHost`**
-(`presentation/common/NestedScrollableHost.kt`, the AndroidX sample class adapted to this
-codebase). Otherwise the two gestures are the same gesture and the pager wins: the filter carousel
-on the Logs screen would stop scrolling, and dragging across it would change screens. The host
-arbitrates — the child keeps the gesture while it still has travel in that direction and hands it
-over at its edge. `fragment_logs.xml` is the only layout that needs it today; any new horizontal
-scroller, carousel or slider placed on a tab needs the same wrapper.
+**Un hijo con desplazamiento horizontal dentro del pager necesita `NestedScrollableHost`**
+(`presentation/common/NestedScrollableHost.kt`, la clase de ejemplo de AndroidX adaptada a este
+código). Si no, los dos gestos son el mismo gesto y gana el pager: el carrusel de filtros de la
+pantalla de Logs dejaría de desplazarse, y arrastrar sobre él cambiaría de pantalla. El host
+arbitra: el hijo se queda el gesto mientras le quede recorrido en esa dirección y lo cede en su
+borde. `fragment_logs.xml` es hoy el único layout que lo necesita; cualquier nuevo desplazador
+horizontal, carrusel o deslizador que se ponga en una pestaña necesita el mismo envoltorio.
 
-### Key files
+### Ficheros clave
 
-| File | Role |
+| Fichero | Cometido |
 |------|------|
-| `domain/transport/EnviadorDeMensajes.kt` | **The seam.** The only thing the pipeline knows about the medium |
-| `domain/transport/ResultadoEnvio.kt` | `Enviado` / `ErrorTransitorio` / `ErrorPermanente` — the whole retry policy |
-| `di/TransportModule.kt` | The only class that names a concrete transport |
-| `data/whatsapp/WhatsAppSender.kt` | The `POST` to `/messages`, in both delivery modes; implements the interface |
-| `data/whatsapp/MapeoDeRespuestas.kt` | **Pure** (HTTP code, body) → `ResultadoEnvio`, driven by `error.code`, plus chunking. Tested |
-| `data/whatsapp/PlantillaDeWhatsApp.kt` | **Pure.** The template contract, `aplanar()` and the budget. Tested |
-| `data/whatsapp/DestinoDeWhatsApp.kt` | What may be written as a destination: one E.164 number. Tested |
-| `data/whatsapp/TokenDeAcceso.kt` | What can be said about the token without asking Meta. Tested |
-| `data/whatsapp/IdNumeroTelefono.kt` | The second credential, and the error message for copying the phone number instead. Tested |
-| `data/whatsapp/ComprobadorDeCuenta.kt` | The Settings button that says *which* number it is, plus `quality_rating` |
-| `data/whatsapp/EstadoDeLaCuenta.kt` | Remembers rejected credentials, so the Panel can say so |
-| `data/whatsapp/ContadorDeMensajes.kt` | Messages delivered this month, service vs template, for the Panel and the cap |
+| `domain/transport/EnviadorDeMensajes.kt` | **La juntura.** Lo único que la tubería sabe del medio |
+| `domain/transport/ResultadoEnvio.kt` | `Enviado` / `ErrorTransitorio` / `ErrorPermanente` — toda la política de reintentos |
+| `di/TransportModule.kt` | La única clase que nombra un transporte concreto |
+| `data/whatsapp/WhatsAppSender.kt` | El `POST` a `/messages`, en los dos modos de entrega; implementa el interfaz |
+| `data/whatsapp/MapeoDeRespuestas.kt` | **Puro:** (código HTTP, cuerpo) → `ResultadoEnvio`, guiado por `error.code`, más el troceado. Con tests |
+| `data/whatsapp/PlantillaDeWhatsApp.kt` | **Puro.** El contrato de la plantilla, `aplanar()` y el presupuesto. Con tests |
+| `data/whatsapp/DestinoDeWhatsApp.kt` | Qué puede escribirse como destino: un número E.164. Con tests |
+| `data/whatsapp/TokenDeAcceso.kt` | Lo que puede decirse del token sin preguntar a Meta. Con tests |
+| `data/whatsapp/IdNumeroTelefono.kt` | La segunda credencial, y el mensaje de error de haber copiado el número en su lugar. Con tests |
+| `data/whatsapp/ComprobadorDeCuenta.kt` | El botón de Ajustes que dice *qué* número es, más el `quality_rating` |
+| `data/whatsapp/EstadoDeLaCuenta.kt` | Recuerda credenciales rechazadas, para que el Panel pueda decirlo |
+| `data/whatsapp/ContadorDeMensajes.kt` | Mensajes entregados este mes, servicio frente a plantilla, para el Panel y el tope |
 | `data/config/ModoDeEntrega.kt` | `AUTOMATICO` / `SOLO_TEXTO_LIBRE` / `SOLO_PLANTILLA` |
-| `domain/rules/EvaluadorDeReglas.kt` | Matching engine, template resolution, pattern validation |
-| `domain/usecase/ProcesarSmsEntranteUseCase.kt` | Both caps → evaluate → create reenvíos → enqueue |
-| `worker/ColaDeEnvios.kt` | The only place that enqueues a dispatch job |
-| `worker/DispatchWorker.kt` | Delivers one reenvío; handles retry/failure logic |
-| `worker/OrphanRescueWorker.kt` | Rescues stalled SMS and reenvíos every 30 s |
-| `data/config/AppConfig.kt` | The two credentials, delivery mode, template, retries, timeout, both caps |
-| `data/rules/ReglasJson.kt` | Versioned rule export/import format |
-| `data/local/db/Migraciones.kt` | Hand-written Room migrations, registered by `DatabaseModule` |
-| `util/OptimizacionBateria.kt` | Doze exemption: status query + the Settings screen's button |
-| `util/InicioAutomatico.kt` | OEM autostart screen (MIUI/EMUI/ColorOS/Funtouch) + the Settings button |
-| `util/ControlRecepcion.kt` | Enables/disables the `SmsReceiver` component — the reception kill switch |
-| `data/config/ConfigBackup.kt` | Export/import of the whole configuration: settings **and** rules |
-| `data/update/ComprobadorDeActualizaciones.kt` | Asks GitHub for the latest release and decides whether it beats the installed one |
-| `data/update/VersionPublicada.kt` | SemVer comparison — the only part of the check with unit tests |
-| `data/update/DescargaDeApk.kt` | `DownloadManager` download plus the system installer intent |
-| `data/update/EstadoActualizacion.kt` | Notice switch, last check and ETag, in their own DataStore keys |
+| `domain/rules/EvaluadorDeReglas.kt` | Motor de coincidencia, resolución de plantillas, validación de patrones |
+| `domain/usecase/ProcesarSmsEntranteUseCase.kt` | Los dos topes → evaluar → crear reenvíos → encolar |
+| `worker/ColaDeEnvios.kt` | El único sitio que encola una tarea de despacho |
+| `worker/DispatchWorker.kt` | Entrega un reenvío; gestiona la lógica de reintento y de fallo |
+| `worker/OrphanRescueWorker.kt` | Rescata SMS y reenvíos atascados cada 30 s |
+| `data/config/AppConfig.kt` | Las dos credenciales, modo de entrega, plantilla, reintentos, timeout, los dos topes |
+| `data/rules/ReglasJson.kt` | Formato versionado de exportación e importación de reglas |
+| `data/local/db/Migraciones.kt` | Migraciones de Room escritas a mano, registradas por `DatabaseModule` |
+| `util/OptimizacionBateria.kt` | Exención de Doze: consulta del estado + el botón de Ajustes |
+| `util/InicioAutomatico.kt` | Pantalla de inicio automático del fabricante (MIUI/EMUI/ColorOS/Funtouch) + el botón de Ajustes |
+| `util/ControlRecepcion.kt` | Activa y desactiva el componente `SmsReceiver` — el interruptor de recepción |
+| `data/config/ConfigBackup.kt` | Exportar e importar la configuración entera: ajustes **y** reglas |
+| `data/update/ComprobadorDeActualizaciones.kt` | Pregunta a GitHub por el último release y decide si gana al instalado |
+| `data/update/VersionPublicada.kt` | Comparación SemVer — la única parte de la comprobación con tests unitarios |
+| `data/update/DescargaDeApk.kt` | Descarga con `DownloadManager` más el intent del instalador del sistema |
+| `data/update/EstadoActualizacion.kt` | Interruptor del aviso, última consulta y ETag, en sus propias claves de DataStore |
 
-### Delivery: what the transport owes the worker
+### La entrega: qué le debe el transporte al worker
 
-`EnviadorDeMensajes.enviar()` **waits for the outcome**, and that requirement has now outlived
-three transports. With `SmsManager` it meant suspending until the per-part `sentIntent` broadcast
-arrived, because the send call returned before the message left the device; with Telegram and with
-the Cloud API it means waiting for the HTTP response. The reason is the same either way: if the
-call returned before the outcome was known, every delivery would look successful and real failures
-would vanish.
+`EnviadorDeMensajes.enviar()` **espera el desenlace**, y ese requisito ha sobrevivido ya a tres
+transportes. Con `SmsManager` significaba suspender hasta que llegara el broadcast del `sentIntent`
+de cada parte, porque la llamada de envío retornaba antes de que el mensaje saliera del
+dispositivo; con Telegram y con la Cloud API significa esperar la respuesta HTTP. La razón es la
+misma en todos los casos: si la llamada retornase antes de conocerse el desenlace, toda entrega
+parecería correcta y los fallos reales se desvanecerían.
 
-**No `parse_mode` — but the risk changed shape and got milder.** Under Telegram, setting
-`parse_mode` made any SMS with a `_`, a `*`, a `[` or a `<` come back as
-`400 can't parse entities`, killing the reenvío because somebody wanted bold. WhatsApp has no such
-switch: **it interprets `*bold*` and `_italics_` always**, so an SMS with asterisks will arrive
-with half its text bold. That is accepted. Escaping the body would mean *interpreting* third-party
-content in order to modify it, which is precisely what this project does nowhere, and the message
-arrives whole either way.
+**Sin `parse_mode` — pero el riesgo cambia de forma y se suaviza.** Con Telegram, poner `parse_mode`
+hacía que cualquier SMS con un `_`, un `*`, un `[` o un `<` volviera como
+`400 can't parse entities`, matando el reenvío porque alguien quería negrita. WhatsApp no tiene ese
+interruptor: **interpreta `*negrita*` y `_cursiva_` siempre**, así que un SMS con asteriscos llegará
+con media frase en negrita. Se acepta. Escapar el cuerpo significaría *interpretar* contenido de
+terceros para modificarlo, que es justo lo que este proyecto no hace en ningún sitio, y el mensaje
+llega entero de todas formas.
 
-**`preview_url` is `false`, and that is not cosmetic.** Left true, WhatsApp **downloads** the first
-link it finds in the body to render its preview card. The body is a third party's SMS, so
-delivering a message would cause Meta's servers to fetch a URL chosen by whoever sent that SMS —
-from confirming a phishing link has an audience to burning a one-time link. It is not
-configurable.
+**`preview_url` va en `false`, y eso no es cosmética.** Dejado en true, WhatsApp **descarga** el
+primer enlace que encuentre en el cuerpo para componer su tarjeta de vista previa. El cuerpo es el
+SMS de un tercero, así que entregar un mensaje haría que los servidores de Meta fuesen a buscar una
+URL elegida por quien mandó ese SMS — desde confirmar que un enlace de phishing tiene público hasta
+quemar un enlace de un solo uso. No es configurable.
 
-**Error mapping** lives in `MapeoDeRespuestas.interpretarEnvio()`, deliberately separated from the
-code that makes the request so it can be unit-tested without a network. And here is the structural
-difference from the Telegram version:
+**La correspondencia de errores** vive en `MapeoDeRespuestas.interpretarEnvio()`, deliberadamente
+separada del código que hace la petición para que pueda probarse con tests unitarios sin red. Y aquí
+está la diferencia estructural con la versión de Telegram:
 
-> **The HTTP status is no longer enough.** The Cloud API puts **four different failures inside the
-> same `400`** and tells them apart in `error.code`. Classifying them alike is what turns a
-> configuration problem into four hundred identical log lines of which only the first informed.
-> So the classification lives in `error.code`, and the HTTP status is the safety net for responses
-> with no readable body.
+> **El código HTTP ya no basta.** La Cloud API mete **cuatro fallos distintos dentro del mismo
+> `400`** y los distingue en `error.code`. Clasificarlos igual es lo que convierte un problema de
+> configuración en cuatrocientas líneas de log idénticas de las que solo la primera informaba. Así
+> que la clasificación vive en `error.code`, y el código HTTP es la red de seguridad para respuestas
+> sin cuerpo legible.
 
-| `error.code` | HTTP | Result |
+| `error.code` | HTTP | Resultado |
 |--------------|------|--------|
-| — (2xx with no `error` block) | 2xx | `Enviado` |
-| `131047` | 400 | **Special case**: the 24 h window is closed. In `AUTOMATICO`, resend as template |
-| `131026` | 400 | `ErrorPermanente` — not a WhatsApp user |
-| `131021` | 400 | `ErrorPermanente` — sender and recipient are the same number |
-| `132000` `132001` `132005` `132007` `132012` `132015` `132016` | 400 | `ErrorPermanente` — the template and its parameters do not line up |
-| `0` `3` `190` | 401/403 | `ErrorPermanente` **and a credential failure** — the token |
-| `100` | 400 | `ErrorPermanente` **and a credential failure** — the `phone_number_id` |
-| `130429` `80007` `131048` `131056` | 429 | `ErrorTransitorio`, **no suggested wait** |
+| — (2xx sin bloque `error`) | 2xx | `Enviado` |
+| `131047` | 400 | **Caso especial**: la ventana de 24 h está cerrada. En `AUTOMATICO`, reenviar como plantilla |
+| `131026` | 400 | `ErrorPermanente` — no es usuario de WhatsApp |
+| `131021` | 400 | `ErrorPermanente` — emisor y destinatario son el mismo número |
+| `132000` `132001` `132005` `132007` `132012` `132015` `132016` | 400 | `ErrorPermanente` — la plantilla y sus parámetros no cuadran |
+| `0` `3` `190` | 401/403 | `ErrorPermanente` **y fallo de credencial** — el token |
+| `100` | 400 | `ErrorPermanente` **y fallo de credencial** — el `phone_number_id` |
+| `130429` `80007` `131048` `131056` | 429 | `ErrorTransitorio`, **sin espera sugerida** |
 | `131000` `133004`, timeout, `IOException` | 5xx | `ErrorTransitorio` |
-| an unrecognized `4xx` | 4xx | `ErrorPermanente` |
-| anything else | — | `ErrorTransitorio`, out of caution |
+| un `4xx` no reconocido | 4xx | `ErrorPermanente` |
+| cualquier otra cosa | — | `ErrorTransitorio`, por precaución |
 
-Four of those deserve their own note:
+Cuatro de ellas merecen nota aparte:
 
-- **A `100` is a bad `phone_number_id`, not a missing resource.** It arrives as a `400` with a
-  generic message ("Unsupported post request"). It is the exact equivalent of Telegram's `404`:
-  what does not exist is the path, and the path is built from the credential. `esFalloDeCredencial()`
-  therefore covers **both** credentials — `190`/`0`/`3` for the token, `100` for the id — and only
-  those light up the Panel warning via `EstadoDeLaCuenta`. A `131026` is a problem with *that*
-  destination, and pointing at the credentials would send someone to look in the wrong place.
-- **Meta sends no `retry_after`.** Telegram did, and `ResultadoEnvio.ErrorTransitorio` still
-  carries an `esperaSegundos` for it; under the Cloud API it is always null, which already meant
-  "apply the usual backoff". `DispatchWorker.esperarSiLoPiden()` consequently never sleeps today —
-  it returns on its first line — and stays because the contract allows the wait and the next medium
-  may ask for one.
-- **An unrecognized `4xx` is closed as permanent**, departing from what the MASTERPLAN first
-  sketched. A retry sends the **same bytes** to the same URL, so "your request is wrong" cannot
-  change by waiting; the motivo carries the `error.code`, which is what you search Meta's docs
-  with. Anything unknown that is *not* a 4xx is still retried out of caution.
-- **`131047` is not classified, it is intercepted.** `esVentanaCerrada()` is a separate predicate
-  rather than a new `ResultadoEnvio` case, because `ResultadoEnvio` is read by `DispatchWorker` and
-  the worker must not learn that there are two ways to deliver.
+- **Un `100` es un `phone_number_id` incorrecto, no un recurso que falta.** Llega como un `400` con
+  un mensaje genérico ("Unsupported post request"). Es el equivalente exacto del `404` de Telegram:
+  lo que no existe es la ruta, y la ruta se construye con la credencial. Por eso
+  `esFalloDeCredencial()` cubre **las dos** credenciales —`190`/`0`/`3` para el token, `100` para el
+  id— y solo esas encienden el aviso del Panel a través de `EstadoDeLaCuenta`. Un `131026` es un
+  problema con *ese* destino, y señalar a las credenciales mandaría a alguien a mirar donde no es.
+- **Meta no manda `retry_after`.** Telegram sí, y `ResultadoEnvio.ErrorTransitorio` sigue llevando
+  un `esperaSegundos` para ello; con la Cloud API es siempre null, que ya significaba «aplica el
+  backoff de siempre». En consecuencia `DispatchWorker.esperarSiLoPiden()` hoy no duerme nunca
+  —retorna en su primera línea— y se queda porque el contrato admite la espera y el próximo medio
+  puede pedirla.
+- **Un `4xx` no reconocido se cierra como permanente**, apartándose de lo que el MASTERPLAN esbozó
+  primero. Un reintento manda **los mismos bytes** a la misma URL, así que «tu petición está mal» no
+  puede cambiar por esperar; el motivo lleva el `error.code`, que es con lo que se busca en la
+  documentación de Meta. Lo desconocido que *no* sea un 4xx se sigue reintentando por precaución.
+- **El `131047` no se clasifica, se intercepta.** `esVentanaCerrada()` es un predicado aparte en
+  lugar de un caso nuevo de `ResultadoEnvio`, porque `ResultadoEnvio` lo lee `DispatchWorker` y el
+  worker no debe enterarse de que hay dos formas de entregar.
 
-**Over 4.096 characters** (free text) or **978** (inside a template) the text is split rather than
-truncated (`MapeoDeRespuestas.trocear`), cutting at the last newline and failing over to the last
-space. Truncating would lose content silently, and letting Meta answer `132005` would turn a long
-message into a failed delivery — **but splitting a template message costs money**, one billed
-message per chunk, which is why `WhatsAppSender` logs that case at warning level. If one chunk
-fails and an earlier one succeeded, the whole reenvío is retried, accepting a possible duplicate:
-the same reasoning SMS multipart used.
+**Por encima de 4.096 caracteres** (texto libre) o de **978** (dentro de una plantilla) el texto se
+trocea en lugar de truncarse (`MapeoDeRespuestas.trocear`), cortando por el último salto de línea y
+recurriendo al último espacio. Truncar perdería contenido en silencio, y dejar que Meta responda
+`132005` convertiría un mensaje largo en una entrega fallida — **pero trocear un mensaje de
+plantilla cuesta dinero**, un mensaje facturado por trozo, que es por lo que `WhatsAppSender` lo
+registra a nivel de aviso. Si un trozo falla y uno anterior tuvo éxito, se reintenta el reenvío
+entero, asumiendo un posible duplicado: el mismo razonamiento que usaba el multiparte de SMS.
 
-### Idempotency
+### Idempotencia
 
-Client-side, at two levels:
+De cliente, en dos niveles:
 
-- `ProcesarSmsEntranteUseCase.procesar()` checks whether the SMS already has reenvíos before
-  creating any. That is what makes the orphan rescue safe to run on a half-processed SMS.
-- `DispatchWorker` checks `reenvio.estado` at the start of every attempt and returns success
-  without touching the transport if it is already `ENVIADO`.
+- `ProcesarSmsEntranteUseCase.procesar()` comprueba si el SMS ya tiene reenvíos antes de crear
+  ninguno. Eso es lo que hace seguro ejecutar el rescate de huérfanos sobre un SMS procesado a
+  medias.
+- `DispatchWorker` comprueba `reenvio.estado` al principio de cada intento y devuelve éxito sin
+  tocar el transporte si ya está en `ENVIADO`.
 
-`ColaDeEnvios` uses `ExistingWorkPolicy.KEEP`, so a reenvío never gets two concurrent jobs.
+`ColaDeEnvios` usa `ExistingWorkPolicy.KEEP`, así que un reenvío nunca tiene dos tareas
+simultáneas.
 
-### Room database
+### Base de datos Room
 
-Four tables, schema version **1** (see the KDoc on `SmsDatabase`: it restarted at 1 for the
-**third** time, and for the same reason). This time the schema did not actually change at all —
-the four tables are identical and `reenvios.destino` is still a `TEXT`. What changed is what that
-text *means*, and that is a change of contract rather than of schema: it is policed by the backup
-format version, not by a migration.
+Cuatro tablas, versión de esquema **1** (ver el KDoc de `SmsDatabase`: volvió a empezar en 1 por
+**tercera** vez, y por la misma razón). Esta vez el esquema no cambió en absoluto: las cuatro tablas
+son idénticas y `reenvios.destino` sigue siendo un `TEXT`. Lo que cambió es lo que ese texto
+*significa*, y eso es un cambio de contrato y no de esquema: lo vigila la versión del formato de
+copia de seguridad, no una migración.
 
-- `sms` — one row per received SMS. Only what arrived plus `estado`
-  (`PENDIENTE`/`PROCESADO`/`SIN_REGLA`/`DESCARTADO`) and `motivo_descarte`.
-- `reglas` — ordered rules, `ignorar_mayusculas` included from the start. `destino` holds an
-  E.164 phone number, and `plantilla` has **no** SQL default on purpose: it was written in two
-  places and the two would have drifted (see the KDoc on `ReglaEntity`).
-- `reenvios` — the dispatch unit: one row per destination number, with its own `estado`, `intentos`
-  and `ultimo_error`. FK to `sms` is CASCADE; FK to `reglas` is SET NULL, and `nombre_regla`
-  is denormalized so history survives rule deletion. There is no `partes` column: that counted
-  the fragments of a concatenated SMS.
-- `log_entries` — audit log. Types: `SMS_RECIBIDO`, `REGLA_APLICADA`, `SMS_REENVIADO`,
+- `sms` — una fila por SMS recibido. Solo lo que llegó, más `estado`
+  (`PENDIENTE`/`PROCESADO`/`SIN_REGLA`/`DESCARTADO`) y `motivo_descarte`.
+- `reglas` — reglas ordenadas, con `ignorar_mayusculas` desde el principio. `destino` guarda un
+  número de teléfono E.164, y `plantilla` **no** tiene valor por defecto en SQL a propósito: estaba
+  escrito en dos sitios y los dos habrían divergido (ver el KDoc de `ReglaEntity`).
+- `reenvios` — la unidad de despacho: una fila por número de destino, con su propio `estado`,
+  `intentos` y `ultimo_error`. La FK a `sms` es CASCADE; la FK a `reglas` es SET NULL, y
+  `nombre_regla` está desnormalizado para que el historial sobreviva al borrado de la regla. No hay
+  columna `partes`: esa contaba los fragmentos de un SMS concatenado.
+- `log_entries` — registro de auditoría. Tipos: `SMS_RECIBIDO`, `REGLA_APLICADA`, `SMS_REENVIADO`,
   `SIN_REGLA`, `LIMITE_ALCANZADO`, `ERROR`, `SISTEMA`.
 
-WAL mode enabled. Schemas are exported to `app/schemas/` and versioned. No
-`fallbackToDestructiveMigration` — migrations must be explicit.
+Modo WAL activado. Los esquemas se exportan a `app/schemas/` y se versionan. Sin
+`fallbackToDestructiveMigration`: las migraciones tienen que ser explícitas.
 
-> **`Migraciones.TODAS` is empty, and that is the last time it can be.** The schema stayed on a
-> clean v1 because no device has this database: a new `applicationId` is a different app with its
-> own data directory. The moment the app is installed on a phone with rules in it the
-> schema stops being editable in place — changing v1 without migrating makes Room abort when
-> opening the database — so from then on every change bumps the version and writes its `Migration`
-> in `data/local/db/Migraciones.kt`, which `DatabaseModule` registers.
+> **`Migraciones.TODAS` está vacío, y es la última vez que puede estarlo.** El esquema se quedó en
+> una v1 limpia porque ningún dispositivo tiene esta base de datos: un `applicationId` nuevo es una
+> aplicación distinta con su propio directorio de datos. En el momento en que la app se instale en
+> un teléfono con reglas dentro, el esquema deja de poder editarse en el sitio —cambiar la v1 sin
+> migrar hace que Room aborte al abrir la base de datos—, así que a partir de entonces todo cambio
+> sube la versión y escribe su `Migration` en `data/local/db/Migraciones.kt`, que `DatabaseModule`
+> registra.
 
-## Naming conventions
+## El estado de la fase 9
 
-The codebase mixes languages deliberately, and new code must follow the same split:
+La fase 9 de `MASTERPLAN-WHATSAPP.md` es **la única que no se cierra desde el editor**, y es lo que
+separa la 0.9.0 de la 1.0.0. Las ocho anteriores se cierran con tests; esta se cierra cuando un SMS
+real acaba en un WhatsApp real. Lo verificable desde aquí está verificado:
 
-- **Members** — functions, properties, parameters, Room column names, enum constants — are in
-  **Spanish**: `guardar`, `observarTodos`, `obtenerPendientes`, `telefono`, `fecha_recepcion`,
-  `SMS_REENVIADO`. The only English members are framework overrides where there is no choice
-  (`onCreate`, `doWork`, `onBindViewHolder`, `provideDatabase`).
-- **Type names** carry an **English architectural suffix** on a Spanish or English noun:
-  `SmsRepository`, `ReglaDao`, `ReenvioEntity`, `SettingsFragment`, `ReglasViewModel`.
-  Pure-domain types may be fully Spanish: `LogTipo`, `EstadoSms`, `EvaluadorDeReglas`.
-- **Comments and KDoc** are in **Spanish**.
-- **Use-case class names follow the same rule:** a Spanish verb phrase plus the `UseCase`
-  suffix — `ProcesarSmsEntranteUseCase`, `ObtenerListaSmsUseCase`. The English
-  `GetSmsListUseCase` inherited from SMSGateway was renamed for consistency.
+| Comprobación | Estado |
+|---|---|
+| Los 134 tests unitarios | **Pasan**, 0 fallos (18 oct 2026) |
+| `assembleRelease` con la clave compartida | **Compila y firma** — SHA-256 `1C:6C:F6:C6:…:EC:CA` |
+| Código de los diez escenarios de la batería 9.2 | **Presente y cableado** (ver la tabla de `error.code`, `ModoDeEntrega`, `ContadorDeMensajes`, `EstadoDeLaCuenta`) |
 
-This split was verified against the pre-migration code, not assumed: of the 89 functions the
-original project declared with a real choice of language, **89 were in Spanish and none in
-English**, and all 13 Room columns were Spanish too. The only English members were framework
-overrides. Do not "restore" English names — there were none to restore.
+Lo que falta **no es código**: es provocar los diez escenarios de 9.2 contra una cuenta de Meta con
+un dispositivo real, hacer el paso a producción de 9.4 y entonces numerar la 1.0.0. El criterio de
+cierre es un SMS entregado **por plantilla** —con la ventana cerrada, que es el camino que de verdad
+usa esta aplicación— y contabilizado en el Panel. No numeres 1.0.0 antes: el número de versión diría
+que la cadena está probada de punta a punta, y la cadena acaba en Meta, no en los tests.
 
-## Device setup (dedicated production phone)
+## Convenciones de nombres
 
-These steps must be completed once on the dedicated Android device that receives the SMS and
-delivers them to WhatsApp. Skip any step already done.
+El código mezcla idiomas deliberadamente, y el código nuevo debe seguir el mismo reparto:
 
-### Why battery optimization must be disabled
+- **Los miembros** —funciones, propiedades, parámetros, nombres de columna de Room, constantes de
+  enum— van en **español**: `guardar`, `observarTodos`, `obtenerPendientes`, `telefono`,
+  `fecha_recepcion`, `SMS_REENVIADO`. Los únicos miembros en inglés son sobrescrituras del framework
+  donde no hay elección (`onCreate`, `doWork`, `onBindViewHolder`, `provideDatabase`).
+- **Los nombres de tipo** llevan un **sufijo arquitectónico en inglés** sobre un sustantivo español
+  o inglés: `SmsRepository`, `ReglaDao`, `ReenvioEntity`, `SettingsFragment`, `ReglasViewModel`. Los
+  tipos de dominio puro pueden ir enteros en español: `LogTipo`, `EstadoSms`, `EvaluadorDeReglas`.
+- **Los comentarios y el KDoc** van en **español**.
+- **Los nombres de clase de caso de uso siguen la misma regla:** una frase verbal en español más el
+  sufijo `UseCase` — `ProcesarSmsEntranteUseCase`, `ObtenerListaSmsUseCase`. El `GetSmsListUseCase`
+  en inglés heredado de SMSGateway se renombró por coherencia.
 
-Android's **Doze mode** suspends background processes when the screen is off for more than a few
-minutes. WorkManager respects Doze and may delay `DispatchWorker` by hours. Exempting the app
-ensures every SMS is delivered within seconds of arrival, regardless of screen or battery state.
+Este reparto se verificó contra el código previo a la migración, no se dio por supuesto: de las 89
+funciones que el proyecto original declaraba con elección real de idioma, **89 estaban en español y
+ninguna en inglés**, y las 13 columnas de Room estaban también en español. Los únicos miembros en
+inglés eran sobrescrituras del framework. No "restaures" nombres en inglés: no había ninguno que
+restaurar.
 
-### Option A — in the app (no USB, no manufacturer-specific path)
+## Preparación del dispositivo (teléfono dedicado de producción)
 
-**Ajustes** → **Fiabilidad en segundo plano**. The card states whether the exemption is already
-granted and the button opens the system screen that grants it. It tries three destinations in
-order — the one-tap exemption dialog, the full battery-optimization list, the app's Settings
-entry — because no manufacturer guarantees the first. This is the route to prefer on a phone
-you are holding; the status refreshes when you come back to the screen.
+Estos pasos se hacen una sola vez en el dispositivo Android dedicado que recibe los SMS y los
+entrega en WhatsApp. Sáltate los que ya estén hechos.
 
-### Option B — ADB command (fastest when the phone is already plugged in)
+### Por qué hay que desactivar la optimización de batería
+
+El **modo Doze** de Android suspende los procesos en segundo plano cuando la pantalla lleva unos
+minutos apagada. WorkManager respeta Doze y puede retrasar `DispatchWorker` durante horas. Eximir a
+la app garantiza que cada SMS se entregue a los pocos segundos de llegar, sin importar el estado de
+la pantalla ni de la batería.
+
+### Opción A — desde la app (sin USB y sin rutas propias de cada fabricante)
+
+**Ajustes** → **Fiabilidad en segundo plano**. La tarjeta indica si la exención ya está concedida y
+el botón abre la pantalla del sistema que la concede. Prueba tres destinos en orden —el diálogo de
+exención de un toque, la lista completa de optimización de batería y la ficha de Ajustes de la
+app— porque ningún fabricante garantiza el primero. Es la vía preferible en un teléfono que tienes
+en la mano; el estado se refresca al volver a la pantalla.
+
+### Opción B — comando ADB (lo más rápido si el teléfono ya está conectado)
 
 ```bash
 adb shell dumpsys deviceidle whitelist +com.capicua.smstowhats
 ```
 
-Run once after install. To verify the app was added to the whitelist:
+Se ejecuta una vez tras instalar. Para verificar que la app quedó en la lista:
 
 ```bash
 adb shell dumpsys deviceidle whitelist
-# Expected output includes a line with: com.capicua.smstowhats
+# La salida debe incluir una línea con: com.capicua.smstowhats
 ```
 
-### Option C — On-device UI, by hand
+### Opción C — interfaz del dispositivo, a mano
 
-Only needed if the in-app button cannot open anything. The exact path varies by manufacturer;
-use the closest match:
+Solo hace falta si el botón de dentro de la app no consigue abrir nada. La ruta exacta varía según
+el fabricante; usa la que más se parezca:
 
-**Stock Android / Pixel**
+**Android puro / Pixel**
 1. **Ajustes** → **Aplicaciones** → **SMStoWhats**
 2. **Batería** → seleccionar **Sin restricciones**
 
@@ -648,9 +702,9 @@ use the closest match:
 > en el buscador de Ajustes, seleccionar **Todas las aplicaciones** y cambiar SMStoWhats
 > a **No optimizar**.
 
-### Other recommended settings (all manufacturers)
+### Otros ajustes recomendados (todos los fabricantes)
 
-| Setting | Where | Value |
+| Ajuste | Dónde | Valor |
 |---------|-------|-------|
 | Inicio automático | Ajustes → Aplicaciones → SMStoWhats | **Activado** |
 | Ejecutar en segundo plano | Ajustes → Aplicaciones → SMStoWhats → Batería | **Permitido** |
@@ -658,112 +712,120 @@ use the closest match:
 
 ---
 
-## Important notes
+## Notas importantes
 
-- `libs.versions.toml` is the single source of truth for all dependency versions. Retrofit and
-  OkHttp were removed when the HTTP layer went away; do not re-add them. `navigation-ui` went
-  the same way when the five tabs stopped being navigation destinations: nothing calls
-  `setupWithNavController` any more.
-  `kotlinx.serialization` **is** used, by the rule export/import format.
-- **`SEND_SMS` is gone, and so is `READ_PHONE_STATE`.** The first went with the SMS transport —
-  this app never sends an SMS — and the second with the SIM selector that chose which card to send
-  from. Do not re-add either: nothing needs them, and `SEND_SMS` is a restricted permission.
-  That said, **this does not open Google Play**: `RECEIVE_SMS` and `READ_SMS` belong to the same
-  restricted group and still require an approved declaration. APK distribution is unaffected.
-- **Nothing starting after a reboot is usually not a bug in `BootReceiver`.** The SMS receiver is
-  declared in the manifest, so the system starts it on its own — the receiver only reschedules
-  the background workers. Two things outside the app's reach break that: the OEM **autostart**
-  list (MIUI, HyperOS, EMUI, ColorOS and Funtouch ship it empty, and the permission can neither
-  be granted nor queried from code — `InicioAutomatico` opens that screen and Ajustes explains
-  it), and Android's **stopped state**: a freshly installed app that nobody has opened yet
-  receives no broadcasts at all, SMS included, until someone launches it once. After installing
-  the APK, open the app once.
-- **Rules are configuration, so their backup lives in Ajustes, not in the Reglas tab.** One file
-  carries both blocks (`ConfigBackup` + format version **5**): settings are **replaced** on import,
-  rules are **appended** — importing never deletes, because a mistaken import that emptied the
-  list would leave the phone delivering nothing. An imported rule whose destination is not a valid
-  E.164 number is rejected and counted apart, which is new in format 5: a `chat_id` could not be
-  checked without asking Telegram, a phone number can.
-- **Neither credential travels in the backup file**, and `ConfiguracionJson.aDominio()` takes
-  **both** current values as arguments so that importing does not wipe them. Those arguments are
-  not decoration: settings are *replaced* on import, so without them a file would leave both empty
-  and the app silent without anyone touching it. The line between what travels and what does not
-  is "does it describe *how* to forward, or does it identify *this* phone?" — the delivery mode,
-  the template name and both caps travel; the token and the `phone_number_id` stay. The token for
-  the obvious reason (the file is plain JSON and the token is permission to write as that number);
-  the id because it inherits `simActual`'s role exactly — restored on another phone with another
-  account it would send from the wrong place.
-- **Format 5 refuses to import files from format 4 or earlier**, and it is the second time an
-  import in this project breaks on purpose — mirroring the first. A format-4 file written by
-  SMStoTelegram has *exactly the same shape*: no field changed name or type. What changed is what
-  `destino` means — a `chat_id` there, a phone number here. It would import without a single parse
-  error and leave a rule set whose destinations do not exist, failing one by one when an SMS
-  arrived, with nothing pointing back at the imported file.
+- `libs.versions.toml` es la única fuente de verdad para las versiones de todas las dependencias.
+  Retrofit y OkHttp se eliminaron cuando desapareció la capa HTTP; no los vuelvas a añadir.
+  `navigation-ui` corrió la misma suerte cuando las cinco pestañas dejaron de ser destinos de
+  navegación: ya nadie llama a `setupWithNavController`. `kotlinx.serialization` **sí** se usa, por
+  el formato de exportación e importación de reglas.
+- **`SEND_SMS` ya no está, y `READ_PHONE_STATE` tampoco.** El primero se fue con el transporte por
+  SMS —esta app no envía ningún SMS— y el segundo con el selector de SIM que elegía desde qué
+  tarjeta enviar. No vuelvas a añadir ninguno: nada los necesita, y `SEND_SMS` es un permiso
+  restringido. Dicho esto, **esto no abre la puerta de Google Play**: `RECEIVE_SMS` y `READ_SMS`
+  pertenecen al mismo grupo restringido y siguen exigiendo una declaración aprobada. La distribución
+  por APK no se ve afectada.
+- **Que no arranque nada tras un reinicio no suele ser un fallo de `BootReceiver`.** El receptor de
+  SMS está declarado en el manifiesto, así que el sistema lo arranca por su cuenta — el receptor
+  solo reprograma los workers de segundo plano. Dos cosas fuera del alcance de la app lo rompen: la
+  lista de **inicio automático** del fabricante (MIUI, HyperOS, EMUI, ColorOS y Funtouch la traen
+  vacía, y el permiso no se puede conceder ni consultar desde código — `InicioAutomatico` abre esa
+  pantalla y Ajustes lo explica) y el **estado detenido** de Android: una app recién instalada que
+  nadie ha abierto todavía no recibe ningún broadcast, SMS incluidos, hasta que alguien la lanza una
+  vez. Después de instalar el APK, abre la app una vez.
+- **Las reglas son configuración, así que su copia de seguridad está en Ajustes, no en la pestaña
+  Reglas.** Un único fichero lleva los dos bloques (`ConfigBackup` + versión de formato **5**): los
+  ajustes se **reemplazan** al importar, las reglas se **añaden** — importar no borra nunca, porque
+  una importación equivocada que vaciase la lista dejaría el teléfono sin entregar nada. Una regla
+  importada cuyo destino no sea un número E.164 válido se rechaza y se cuenta aparte, lo cual es
+  nuevo en el formato 5: un `chat_id` no se podía comprobar sin preguntar a Telegram, un número de
+  teléfono sí.
+- **Ninguna de las dos credenciales viaja en el fichero de copia de seguridad**, y
+  `ConfiguracionJson.aDominio()` recibe **los dos** valores actuales como argumentos para que
+  importar no los borre. Esos argumentos no son adorno: los ajustes se *reemplazan* al importar, así
+  que sin ellos un fichero dejaría las dos vacías y la app muda sin que nadie la tocara. La línea
+  entre lo que viaja y lo que no es «¿describe *cómo* reenviar, o identifica a *este* teléfono?» —
+  el modo de entrega, el nombre de la plantilla y los dos topes viajan; el token y el
+  `phone_number_id` se quedan. El token por la razón obvia (el fichero es JSON en claro y el token
+  es permiso para escribir como ese número); el id porque hereda exactamente el papel de
+  `simActual`: restaurado en otro teléfono con otra cuenta, enviaría desde donde no es.
+- **El formato 5 se niega a importar ficheros del formato 4 o anteriores**, y es la segunda vez que
+  una importación de este proyecto rompe a propósito, en espejo de la primera. Un fichero de formato
+  4 escrito por SMStoTelegram tiene *exactamente la misma forma*: ningún campo cambió de nombre ni de
+  tipo. Lo que cambió es lo que significa `destino` — un `chat_id` allí, un número de teléfono aquí.
+  Se importaría sin un solo error de parseo y dejaría un conjunto de reglas cuyos destinos no
+  existen, fallando uno a uno cuando llegase un SMS, sin nada que señalase al fichero importado.
 
-  A format-**3** file is refused too, and that one deserves saying out loud because its
-  destinations *are* phone numbers: they are national numbers, written to be dialled from one
-  country, so they would all come in without a country code and fail alike.
-- **«Acerca de» carries a liability disclaimer** next to the privacy notice: the app ships as-is
-  and whoever installs and configures it is solely responsible for its use and for the law that
-  applies to them. In an app that sends other people's SMS to a third-party service, that is not
-  boilerplate — and the privacy notice is the single most important piece of text in the project.
-  **It got worse with this migration, and it says so.** It states that the SMS body reaches
-  **Meta's** servers; that the message stays in the destination conversation and on the recipient's
-  phone; that the forwards leave from a WhatsApp business account **registered in the operator's
-  own name**, so to Meta and to the recipient the sender is them; that outside the 24 h window the
-  messages arrive via Meta-approved templates **to someone who never wrote first and asked for
-  nothing**, which in Meta's own terms is unsolicited messaging and can get the number limited or
-  blocked; and that the original SMS sender neither knows nor consented. The liability text adds
-  that neither Capicua nor the author answers for what Meta bills or for any restriction Meta
-  applies. **Do not soften any of it.**
-- Debug variant uses `applicationId = com.capicua.smstowhats.debug`, so it can coexist with
-  the release build on the same device. They do **not** share a database.
-- **Anything scoped per-install must derive from `applicationId`, never be typed out.** The
-  FileProvider authority was hardcoded as `com.capicua.smstowhats.provider`, so both variants
-  declared the *same* authority — and an authority is unique device-wide, so Android refused to
-  have both installed (`INSTALL_FAILED_CONFLICTING_PROVIDER`), defeating the very point of the
-  `applicationIdSuffix`. It now reads `${applicationId}.provider` in the manifest and
-  `BuildConfig.APPLICATION_ID + ".provider"` in `Constants`; the two have to stay in step. The
-  symptom is misleading — it surfaces at install time, never at build time.
-- **Edge-to-edge is mandatory here.** With `targetSdk 35`, Android 15 draws the window under the
-  status and navigation bars and ignores `fitsSystemWindows`; there is no opt-out. `MainActivity`
-  distributes the insets (`systemBars or displayCutout`) and is the only place that does, so any
-  new top-level container inherits it. Without it the camera cutout covered each screen's header
-  and the system navigation bar sat **on top of** the Bottom Navigation, which made the screens
-  that are not in that bar impossible to leave. `ProbarReglasFragment` and `EditarReglaFragment`
-  also carry their own back button, since neither has an entry in the bottom bar.
-- **Known toolchain item:** the wrapper is Gradle 9.3.0 while AGP is 8.5.2. It builds, but warns
-  about APIs that disappear in Gradle 10 — among them `android.applicationVariants.all`, the
-  block that renames the release APK. Before moving to Gradle 10, either raise AGP or pin the
-  wrapper to Gradle 8.x. Nothing is broken today, so this was deliberately left alone.
-- **`INTERNET` is now load-bearing.** It is how messages are delivered, not an extra for the
-  version check. The sentence that used to live here — *this app not needing the network is part
-  of what it is* — belonged to SMStoSMS and no longer applies.
-- **Seven unit test suites, 133 tests**, all pure Kotlin with no Android dependencies:
-  `EvaluadorDeReglasTest` (43), `MapeoDeRespuestasTest` (24), `PlantillaDeWhatsAppTest` (19),
-  `ReglasJsonTest` (14), `CredencialesTest` (12), `DestinoDeWhatsAppTest` (11) and
-  `VersionPublicadaTest` (10). `DestinoDeTelegramTest` and `TokenDeBotTest` left with the classes
-  they tested.
-  `MapeoDeRespuestas` and `PlantillaDeWhatsApp` are kept separate from the code that makes the
-  HTTP request **so that they can be tested without a network** — they are the pieces it matters
-  most to get right, and the only ones testable at all without an account. Keep that separation.
-  The template rules in particular cannot be verified any other way: a newline in a parameter is a
-  `132007`, and the tests caught two real bugs in `aplanar()` that no amount of reading would have.
-- **Three MASTERPLAN files record the three migrations**, phase by phase, with the decisions
-  taken, the ones that were reshuffled mid-flight and why. `MASTERPLAN-WHATSAPP.md` is this one:
-  Telegram → Cloud API. `MASTERPLAN-TELEGRAM.md` is SMStoSMS → Telegram, and `MASTERPLAN-SMS.md`
-  the earlier migration from SMSGateway. Read them before changing anything structural: between
-  them they explain why several things that look like oversights are deliberate.
-  `MASTERPLAN-WHATSAPP.md` also carries two **corrections** written after the fact, where the plan
-  turned out to be wrong once the code was there: the fate of an unrecognized `4xx`, and the fact
-  that `limiteCaracteres` could not stay a property.
-- **Setting up the Meta account is documented in `docs/CUENTA-WHATSAPP-BUSINESS.md`**, and that is the file to
-  update when Meta moves a button — not the README, which only enumerates the five prerequisites
-  and explains *why* they exist. The guide is written for whoever installs the APK, so it names
-  screens and clicks; it is the one document in the project that goes stale on its own, because
-  the console changes without anybody touching this repository.
-  It quotes two values that are **derived in code**, so changing either means changing the guide:
-  `PlantillaDeWhatsApp.PRESUPUESTO` (978 characters, the budget inside a template) and
-  `AppConfig.maxMensajesPorMes` (900). The budget had already drifted — `CLAUDE.md` and
-  `docs/ARCHITECTURE.md` both said 992 while the code computed 978, and nothing caught it because
-  `PlantillaDeWhatsAppTest` asserts only `> 900` and `< LIMITE_RENDERIZADO`, never the literal.
+  Un fichero de formato **3** se rechaza también, y ese merece decirlo en voz alta porque sus
+  destinos *sí* son números de teléfono: son números nacionales, escritos para marcarse desde un
+  país, así que entrarían todos sin prefijo de país y fallarían por igual.
+- **«Acerca de» lleva un descargo de responsabilidad** junto al aviso de privacidad: la aplicación
+  se entrega tal cual y quien la instala y la configura es el único responsable de su uso y de la
+  ley que le aplique. En una app que manda los SMS de otras personas a un servicio de terceros, eso
+  no es relleno — y el aviso de privacidad es el texto más importante del proyecto. **Con esta
+  migración ha empeorado, y lo dice.** Afirma que el cuerpo del SMS llega a los servidores de
+  **Meta**; que el mensaje se queda en la conversación de destino y en el teléfono del
+  destinatario; que los reenvíos salen de una cuenta de empresa de WhatsApp **registrada a nombre
+  de quien opera la app**, así que para Meta y para el destinatario el emisor es esa persona; que
+  fuera de la ventana de 24 h los mensajes llegan mediante plantillas aprobadas por Meta **a alguien
+  que no escribió primero y no pidió nada**, lo que en los propios términos de Meta es mensajería no
+  solicitada y puede acabar con el número limitado o bloqueado; y que el remitente original del SMS
+  ni lo sabe ni ha dado su consentimiento. El texto de responsabilidad añade que ni Capicua ni el
+  autor responden de lo que Meta facture ni de las restricciones que Meta aplique. **No suavices
+  nada de eso.**
+- La variante debug usa `applicationId = com.capicua.smstowhats.debug`, así que puede convivir con
+  la de release en el mismo dispositivo. **No** comparten base de datos.
+- **Todo lo que tenga alcance por instalación debe derivarse de `applicationId`, nunca escribirse a
+  mano.** La autoridad del FileProvider estaba escrita como `com.capicua.smstowhats.provider`, de
+  modo que ambas variantes declaraban la *misma* autoridad — y una autoridad es única en todo el
+  dispositivo, así que Android se negaba a tener las dos instaladas
+  (`INSTALL_FAILED_CONFLICTING_PROVIDER`), echando por tierra el sentido mismo del
+  `applicationIdSuffix`. Ahora se lee `${applicationId}.provider` en el manifiesto y
+  `BuildConfig.APPLICATION_ID + ".provider"` en `Constants`; los dos tienen que ir a la par. El
+  síntoma despista: aparece al instalar, nunca al compilar.
+- **Aquí el edge-to-edge es obligatorio.** Con `targetSdk 35`, Android 15 dibuja la ventana por
+  debajo de las barras de estado y de navegación e ignora `fitsSystemWindows`; no hay forma de
+  renunciar. `MainActivity` reparte los insets (`systemBars or displayCutout`) y es el único sitio
+  que lo hace, así que cualquier contenedor principal nuevo lo hereda. Sin eso, el recorte de la
+  cámara tapaba la cabecera de cada pantalla y la barra de navegación del sistema quedaba **encima**
+  de la Bottom Navigation, lo que hacía imposible salir de las pantallas que no están en esa barra.
+  `ProbarReglasFragment` y `EditarReglaFragment` llevan además su propio botón de atrás, ya que
+  ninguno tiene entrada en la barra inferior.
+- **Asunto conocido del toolchain:** el wrapper es Gradle 9.3.0 mientras que AGP es 8.5.2. Compila,
+  pero avisa de APIs que desaparecen en Gradle 10 — entre ellas `android.applicationVariants.all`,
+  el bloque que renombra el APK de release. Antes de pasar a Gradle 10, o subes AGP o fijas el
+  wrapper a Gradle 8.x. Hoy no hay nada roto, así que se ha dejado estar a propósito.
+- **`INTERNET` es ahora estructural.** Es por donde se entregan los mensajes, no un extra para la
+  comprobación de versión. La frase que vivía aquí —*que esta app no necesite red es parte de lo que
+  es*— era de SMStoSMS y ya no aplica.
+- **Siete conjuntos de tests unitarios, 134 tests**, todos en Kotlin puro y sin dependencias de
+  Android: `EvaluadorDeReglasTest` (44), `MapeoDeRespuestasTest` (24), `PlantillaDeWhatsAppTest`
+  (19), `ReglasJsonTest` (14), `CredencialesTest` (12), `DestinoDeWhatsAppTest` (11) y
+  `VersionPublicadaTest` (10). `DestinoDeTelegramTest` y `TokenDeBotTest` se fueron con las clases
+  que probaban.
+  `MapeoDeRespuestas` y `PlantillaDeWhatsApp` se mantienen separados del código que hace la petición
+  HTTP **para que puedan probarse sin red**: son las piezas que más importa acertar, y las únicas
+  que se pueden probar sin una cuenta. Mantén esa separación. Las reglas de la plantilla en
+  particular no se pueden verificar de ninguna otra forma: un salto de línea en un parámetro es un
+  `132007`, y los tests cazaron dos fallos reales en `aplanar()` que ninguna lectura habría
+  encontrado.
+- **Tres ficheros MASTERPLAN recogen las tres migraciones**, fase a fase, con las decisiones
+  tomadas, las que se reordenaron sobre la marcha y por qué. `MASTERPLAN-WHATSAPP.md` es el de esta:
+  Telegram → Cloud API. `MASTERPLAN-TELEGRAM.md` es el de SMStoSMS → Telegram, y `MASTERPLAN-SMS.md`
+  el de la migración anterior desde SMSGateway. Léelos antes de cambiar nada estructural: entre
+  ellos explican por qué varias cosas que parecen descuidos son deliberadas.
+  `MASTERPLAN-WHATSAPP.md` lleva además dos **correcciones** escritas a posteriori, donde el plan
+  resultó estar equivocado una vez escrito el código: el destino de un `4xx` no reconocido, y el
+  hecho de que `limiteCaracteres` no podía seguir siendo una propiedad.
+- **Montar la cuenta de Meta está documentado en `docs/CUENTA-WHATSAPP-BUSINESS.md`**, y ese es el
+  fichero que hay que actualizar cuando Meta mueva un botón — no el README, que solo enumera los
+  cinco requisitos previos y explica *por qué* existen. La guía está escrita para quien instala el
+  APK, así que nombra pantallas y clics; es el único documento del proyecto que se queda obsoleto
+  solo, porque la consola cambia sin que nadie toque este repositorio.
+  Cita dos valores que se **derivan en código**, así que cambiar cualquiera de ellos implica cambiar
+  la guía: `PlantillaDeWhatsApp.PRESUPUESTO` (978 caracteres, el presupuesto dentro de una
+  plantilla) y `AppConfig.maxMensajesPorMes` (900). El presupuesto ya se había desviado una vez
+  —`CLAUDE.md` y `docs/ARCHITECTURE.md` decían 992 mientras el código calculaba 978, y no lo cazó
+  nadie porque `PlantillaDeWhatsAppTest` solo comprueba `> 900` y `< LIMITE_RENDERIZADO`, nunca el
+  literal—. El 18 oct 2026 se corrigieron además dos menciones a 992 que quedaban en el KDoc del
+  propio `PlantillaDeWhatsApp`. **Mientras el test no afirme el literal, esto se volverá a desviar.**

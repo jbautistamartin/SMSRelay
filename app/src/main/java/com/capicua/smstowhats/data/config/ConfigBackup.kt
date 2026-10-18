@@ -26,11 +26,17 @@ import javax.inject.Singleton
 
 /** Cómo acabó una copia de seguridad. Lo traduce a texto la pantalla que la pidió. */
 sealed interface ResultadoCopia {
-    data class Exportada(val reglas: Int) : ResultadoCopia
+    /**
+     * @param conCredenciales si el fichero escrito lleva dentro el token y el id del número.
+     *   La pantalla lo usa para cambiar el mensaje de confirmación: una copia con credenciales
+     *   es un fichero que hay que custodiar, y eso se dice al terminar y no solo antes.
+     */
+    data class Exportada(val reglas: Int, val conCredenciales: Boolean) : ResultadoCopia
     data class Importada(
         val aceptadas: Int,
         val rechazadas: Int,
-        val conAjustes: Boolean
+        val conAjustes: Boolean,
+        val conCredenciales: Boolean
     ) : ResultadoCopia
     data class Fallo(val motivo: String) : ResultadoCopia
 }
@@ -73,14 +79,24 @@ class ConfigBackup @Inject constructor(
     /** Nombre sugerido para el fichero. */
     fun nombreFichero(): String = "smstowhats-configuracion-${Instant.now().epochSecond}.json"
 
-    /** Escribe los ajustes y el juego de reglas completo en el fichero elegido. */
-    suspend fun exportar(destino: Uri): ResultadoCopia = try {
+    /**
+     * Escribe los ajustes y el juego de reglas completo en el fichero elegido.
+     *
+     * @param incluirCredenciales si el token y el id del número viajan dentro. **Falso por
+     *   defecto**, y el valor por defecto importa: quien llame sin pensarlo escribe el fichero
+     *   seguro. Activarlo es una decisión consciente de quien exporta, tomada en una casilla
+     *   que explica lo que implica.
+     */
+    suspend fun exportar(
+        destino: Uri,
+        incluirCredenciales: Boolean = false
+    ): ResultadoCopia = try {
         val reglas = reglaRepository.obtenerTodas()
         val contenido = json.encodeToString(
             ReglasExportadas.serializer(),
             ReglasExportadas(
                 exportado = Instant.now().toString(),
-                configuracion = configDataStore.config.first().aJson(),
+                configuracion = configDataStore.config.first().aJson(incluirCredenciales),
                 reglas = reglas.map { it.aJson() }
             )
         )
@@ -92,7 +108,7 @@ class ConfigBackup @Inject constructor(
                 ?: error("no se pudo abrir el fichero para escribir")
         }
 
-        ResultadoCopia.Exportada(reglas.size)
+        ResultadoCopia.Exportada(reglas.size, incluirCredenciales)
     } catch (e: Exception) {
         Timber.e(e, "Error exportando la configuración")
         ResultadoCopia.Fallo(e.message ?: "error al exportar")
@@ -132,8 +148,14 @@ class ConfigBackup @Inject constructor(
                     "de nuevo"
             )
         } else {
-            // Las credenciales no viajan en el fichero y los ajustes se reemplazan: hay
-            // que devolverle las que ya tenía este teléfono o la importación las borraría.
+            // Los ajustes se reemplazan, así que hay que pasarle las credenciales que ya
+            // tenía este teléfono: si el fichero no las trae —el caso normal— son las que se
+            // conservan, y sin ellas la importación las borraría. Si el fichero sí las trae,
+            // aDominio() se queda con las del fichero.
+            val traeCredenciales = fichero.configuracion?.let {
+                !it.tokenAcceso.isNullOrBlank() || !it.idNumeroTelefono.isNullOrBlank()
+            } ?: false
+
             fichero.configuracion?.let { importados ->
                 val actual = configDataStore.config.first()
                 configDataStore.guardar(
@@ -151,7 +173,8 @@ class ConfigBackup @Inject constructor(
             ResultadoCopia.Importada(
                 aceptadas = validas.size,
                 rechazadas = invalidas.size,
-                conAjustes = fichero.configuracion != null
+                conAjustes = fichero.configuracion != null,
+                conCredenciales = traeCredenciales
             )
         }
     } catch (e: Exception) {

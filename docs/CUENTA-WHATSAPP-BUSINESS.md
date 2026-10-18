@@ -121,12 +121,17 @@ Hacerlo en otro orden es posible, pero te obliga a volver atrás:
 | 1 | Crear la app y añadir WhatsApp | developers | 5 min |
 | 2 | Número de prueba + lista blanca del destinatario | developers | 5 min |
 | 3 | Token de usuario de sistema | business | 10 min, y es el que más se tuerce |
-| 4 | Comprobar las credenciales desde la aplicación | el teléfono | 1 min |
-| 5 | Dar de alta la plantilla y esperar aprobación | business | 10 min + **hasta 24 h** de revisión |
-| 6 | *(solo para producción)* número propio y verificación de empresa | business | **días** |
+| 4 | **Registrar el número** en la Cloud API | por API, con `curl` | 1 min, y no te lo pide nadie |
+| 5 | Comprobar las credenciales desde la aplicación | el teléfono | 1 min |
+| 6 | Dar de alta la plantilla y esperar aprobación | business | 10 min + **hasta 24 h** de revisión |
+| 7 | *(solo para producción)* **verificación de empresa primero**, luego número propio, luego registrarlo | business | **días**, y en este orden |
 
-Con los pasos 1 a 4 la aplicación ya entrega **dentro de la ventana de 24 h** de un destinatario
-que te haya escrito. Para que entregue siempre hace falta el paso 5.
+Con los pasos 1 a 5 la aplicación ya entrega **dentro de la ventana de 24 h** de un destinatario
+que te haya escrito. Para que entregue siempre hace falta el paso 6.
+
+**El paso 4 es el único que no vive en ninguna consola**, y por eso es el que se salta todo el
+mundo: no hay botón que pulsar ni pantalla que lo pida. Un número verificado pero sin registrar
+deja la cuenta con toda la pinta de estar lista y no entrega nada.
 
 ---
 
@@ -205,9 +210,14 @@ verificación del número por SMS o llamada. Lo que conviene saber **antes** de 
 - **Los límites de mensajería empiezan bajos** (del orden de unos cientos de destinatarios
   distintos al día) y Meta los sube solos según el volumen y la calidad. Para un reenviador de SMS
   casi nunca importa.
-- **La verificación de empresa** —documentación fiscal de la sociedad— es lo que desbloquea los
-  límites altos y quitar restricciones. Es un trámite de **días**, lo revisa una persona, y es la
-  parte más lenta de todo el montaje. No hace falta para empezar con el número de prueba.
+- **La verificación de empresa es obligatoria, y va antes que esto.** Es documentación fiscal de
+  la sociedad, un trámite de **días** que revisa una persona, y la parte más lenta de todo el
+  montaje. No la dejes para el final creyendo que solo sirve para subir límites: **sin la empresa
+  verificada, Meta no deja registrar un número propio** (paso 4), y un número sin registrar no
+  entrega nada. El `register` responde `(#100) Invalid parameter` con el detalle *«cuenta de
+  WhatsApp Business no verificada»*. Se tramita en
+  [Centro de seguridad](https://business.facebook.com/latest/settings/security_center).
+  Para el **número de prueba no hace falta**, y por eso conviene empezar por él.
 
 > **La SIM que recibe los SMS puede ser este mismo número**, siempre que no tenga WhatsApp
 > instalado y registrado. Lo que no puede hacer es reenviarse a sí mismo: Meta devuelve
@@ -319,12 +329,12 @@ que empieza por `EAA…`; cópiala entera y sin espacios al principio ni al fina
 Antes de ir al teléfono, con el token y el id del número ya en la mano:
 
 ```bash
-curl "https://graph.facebook.com/v22.0/<ID_DEL_NUMERO>?fields=display_phone_number,verified_name,quality_rating"   -H "Authorization: Bearer <TOKEN>"
+curl "https://graph.facebook.com/v26.0/<ID_DEL_NUMERO>?fields=display_phone_number,verified_name,quality_rating"   -H "Authorization: Bearer <TOKEN>"
 ```
 
 Si contesta con el número y el nombre, las dos credenciales están bien y encajan entre sí. Si
 contesta `190`, el token; si contesta `100`, el id. Es la misma pregunta que hace el botón
-*Comprobar las credenciales* de la aplicación, por si prefieres hacerlo allí — y `v22.0` es la
+*Comprobar las credenciales* de la aplicación, por si prefieres hacerlo allí — y `v26.0` es la
 versión de la Graph API que usa la aplicación (`WhatsAppSender.API`).
 
 ### 3.4 · «Permanente» no es «inmortal»
@@ -339,7 +349,75 @@ claro y el token es permiso para escribir en nombre de ese número.
 
 ---
 
-## Paso 4 · Comprobar que las dos credenciales valen
+## Paso 4 · Registrar el número en la Cloud API
+
+**Este paso no está en ninguna pantalla de las dos consolas, no te lo pide nadie, y sin él no se
+entrega ni un solo mensaje.** Es el que más caro sale de saltarse, porque todo lo demás parece
+correcto: el número aparece en la consola, sale verificado, el token funciona y las credenciales
+se comprueban bien. Y los envíos mueren con un error que no dice nada.
+
+Verificar un número y registrarlo son **dos cosas distintas**. La verificación por SMS o llamada
+demuestra que el número es tuyo; el registro lo activa para enviar por la Cloud API. Lo segundo
+solo se hace por API.
+
+> **Con el número de prueba, este paso no hace falta**: Meta lo entrega ya registrado. Si estás
+> con el de prueba, salta al paso 5.
+>
+> **Con un número propio, antes de registrar hace falta la empresa verificada.** Si no lo está,
+> el `register` responde `(#100) Invalid parameter` con el detalle *«cuenta de WhatsApp Business
+> no verificada»*. La verificación es un trámite de días (paso 2, Opción B) y **es la dependencia
+> que hay que resolver primero**, no un extra para subir límites.
+
+### Cómo saber si te hace falta
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+ "https://graph.facebook.com/v26.0/<ID_DEL_NUMERO>?fields=display_phone_number,code_verification_status,status"
+```
+
+Mira el campo **`status`**:
+
+| `status` | Qué significa |
+|---|---|
+| `CONNECTED` | Registrado. Puedes enviar |
+| `PENDING` | **Verificado pero sin registrar.** Es este paso |
+| `FLAGGED` · `RESTRICTED` | Meta ha limitado el número por calidad. Otro problema |
+
+Que `code_verification_status` diga `VERIFIED` **no** basta y es justo lo que despista: puedes
+tener `VERIFIED` y `PENDING` a la vez, que es el caso que hay que arreglar aquí.
+
+### Registrarlo
+
+Elige un PIN de **seis dígitos**. Si el número nunca ha tenido verificación en dos pasos, esta
+llamada lo establece — **apúntalo**, porque hará falta para volver a registrar el número en el
+futuro:
+
+```bash
+curl -i -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+ -d '{"messaging_product":"whatsapp","pin":"123456"}' \
+ "https://graph.facebook.com/v26.0/<ID_DEL_NUMERO>/register"
+```
+
+Esperas `{"success":true}`. Vuelve a consultar el `status` y tiene que decir `CONNECTED`.
+
+| Si responde | Qué pasa |
+|---|---|
+| `(#100) Param pin must be 6 characters long` | El PIN no son seis dígitos — o has dejado el marcador sin sustituir |
+| `133005` | El número ya tenía verificación en dos pasos y el PIN no es ese. Hay que restablecerlo |
+| `133006` | El número necesita volver a verificarse antes de registrarse |
+| `(#100) Invalid parameter` + *«cuenta de WhatsApp Business no verificada»* | **La empresa no está verificada.** Es la dependencia de días del paso 2, Opción B. Con el número de prueba no pasa |
+
+### Cómo se ve si te lo saltas
+
+Vale la pena reconocerlo, porque el síntoma no apunta a ningún sitio: **`HTTP 500` con
+`error.code` 1 y el mensaje «An unknown error has occurred»**, en todos los envíos, sin un solo
+código específico de WhatsApp en el registro de la aplicación — ni `131047` de ventana cerrada, ni
+`131026`, ni ningún `132xxx` de plantilla. Esa ausencia es la pista: si Meta hubiese llegado a
+mirar el mensaje, se habría quejado de algo concreto.
+
+---
+
+## Paso 5 · Comprobar que las dos credenciales valen
 
 Ya puedes dejar la consola. En el teléfono:
 
@@ -363,7 +441,7 @@ destinatarios. Es el riesgo real de mandar mensajes a quien no los ha pedido.
 
 ---
 
-## Paso 5 · La plantilla, que es el camino principal
+## Paso 6 · La plantilla, que es el camino principal
 
 **Esto no es opcional, y es lo contrario de lo que uno supondría.** La Cloud API solo deja mandar
 texto libre durante las **24 horas** siguientes a que el destinatario escriba al número emisor.
@@ -480,7 +558,7 @@ lo único que falla con la plantilla una vez aprobada.
 
 ---
 
-## Paso 6 · El dinero, antes de que llegue la factura
+## Paso 7 · El dinero, antes de que llegue la factura
 
 Hay dos tramos y conviene tenerlos claros desde el principio:
 
@@ -526,6 +604,8 @@ decírtelo:
 - [ ] Si es el número de prueba: el destinatario está en la lista blanca **y confirmó el código**
       que le llegó por WhatsApp
 - [ ] Tengo el **id del número** (15 dígitos), no el número de teléfono ni el id de la WABA
+- [ ] El número está **registrado**: `status` devuelve `CONNECTED`, no `PENDING`. Paso 4
+- [ ] Si es un número propio: la **empresa está verificada**. Sin eso no se puede registrar
 
 **El token**
 
@@ -562,12 +642,13 @@ que buscar. Los que de verdad se ven:
 
 | Código | Qué pasa | Qué hacer |
 |---|---|---|
+| `1` «An unknown error has occurred», con `HTTP 500` | Casi siempre el número **no está registrado** en la Cloud API | Comprobar que `status` es `CONNECTED`. Paso 4 |
 | `190` · `0` · `3` | El token no vale: caducado o revocado | Generar otro de usuario de sistema, paso 3 |
 | `100` | El **id del número** está mal | Es el `Phone number ID`, no el teléfono. Paso 2 |
 | `131047` | La ventana de 24 h está cerrada | Normal. En modo *Automático* salta a plantilla solo |
 | `131026` | Ese destinatario no tiene WhatsApp | Revisar el destino de la regla |
 | `131021` | El emisor y el destinatario son el mismo número | Un número no puede reenviarse a sí mismo |
-| `132000`…`132016` | La plantilla y sus parámetros no encajan | Nombre, idioma o cuerpo. Paso 5 |
+| `132000`…`132016` | La plantilla y sus parámetros no encajan | Nombre, idioma o cuerpo. Paso 6 |
 | `131056` · `130429` | Demasiados mensajes demasiado rápido | Bajar el tope por minuto. Se reintenta solo |
 
 **El caso sin código de error**, que es el que más desespera: la aplicación dice *entregado*, los

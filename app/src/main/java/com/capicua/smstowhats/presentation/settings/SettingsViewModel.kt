@@ -104,8 +104,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun exportar(destino: Uri) {
-        viewModelScope.launch { _copias.emit(configBackup.exportar(destino)) }
+    /**
+     * Exporta la configuración al fichero elegido.
+     *
+     * @param incluirCredenciales lo decide la casilla de la pantalla, que está apagada cada vez
+     *   que se entra en Ajustes. **No se persiste a propósito:** no es un ajuste de la
+     *   aplicación, es una decisión sobre *esta* exportación concreta, y dejarla encendida de
+     *   una vez para otra acabaría escribiendo el token en un fichero que alguien creía inocuo.
+     */
+    fun exportar(destino: Uri, incluirCredenciales: Boolean) {
+        viewModelScope.launch {
+            _copias.emit(configBackup.exportar(destino, incluirCredenciales))
+        }
     }
 
     /**

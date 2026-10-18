@@ -70,7 +70,7 @@ object PlantillaDeWhatsApp {
     /**
      * Lo que se reserva por si Meta cuenta algún carácter de forma distinta.
      *
-     * Quedarse corto aquí no cuesta nada —un puñado de caracteres en un mensaje de 992— y
+     * Quedarse corto aquí no cuesta nada —un puñado de caracteres en un mensaje de 978— y
      * pasarse cuesta un `132005` que cierra el reenvío como fallido permanente.
      */
     private const val MARGEN = 16
@@ -116,7 +116,7 @@ object PlantillaDeWhatsApp {
      *
      * Partir en varios mensajes de plantilla **cuesta dinero** —cada uno se factura— y aun así
      * es lo correcto: truncar perdería contenido en silencio, y dejar que Meta conteste
-     * `132005` convertiría un SMS largo en un reenvío fallido. Con el presupuesto en 992
+     * `132005` convertiría un SMS largo en un reenvío fallido. Con el presupuesto en 978
      * caracteres hace falta un SMS concatenado largo más una plantilla generosa para llegar
      * aquí, igual que pasaba con los 4.096 del texto libre.
      *

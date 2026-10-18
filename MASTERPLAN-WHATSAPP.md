@@ -180,7 +180,7 @@ arranque y se navegue entera mientras la fase 3 se escribe.
 
 | Sale | Entra | Qué cambia de verdad |
 |---|---|---|
-| `TelegramSender` | `WhatsAppSender` | `POST https://graph.facebook.com/v22.0/<phone_number_id>/messages`, con `Authorization: Bearer <token>`. El token va en **cabecera**, no en la URL — así que, a diferencia de Telegram, la URL sí se puede registrar |
+| `TelegramSender` | `WhatsAppSender` | `POST https://graph.facebook.com/v26.0/<phone_number_id>/messages`, con `Authorization: Bearer <token>`. El token va en **cabecera**, no en la URL — así que, a diferencia de Telegram, la URL sí se puede registrar |
 | `MapeoDeRespuestas` | `MapeoDeRespuestas` | Reescrito: ya **no basta el código HTTP** |
 | `DestinoDeTelegram` | `DestinoDeWhatsApp` | Un teléfono E.164. `pareceValido` y `pareceTelefono` se funden en una |
 | `TokenDeBot` | `TokenDeAcceso` | Un token de Graph no tiene forma `id:cadena`. Validación deliberadamente laxa |
@@ -364,6 +364,18 @@ falta por saber es si lo que dice es lo que Meta espera.
 - **El APK de release, firmado e instalado en un dispositivo real** (17 oct 2026). Compila con
   R8, pasa el lint vital y entra encima de la instalación anterior sin perder datos, que es lo
   que confirma que la clave de firma compartida está bien puesta.
+- **La cadena de compilación, revalidada de cero** (18 oct 2026): los **134** tests unitarios
+  pasan sin un fallo, y `assembleRelease` produce un APK cuya firma es la clave compartida
+  —SHA-256 `1C:6C:F6:C6:…:EC:CA`, comprobado con `apksigner verify --print-certs`—. Esto cubre el
+  paso 3 de 9.5 en todo lo que no exige el teléfono.
+
+  Para llegar ahí hubo que arreglar antes algo que estaba roto y no se veía: **`local.properties`
+  apuntaba a un almacén inexistente (`../smsgateway-release.jks`) y declaraba un alias que
+  tampoco existe (`smsgateway`)**, de modo que `assembleRelease` moría en
+  `validateSigningRelease`. Los valores buenos son `KEYSTORE_PATH=../../Claves/capicua.jks` y
+  `KEY_ALIAS=capicua`. Lo mismo pasaba en las otras tres aplicaciones de la casa y se corrigió en
+  las cuatro. Como `local.properties` no se versiona, **esto reaparecerá en cada máquina nueva**,
+  y es exactamente el fallo que el paso 3 de 9.5 manda descubrir aquí y no después de publicar.
 
 #### 9.2 · La batería de pruebas, con el número de prueba
 
@@ -410,13 +422,26 @@ Conviene saberlo antes de dar nada por validado:
 
 #### 9.4 · El paso a producción
 
-1. Número propio, con su verificación por SMS o llamada, y **sin WhatsApp registrado** en él.
-2. Verificación de empresa si hacen falta los límites altos. Es un trámite de días y lo revisa
-   una persona: no se puede planificar como si fuera un paso más.
-3. Plantilla aprobada **en la WABA de producción**, y su nombre e idioma escritos en Ajustes →
+1. **Verificación de empresa.** Va la primera, y el plan la tenía mal: decía «si hacen falta los
+   límites altos», como si fuera opcional para empezar. **No lo es.** Sin la empresa verificada,
+   Meta **no deja registrar un número propio** en la Cloud API, y sin registrar no se entrega
+   nada. Comprobado contra la API el 18 oct 2026: `POST /<id>/register` devuelve
+   `(#100) Invalid parameter` con el detalle *«cuenta de WhatsApp Business no verificada»*. Sigue
+   siendo un trámite de días que revisa una persona, así que **se empieza por aquí**.
+2. Número propio, con su verificación por SMS o llamada, y **sin WhatsApp registrado** en él.
+3. **Registrar el número** con `POST /<phone_number_id>/register` y un PIN de seis dígitos, hasta
+   que `status` devuelva `CONNECTED`. No hay pantalla para esto en ninguna de las dos consolas:
+   es el paso que no se ve y el que deja la cuenta con pinta de estar lista sin estarlo.
+4. Plantilla aprobada **en la WABA de producción**, y su nombre e idioma escritos en Ajustes →
    Entrega.
-4. Repetir las filas 1, 2 y 4 de la tabla contra el número real, que es lo mínimo que distingue
+5. Repetir las filas 1, 2 y 4 de la tabla contra el número real, que es lo mínimo que distingue
    «funciona» de «funcionaba en el entorno de pruebas».
+
+> **El orden de 1 a 3 no es preferencia, es dependencia.** Intentar el 2 y el 3 con la empresa
+> sin verificar es lo que pasó el 18 oct 2026: el número quedó en `PENDING`, y como ni la consola
+> ni el mensaje de error de los envíos lo dicen, los SMS se pasaron una tarde agotando reintentos
+> contra un `HTTP 500 · error 1` que no apunta a ningún sitio. La causa estaba a tres saltos del
+> síntoma.
 
 #### 9.5 · La release 1.0.0
 

@@ -12,6 +12,62 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ---
 
+## [0.10.0] - 2026-10-18
+
+Sigue siendo un **preestreno**: la fase 9 del
+[`MASTERPLAN-WHATSAPP.md`](MASTERPLAN-WHATSAPP.md) no está cerrada y por eso no es la 1.0.0.
+
+### Corregido
+
+- **La versión de la Graph API sube de `v22.0` a `v26.0`.** Meta deprecó la v22.0 y lo dice en
+  una cabecera de respuesta que el cuerpo del error no menciona
+  (`x-ad-api-version-warning: The call has been auto-upgraded to v26.0 as v22.0 has been
+  deprecated`). Pedir una versión deprecada funciona hasta que deja de hacerlo.
+
+  **No era la causa del incidente que lo destapó**, y queda escrito en el código para que nadie
+  lo dé por arreglado por ahí: aquellos `HTTP 500 · error 1` venían de que el número emisor no
+  estaba **registrado** en la Cloud API, y Meta ya servía la llamada auto-promocionada a v26.0.
+
+- **Dos cifras obsoletas en el KDoc de `PlantillaDeWhatsApp`**, que decían 992 donde el código
+  calcula 978.
+
+### Añadido
+
+- **La copia de seguridad puede llevar las credenciales, si se piden.** Una casilla nueva en
+  Ajustes → Copia de seguridad, **apagada por defecto**, decide si el token de acceso y el id del
+  número viajan dentro del fichero. Sin marcarla, el comportamiento es el de siempre y las copias
+  antiguas se siguen importando igual.
+
+  Hasta ahora las credenciales nunca viajaban, y eso hacía que una copia no sirviese para lo que
+  más falta hace: restaurar un teléfono entero o clonar la configuración en otro. El precio es
+  que el fichero pasa a ser un secreto —quien lo abra puede enviar mensajes en tu nombre y con
+  cargo a tu cuenta—, así que la casilla enseña un aviso en rojo mientras está encendida, y el
+  mensaje de confirmación al terminar también lo dice.
+
+  La casilla **no se recuerda**: vuelve a estar apagada cada vez que se entra en Ajustes. No es un
+  ajuste de la aplicación, es una decisión sobre esa exportación concreta.
+
+  Cada credencial se decide por separado al importar, y una cadena vacía cuenta como ausente:
+  sustituir una credencial buena por nada es el peor de los dos resultados posibles.
+
+### Documentación
+
+- **`docs/CUENTA-WHATSAPP-BUSINESS.md` gana el paso que faltaba: registrar el número.** No vivía
+  en ninguna parte de la guía, no lo pide ninguna pantalla de las dos consolas, y sin él no se
+  entrega ni un mensaje. Un número puede estar **verificado y sin registrar** a la vez —
+  `code_verification_status: VERIFIED` con `status: PENDING`— y el síntoma es un `HTTP 500` con
+  `error.code` 1 que no apunta a ningún sitio. La guía explica ahora cómo detectarlo, cómo
+  registrarlo y cómo reconocer el síntoma.
+
+- **La verificación de empresa deja de describirse como opcional.** Decía que servía «si hacen
+  falta los límites altos». Es falso: **sin ella Meta no deja registrar un número propio**, y por
+  tanto no se entrega nada. Corregido en la guía y en el punto 9.4 del masterplan, donde pasa a
+  ser el primer paso del paso a producción.
+
+- **`CLAUDE.md` pasa íntegramente al español** y gana una sección con el estado real de la fase 9:
+  qué está verificado desde el editor y qué solo puede cerrarse con un teléfono y una cuenta de
+  Meta.
+
 ## [0.9.0] - 2026-10-17
 
 ### Documentación

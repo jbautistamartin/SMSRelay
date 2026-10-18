@@ -123,12 +123,44 @@ data class ConfiguracionJson(
     @SerialName("timeout_envio_segundos") val timeoutEnvioSegundos: Int,
     @SerialName("max_reenvios_por_minuto") val maxReenviosPorMinuto: Int,
     @SerialName("max_mensajes_por_mes") val maxMensajesPorMes: Int = 900,
-    @SerialName("recepcion_activa") val recepcionActiva: Boolean = true
+    @SerialName("recepcion_activa") val recepcionActiva: Boolean = true,
+
+    /**
+     * Las credenciales, **solo si quien exporta lo pidió expresamente**.
+     *
+     * Null es el valor normal y significa «esta copia no las lleva». Se escriben como `null`
+     * explícito en el fichero en lugar de omitirse, y eso es deliberado: quien abra el JSON ve
+     * de un vistazo que no hay secretos dentro, en vez de tener que saberse qué campos deberían
+     * estar y no están.
+     *
+     * ## Por qué esto no sube la versión del formato
+     * Son campos opcionales que solo se añaden. Un fichero sin ellos —todos los anteriores a
+     * esta función— se importa exactamente igual que antes: [aDominio] cae en las credenciales
+     * que ya tuviera el teléfono. Y una versión vieja de la aplicación leyendo un fichero que
+     * sí las lleva las descarta por `ignoreUnknownKeys` y se queda con las suyas, que es el
+     * comportamiento seguro. Ninguna de las dos direcciones rompe nada, así que subir la
+     * versión solo serviría para rechazar copias que funcionan.
+     *
+     * Lo que **no** cambia es la línea de qué describe «cómo reenviar» y qué identifica a «este
+     * teléfono»: las credenciales siguen siendo lo segundo. Lo que cambia es que ahora quien
+     * exporta puede decidir llevárselas, sabiendo lo que eso significa.
+     */
+    @SerialName("token_acceso") val tokenAcceso: String? = null,
+    @SerialName("id_numero_telefono") val idNumeroTelefono: String? = null
 )
 
-/** Convierte los ajustes a su forma exportable, dejando fuera lo que es de este teléfono. */
-fun AppConfig.aJson() = ConfiguracionJson(
+/**
+ * Convierte los ajustes a su forma exportable, dejando fuera lo que es de este teléfono.
+ *
+ * @param incluirCredenciales si el token y el id del número viajan en el fichero. **Por
+ *   defecto no**, y tiene que pedirlo expresamente quien exporta: el fichero es JSON en claro
+ *   y el token es permiso para enviar mensajes como ese número. La pantalla que lo ofrece se
+ *   encarga de decirlo con todas las letras.
+ */
+fun AppConfig.aJson(incluirCredenciales: Boolean = false) = ConfiguracionJson(
     // Si algún campo de AppConfig no debe viajar, el sitio de omitirlo es aquí, no en quien llama.
+    tokenAcceso = tokenAcceso.takeIf { incluirCredenciales },
+    idNumeroTelefono = idNumeroTelefono.takeIf { incluirCredenciales },
     modoEntrega = modoDeEntrega.name,
     plantillaNombre = plantillaNombre,
     plantillaIdioma = plantillaIdioma,
@@ -143,17 +175,25 @@ fun AppConfig.aJson() = ConfiguracionJson(
 /**
  * Convierte los ajustes importados al dominio.
  *
- * [tokenActual] e [idActual] son las credenciales que ya tenía este teléfono. **No vienen en el
- * fichero y hay que pasarlas**, porque los ajustes se *reemplazan* al importar: sin esto,
- * importar una copia dejaría las dos vacías y la aplicación se quedaría muda sin que nadie
- * hubiera tocado nada. Es el mismo papel que tenía `simActual` cuando el transporte era el SMS.
+ * [tokenActual] e [idActual] son las credenciales que ya tenía este teléfono, y son el
+ * **respaldo**: se usan cuando el fichero no trae las suyas, que es el caso normal. Hacen falta
+ * porque los ajustes se *reemplazan* al importar: sin ellas, importar una copia sin credenciales
+ * dejaría las dos vacías y la aplicación se quedaría muda sin que nadie hubiera tocado nada. Es
+ * el mismo papel que tenía `simActual` cuando el transporte era el SMS.
  *
  * Son dos parámetros y no uno porque son dos credenciales independientes, y olvidar cualquiera
  * de las dos deja la aplicación igual de callada.
+ *
+ * **Si el fichero sí las trae, ganan las del fichero.** Es lo que se pidió al exportarlas: una
+ * copia con credenciales existe precisamente para restaurar un teléfono entero o clonar la
+ * configuración en otro, y dejarlas fuera al importar vaciaría de sentido la casilla. Cada una
+ * se decide por separado —un fichero podría traer una y no la otra— y una cadena vacía cuenta
+ * como ausente, porque no sirve para enviar y sustituir una credencial buena por nada es el
+ * peor de los dos resultados posibles.
  */
 fun ConfiguracionJson.aDominio(tokenActual: String, idActual: String) = AppConfig(
-    tokenAcceso = tokenActual,
-    idNumeroTelefono = idActual,
+    tokenAcceso = tokenAcceso?.takeIf { it.isNotBlank() } ?: tokenActual,
+    idNumeroTelefono = idNumeroTelefono?.takeIf { it.isNotBlank() } ?: idActual,
     modoDeEntrega = ModoDeEntrega.de(modoEntrega),
     plantillaNombre = plantillaNombre,
     plantillaIdioma = plantillaIdioma,

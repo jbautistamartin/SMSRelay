@@ -184,30 +184,107 @@ class ReglasJsonTest {
         )
     }
 
-    /**
-     * Las dos credenciales de la aplicación, y este fichero es JSON en claro que se guarda donde
-     * el operador diga y se lleva a otro teléfono. Que no viajen no es una preferencia: es lo
-     * que impide que una copia de seguridad reparta permiso para escribir en nombre del número.
-     */
-    @Test
-    fun `las credenciales no aparecen en el fichero exportado`() {
-        val config = AppConfig(
-            tokenAcceso = "EAAhBOweik6ad9rQXZ2Ql3n1xWcCOPvj8sAAAAAAAAAAAA",
-            idNumeroTelefono = "123456789012345"
-        )
+    private val credenciales = AppConfig(
+        tokenAcceso = "EAAhBOweik6ad9rQXZ2Ql3n1xWcCOPvj8sAAAAAAAAAAAA",
+        idNumeroTelefono = "123456789012345"
+    )
 
-        val serializado = json.encodeToString(
+    private fun exportar(config: AppConfig, incluirCredenciales: Boolean = false) =
+        json.encodeToString(
             ReglasExportadas.serializer(),
             ReglasExportadas(
                 exportado = "2026-10-12T20:00:00Z",
-                configuracion = config.aJson(),
+                configuracion = config.aJson(incluirCredenciales),
                 reglas = listOf(regla().aJson())
             )
         )
 
+    /**
+     * Este fichero es JSON en claro que se guarda donde el operador diga y se lleva a otro
+     * teléfono. Que las credenciales no viajen **por defecto** no es una preferencia: es lo que
+     * impide que una copia de seguridad hecha sin pensar reparta permiso para escribir en
+     * nombre del número.
+     *
+     * El valor por defecto del parámetro es parte de lo que se comprueba aquí: quien llame a
+     * `aJson()` sin argumentos tiene que obtener el fichero seguro.
+     */
+    @Test
+    fun `por defecto las credenciales no aparecen en el fichero exportado`() {
+        val serializado = exportar(credenciales)
+
         assertFalse("el token no debe aparecer", serializado.contains("EAAhBOweik"))
-        assertFalse("ni su nombre de campo", serializado.contains("token"))
         assertFalse("ni el id del numero", serializado.contains("123456789012345"))
+        // Los campos sí salen, con valor null: el fichero dice explícitamente que no lleva
+        // secretos en vez de callárselo, que es más fácil de auditar de un vistazo.
+        assertTrue("el campo debe estar, a null", serializado.contains("\"token_acceso\": null"))
+    }
+
+    /**
+     * El caso contrario, que es la razón de que exista el parámetro: quien lo pide a sabiendas
+     * se lleva las credenciales dentro, porque si no una copia no sirve para restaurar un
+     * teléfono entero.
+     */
+    @Test
+    fun `si se piden, las credenciales viajan en el fichero`() {
+        val serializado = exportar(credenciales, incluirCredenciales = true)
+
+        assertTrue("el token debe aparecer", serializado.contains("EAAhBOweik"))
+        assertTrue("y el id del numero", serializado.contains("123456789012345"))
+    }
+
+    /**
+     * Un fichero sin credenciales no puede dejar mudo al teléfono que lo importa.
+     *
+     * Es el modo de fallo que justifica los dos parámetros de [aDominio]: los ajustes se
+     * *reemplazan* al importar, así que sin respaldo una copia normal borraría el token.
+     */
+    @Test
+    fun `importar sin credenciales conserva las del telefono`() {
+        val recuperado = json.decodeFromString(
+            ReglasExportadas.serializer(),
+            exportar(credenciales)
+        )
+
+        val importado = recuperado.configuracion!!.aDominio("EAAya-configurado", "999888777666555")
+
+        assertEquals("EAAya-configurado", importado.tokenAcceso)
+        assertEquals("999888777666555", importado.idNumeroTelefono)
+    }
+
+    /** Y si el fichero las trae, ganan: es exactamente lo que se pidió al exportarlas. */
+    @Test
+    fun `importar con credenciales sustituye las del telefono`() {
+        val recuperado = json.decodeFromString(
+            ReglasExportadas.serializer(),
+            exportar(credenciales, incluirCredenciales = true)
+        )
+
+        val importado = recuperado.configuracion!!.aDominio("EAAya-configurado", "999888777666555")
+
+        assertEquals(credenciales.tokenAcceso, importado.tokenAcceso)
+        assertEquals("123456789012345", importado.idNumeroTelefono)
+    }
+
+    /**
+     * Una credencial en blanco en el fichero cuenta como ausente.
+     *
+     * Sustituir una credencial que funciona por una cadena vacía es el peor de los dos
+     * resultados posibles: deja la aplicación muda y sin rastro de por qué. Pasa con un fichero
+     * exportado desde un teléfono a medio configurar, que es un caso corriente.
+     */
+    @Test
+    fun `una credencial vacia en el fichero no pisa la que ya habia`() {
+        val aMedias = AppConfig(tokenAcceso = "", idNumeroTelefono = "123456789012345")
+
+        val recuperado = json.decodeFromString(
+            ReglasExportadas.serializer(),
+            exportar(aMedias, incluirCredenciales = true)
+        )
+
+        val importado = recuperado.configuracion!!.aDominio("EAAya-configurado", "999888777666555")
+
+        assertEquals("el token vacío no debe pisar", "EAAya-configurado", importado.tokenAcceso)
+        assertEquals("el id sí viene en el fichero", "123456789012345", importado.idNumeroTelefono)
     }
 
     /**

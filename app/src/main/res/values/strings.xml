@@ -111,7 +111,11 @@
 
 
     <string name="settings_backup_titulo">Copia de seguridad</string>
-    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los números de destino: trátalo como información sensible. Las credenciales no viajan en él.</string>
+    <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los números de destino: trátalo como información sensible.</string>
+    <string name="settings_backup_credenciales">Incluir las credenciales</string>
+    <string name="settings_backup_credenciales_aviso">El fichero llevará el token de acceso y el id del número en texto plano. Quien lo abra podrá enviar mensajes de WhatsApp en tu nombre y con cargo a tu cuenta. Guárdalo como guardarías una contraseña: cifrado o en un sitio del que respondas, nunca en una carpeta compartida ni en el correo.</string>
+    <string name="settings_copia_exportada_credenciales">Copia guardada con credenciales · %1$d regla(s) · custodia el fichero</string>
+    <string name="settings_copia_importada_credenciales">Copia restaurada · %1$d regla(s) añadidas · se han sustituido las credenciales</string>
     <string name="settings_exportar">Exportar</string>
     <string name="settings_importar">Importar</string>
     <string name="settings_importar_confirmar">Los ajustes del fichero sustituyen a los actuales. Las reglas se añaden a las que ya hay, sin borrar ninguna.</string>

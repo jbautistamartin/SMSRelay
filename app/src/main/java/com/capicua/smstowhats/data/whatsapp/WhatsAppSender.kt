@@ -502,8 +502,30 @@ class WhatsAppSender @Inject constructor(
          * publicada, lo que convierte cualquier cambio suyo en un cambio de comportamiento de
          * esta aplicación sin que nadie haya tocado nada. Subirla es una decisión, y se toma
          * leyendo el registro de cambios de Meta.
+         *
+         * ## Por qué se subió de la v22.0 a la v26.0 (18 oct 2026)
+         * Meta la deprecó, y lo dice en una cabecera de respuesta que el cuerpo del error no
+         * menciona: `x-ad-api-version-warning: The call has been auto-upgraded to v26.0 as
+         * v22.0 has been deprecated`. Pedir una versión deprecada funciona hasta que deja de
+         * hacerlo, así que se sube.
+         *
+         * **No fue la causa del incidente que lo destapó, y conviene dejarlo escrito para que
+         * nadie lo dé por arreglado.** El síntoma eran tres SMS agotando sus diez reintentos
+         * contra un `HTTP 500` con `error.code` **1** («An unknown error has occurred»). Se
+         * reprodujo con `curl`, fuera de la aplicación, con la misma petición byte por byte: el
+         * mismo 500. Y en esa respuesta Meta devolvía ya `facebook-api-version: v26.0`, es
+         * decir, **la llamada se estaba sirviendo auto-promocionada y fallaba igual**. La causa
+         * estaba en el estado de la cuenta, no en la versión ni en esta clase.
+         *
+         * Lo que sí deja ese incidente como método, y vale para el siguiente:
+         * - Un fallo de entrega **sin código específico de WhatsApp** en el registro —ni
+         *   `131047`, ni `131026`, ni `132xxx`— significa que Meta no llegó a evaluar el
+         *   mensaje. No busques la causa en el mensaje.
+         * - Las **cabeceras** de la respuesta dicen cosas que el cuerpo calla.
+         * - Reproducir con `curl` antes de tocar código: separa en un minuto «la app construye
+         *   mal la petición» de «la cuenta no está lista».
          */
-        const val API = "v22.0"
+        const val API = "v26.0"
 
         /**
          * Margen del respaldo de la corrutina sobre la suma de los plazos del socket.
