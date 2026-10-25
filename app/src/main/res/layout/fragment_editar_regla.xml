@@ -170,19 +170,74 @@
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="12dp" />
 
+        <!-- El canal va antes que el destino porque decide qué es un destino: un E.164, un
+             chat de Telegram, un teléfono o una URL. Cambiarlo cambia la ayuda, el teclado y la
+             validación del campo de abajo. Los canales que esta compilación no entrega salen
+             deshabilitados en lugar de ocultos, para que se vea que existen. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/regla_canal"
+            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+            android:layout_marginBottom="4dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_canal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_canal_whatsapp"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/canal_whatsapp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_canal_telegram"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/canal_telegram" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_canal_sms"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/canal_sms" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_canal_api"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/canal_api" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <TextView
+            android:id="@+id/text_view_canal_ayuda"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="16dp" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_destino"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
-            android:hint="@string/regla_destino"
-            app:helperText="@string/regla_destino_ayuda">
+            android:hint="@string/regla_destino_whatsapp"
+            app:helperText="@string/regla_destino_ayuda_whatsapp">
 
-            <!-- inputType=phone, y vuelve a serlo después de una vuelta completa: lo era en
-                 SMStoSMS, dejó de serlo con Telegram porque el teclado numérico no tiene arroba
-                 y un @canal era un destino válido, y lo es otra vez porque un destino es un
-                 teléfono. El teclado de teléfono sí trae el «+», que aquí es obligatorio. -->
+            <!-- El inputType lo pone el fragment según el canal: teléfono para WhatsApp y SMS
+                 (el teclado de teléfono trae el «+»), texto para Telegram (un @canal lleva
+                 arroba, que el teclado numérico no tiene) y URL para la API. El de aquí es solo
+                 el del canal por defecto. -->
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edit_text_destino"
                 android:layout_width="match_parent"

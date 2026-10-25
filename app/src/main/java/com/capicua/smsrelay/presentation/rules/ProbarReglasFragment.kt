@@ -81,7 +81,7 @@ class ProbarReglasFragment : Fragment() {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.probar_enviar)
             .setMessage(
-                getString(R.string.probar_enviar_confirmar, primera.destino)
+                getString(R.string.probar_enviar_confirmar, primera.canal.etiqueta, primera.destino)
             )
             .setNegativeButton(R.string.cancelar, null)
             .setPositiveButton(R.string.probar_enviar) { _, _ -> viewModel.enviarPrueba() }
@@ -141,14 +141,14 @@ class ProbarReglasFragment : Fragment() {
             val fila = ItemCoincidenciaBinding.inflate(layoutInflater, contenedor, false)
             fila.textViewPosicion.text = coincidencia.posicion.toString()
             fila.textViewRegla.text = coincidencia.nombreRegla
-            fila.textViewDestino.text =
-                getString(R.string.reglas_destino, coincidencia.destino)
-            fila.textViewTexto.text = coincidencia.textoFinal
-            fila.textViewLongitud.text = getString(
-                R.string.regla_longitud,
-                coincidencia.textoFinal.length,
-                viewModel.limiteCaracteres.value
+            fila.textViewDestino.text = getString(
+                R.string.reglas_destino,
+                getString(R.string.destino_por_canal, coincidencia.canal.etiqueta, coincidencia.destino)
             )
+            fila.textViewTexto.text = coincidencia.textoFinal
+            fila.textViewLongitud.text = coincidencia.limiteCaracteres?.let { limite ->
+                getString(R.string.regla_longitud, coincidencia.textoFinal.length, limite)
+            }.orEmpty()
             contenedor.addView(fila.root)
         }
     }
@@ -186,11 +186,11 @@ class ProbarReglasFragment : Fragment() {
                             resultado.visibility = View.VISIBLE
                             binding.buttonEnviarPrueba.isEnabled = true
                             resultado.text =
-                                getString(R.string.probar_envio_correcto, estado.destino)
+                                getString(R.string.probar_envio_correcto, estado.canal.etiqueta, estado.destino)
                             resultado.setTextColor(resources.getColor(R.color.status_delivered, null))
                             Snackbar.make(
                                 binding.root,
-                                getString(R.string.probar_envio_correcto_breve, estado.destino),
+                                getString(R.string.probar_envio_correcto_breve, estado.canal.etiqueta, estado.destino),
                                 Snackbar.LENGTH_LONG
                             ).show()
                         }

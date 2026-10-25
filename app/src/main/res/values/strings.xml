@@ -188,6 +188,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="reglas_criterio_sin_mayusculas">sin distinguir mayúsculas</string>
     <string name="reglas_criterio_todo">Sin filtros: casa con todos los SMS</string>
     <string name="reglas_destino">→ %1$s</string>
+    <string name="destino_por_canal">%1$s · %2$s</string>
     <string name="reglas_destino_continua">→ %1$s · sigue evaluando</string>
 
     <!-- Reglas: editor -->
@@ -205,8 +206,24 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_ignorar_mayusculas">Ignorar mayúsculas</string>
     <string name="regla_ignorar_mayusculas_ayuda">Aplica las dos expresiones sin distinguir mayúsculas de minúsculas: «hola» casa con «HOLA». Equivale a escribir (?i) en ambas.</string>
 
-    <string name="regla_destino">Número de destino</string>
-    <string name="regla_destino_ayuda">El número de WhatsApp de la persona, en formato internacional: «+», el prefijo del país y el número. Por ejemplo +34600112233. Tiene que tener WhatsApp y haber escrito al número emisor en las últimas 24 horas, o hará falta una plantilla.</string>
+    <string name="regla_canal">Canal</string>
+    <string name="canal_whatsapp">WhatsApp</string>
+    <string name="canal_telegram">Telegram</string>
+    <string name="canal_sms">SMS</string>
+    <string name="canal_api">API</string>
+    <string name="canal_ayuda_whatsapp">Por la Cloud API de Meta, desde el número de empresa configurado en Ajustes.</string>
+    <string name="canal_ayuda_telegram">Por un bot de Telegram, a una persona, un grupo o un canal.</string>
+    <string name="canal_ayuda_sms">Como un SMS más, desde la SIM de este teléfono. Cada parte cuesta lo que cueste un SMS.</string>
+    <string name="canal_ayuda_api">Una petición GET a tu servidor, con el mensaje en la URL.</string>
+    <string name="canal_no_disponible">Esta versión todavía no entrega por este canal.</string>
+    <string name="regla_destino_whatsapp">Número de WhatsApp</string>
+    <string name="regla_destino_ayuda_whatsapp">El número de WhatsApp de la persona, en formato internacional: «+», el prefijo del país y el número. Por ejemplo +34600112233. Tiene que tener WhatsApp y haber escrito al número emisor en las últimas 24 horas, o hará falta una plantilla.</string>
+    <string name="regla_destino_telegram">Chat de Telegram</string>
+    <string name="regla_destino_ayuda_telegram">El id numérico del chat (un grupo o canal empieza por -100) o el @nombre de un canal público. El bot tiene que estar en el chat.</string>
+    <string name="regla_destino_sms">Número de teléfono</string>
+    <string name="regla_destino_ayuda_sms">El número al que se envía el SMS, tal como lo marcarías. Escribe {telefono} para contestar a quien mandó el SMS.</string>
+    <string name="regla_destino_api">URL de la API</string>
+    <string name="regla_destino_ayuda_api">Se llama con GET. Marcadores: {mensaje} (el texto de la plantilla), {telefono} y {fecha} (ISO-8601 UTC), siempre después del servidor. Por ejemplo https://api.ejemplo.com/sms?de={telefono}&amp;texto={mensaje}</string>
     <string name="regla_plantilla">Plantilla del texto</string>
     <string name="regla_plantilla_ayuda">Marcadores: {mensaje}, {telefono}, {fecha}. Conviene dejar {telefono}: en WhatsApp todo llega del mismo número, y sin el remitente no se sabe de quién era el SMS.</string>
     <string name="regla_previsualizacion">Así saldría</string>
@@ -214,7 +231,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_activa">Activa</string>
     <string name="regla_activa_ayuda">Desactívala para que no se evalúe, sin borrarla</string>
     <string name="regla_continuar">Seguir evaluando</string>
-    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite entregar el mismo SMS a varios números.</string>
+    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite entregar el mismo SMS a varios destinos, incluso por canales distintos.</string>
     <string name="regla_guardar">Guardar regla</string>
 
     <!-- Reglas: panel de prueba -->
@@ -229,9 +246,9 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="probar_envio_real_ayuda">La prueba real entrega un mensaje de verdad al primer número de destino, y consume cuota como cualquier otro.</string>
     <string name="probar_enviar">Enviar de prueba</string>
     <string name="regla_longitud">%1$d / %2$d caracteres</string>
-    <string name="probar_enviar_confirmar">Se entregará un mensaje real a %1$s.</string>
-    <string name="probar_envio_correcto">✓ Entregado a %1$s</string>
-    <string name="probar_envio_correcto_breve">Mensaje de prueba entregado a %1$s</string>
+    <string name="probar_enviar_confirmar">Se entregará un mensaje real por %1$s a %2$s.</string>
+    <string name="probar_envio_correcto">✓ Entregado por %1$s a %2$s</string>
+    <string name="probar_envio_correcto_breve">Mensaje de prueba entregado por %1$s a %2$s</string>
     <string name="probar_envio_fallido">✗ %1$s</string>
 
     <!-- Común -->

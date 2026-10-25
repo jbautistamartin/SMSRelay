@@ -14,7 +14,7 @@ import com.capicua.smsrelay.data.repository.SmsRepository
 import com.capicua.smsrelay.data.whatsapp.ContadorDeMensajes
 import com.capicua.smsrelay.data.whatsapp.EstadoDeLaCuenta
 import com.capicua.smsrelay.data.whatsapp.MensajesDelMes
-import com.capicua.smsrelay.domain.transport.EnviadorDeMensajes
+import com.capicua.smsrelay.domain.transport.Transportes
 import com.capicua.smsrelay.domain.model.SmsConReenvios
 import com.capicua.smsrelay.domain.usecase.ObtenerListaSmsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,7 +34,7 @@ data class ResumenInicio(
 class DashboardViewModel @Inject constructor(
     private val obtenerListaSms: ObtenerListaSmsUseCase,
     private val smsRepository: SmsRepository,
-    private val enviador: EnviadorDeMensajes,
+    private val transportes: Transportes,
     private val estadoDeLaCuenta: EstadoDeLaCuenta,
     contadorDeMensajes: ContadorDeMensajes,
     configDataStore: ConfigDataStore,
@@ -76,22 +76,39 @@ class DashboardViewModel @Inject constructor(
     ) { mes, config -> mes to config.maxMensajesPorMes }
 
     /**
-     * Por qué no se puede entregar nada, o null si el transporte está listo.
+     * Por qué no se puede entregar por alguno de los canales en uso, o null si todos están
+     * listos.
      *
      * Es el aviso más importante del Panel, porque es el único fallo que afecta a **todos** los
-     * reenvíos por igual: sin credenciales, o con unas que Meta ha rechazado, la aplicación
-     * recibe SMS y los va marcando como fallidos uno a uno. En el registro eso son cuatrocientas
-     * líneas idénticas de las que solo la primera informa; aquí es una línea en la primera
-     * pantalla, que es donde alguien la va a leer.
+     * reenvíos de un canal por igual: sin credenciales, o con unas que el servicio ha rechazado,
+     * la aplicación recibe SMS y los va marcando como fallidos uno a uno. En el registro eso son
+     * cuatrocientas líneas idénticas de las que solo la primera informa; aquí es una línea en la
+     * primera pantalla, que es donde alguien la va a leer.
      *
-     * Se recalcula con cada cambio de la configuración, que es cuando puede dejar de ser cierto:
-     * el motivo depende de las credenciales guardadas, del modo de entrega y de si el último
-     * envío fue rechazado.
+     * **Solo mira los canales que usa alguna regla activa.** Con cuatro canales, lo normal es
+     * tener uno o dos configurados; avisar de que falta el token de Telegram a quien solo
+     * reenvía por SMS sería ruido, y el ruido enseña a no leer el aviso.
+     *
+     * Se recalcula con cada cambio de la configuración o de las reglas, que es cuando puede dejar
+     * de ser cierto.
      */
     val avisoTransporte: Flow<String?> = combine(
         configDataStore.config,
-        estadoDeLaCuenta.credencialRechazada
-    ) { _, _ -> enviador.motivoNoDisponible() }
+        estadoDeLaCuenta.credencialRechazada,
+        reglaRepository.observarTodas()
+    ) { _, _, reglas ->
+        reglas.filter { it.activa }
+            .map { it.canal }
+            .distinct()
+            .sortedBy { it.ordinal }
+            .mapNotNull { canal ->
+                val motivo = transportes.de(canal)?.motivoNoDisponible()
+                    ?: transportes.motivoSinTransporte(canal).takeIf { transportes.de(canal) == null }
+                motivo?.let { "${canal.etiqueta}: $it" }
+            }
+            .joinToString("\n")
+            .ifEmpty { null }
+    }
 
     fun limpiarTodos() {
         viewModelScope.launch {

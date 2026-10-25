@@ -5,6 +5,8 @@
 
 package com.capicua.smsrelay.domain.rules
 
+import com.capicua.smsrelay.domain.transport.Canal
+
 /**
  * Resultado de evaluar las reglas contra un SMS entrante.
  *
@@ -23,12 +25,15 @@ data class ResultadoEvaluacion(
     val hayCoincidencias: Boolean get() = coincidencias.isNotEmpty()
 }
 
-/** Una regla que casó, con el destino y el texto ya resueltos. */
+/** Una regla que casó, con su canal, su destino y el texto ya resuelto. */
 data class Coincidencia(
     val reglaId: Long,
     val nombreRegla: String,
 
-    /** Número de destino, tal como lo escribió la regla. No se resuelve ningún marcador. */
+    /** Por dónde sale, copiado de la regla. */
+    val canal: Canal,
+
+    /** Destino tal como lo escribió la regla, en el formato de [canal]. Aquí no se resuelve nada. */
     val destino: String,
 
     val textoFinal: String

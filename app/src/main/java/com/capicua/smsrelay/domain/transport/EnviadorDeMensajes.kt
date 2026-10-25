@@ -13,12 +13,21 @@ package com.capicua.smsrelay.domain.transport
  * medias— es agnóstico del medio y no cambia aunque cambie el medio. Lo que hay después es un
  * detalle de implementación que vive en `data`.
  *
- * Hoy la única implementación entrega por la Cloud API de WhatsApp, y **no está previsto que
- * haya dos**. El interfaz no existe para permitir varios transportes a la vez: existe porque
- * marca dónde está el corte, y porque es lo que ha permitido que cambiar de medio **dos veces**
- * —de `SmsManager` a Telegram, y de Telegram a la Cloud API— no tocase la tubería ni una sola
- * vez. Añadir un selector de transporte por regla duplicaría la pantalla de reglas, la de
- * ajustes y las guardias para un caso que esta aplicación no tiene.
+ * ## Una implementación por canal
+ * En las aplicaciones de las que nace SMSRelay había **una** implementación, y este KDoc decía
+ * que no estaba previsto que hubiera dos: el interfaz marcaba dónde estaba el corte, y eso fue lo
+ * que permitió cambiar de medio dos veces —de `SmsManager` a Telegram, y de Telegram a la Cloud
+ * API— sin tocar la tubería. Añadir un selector de transporte por regla, decía, duplicaría la
+ * pantalla de reglas, la de ajustes y las guardias para un caso que aquella aplicación no tenía.
+ *
+ * Ese caso es exactamente esta aplicación. Aquí hay una implementación por [Canal], la regla
+ * elige cuál y el reenvío la hereda; `Transportes` las reúne y `DispatchWorker` pide la del canal
+ * del reenvío. El coste que se anticipaba es real —la pantalla de reglas y la de ajustes crecen—
+ * y se paga a cambio de no mantener cuatro proyectos que son copias unos de otros.
+ *
+ * Lo que **no** cambió es el contrato: cada implementación espera la confirmación, y ninguna
+ * reintenta, registra ni decide el destino. Que haya cuatro no da permiso a ninguna para saber
+ * de las otras.
  *
  * ## Qué no es responsabilidad del transporte
  * - **Reintentar.** Devuelve [ResultadoEnvio.ErrorTransitorio] y decide `DispatchWorker`.

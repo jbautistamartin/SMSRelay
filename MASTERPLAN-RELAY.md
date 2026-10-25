@@ -207,7 +207,7 @@ del icono completa con su punto 7.
 > 978 a 980. Una plantilla aprobada con la firma vieja sigue sirviendo: le sobran dos caracteres
 > que caben en el margen de 16.
 
-### Fase 2 — La juntura se abre · `[ ]`
+### Fase 2 — La juntura se abre · `[x]`
 
 La fase de estructura. Al cerrarla, la aplicación sigue entregando **solo por WhatsApp**, pero
 por el camino nuevo.
@@ -229,6 +229,28 @@ por el camino nuevo.
 
 **Verificación:** los tests en verde y una entrega real por WhatsApp idéntica a la de SMStoWhats.
 Si algo cambia en lo que ve quien recibe, la fase está mal.
+
+> **Cómo se cerró (25 oct 2026).** 140 tests en verde: los 138 heredados y dos nuevos en
+> `EvaluadorDeReglasTest` que fijan que el canal viaja de la regla a la coincidencia y que no
+> interviene en si la regla casa. Lo que ve quien recibe no cambia: el texto se compone igual y
+> sale por el mismo `WhatsAppSender`. La entrega real queda para la fase 10, con el resto de
+> comprobaciones en el teléfono.
+>
+> Tres cosas que el plan no decía y salieron al escribirlo:
+>
+> - **`ColaDeEnvios` decide la restricción de red por canal.** Era `CONNECTED` para todo, y
+>   eso habría dejado un reenvío por SMS esperando una red que no necesita. API y SMS van con
+>   `NOT_REQUIRED` (la API puede estar en la red local, y si no hay ruta el intento falla y se
+>   reintenta como cualquier otro); Telegram y WhatsApp siguen con `CONNECTED`. Por eso
+>   `encolar()` recibe ahora el `Reenvio` entero y no solo su id.
+> - **`Transportes`** envuelve el mapa de Hilt. Nadie más que él toca el
+>   `Map<Canal, EnviadorDeMensajes>`, y es quien redacta el motivo de un canal sin transporte,
+>   para que el worker, la prueba y el editor digan lo mismo.
+> - **La pantalla de prueba y el Panel también eran consumidores del transporte único.** La
+>   prueba lleva ahora el canal y el límite de caracteres en cada coincidencia —cada regla puede
+>   salir por un canal distinto—, y el aviso del Panel combina solo los canales que usa alguna
+>   regla activa: avisar de un token de Telegram ausente a quien solo reenvía por SMS sería
+>   ruido.
 
 ### Fase 3 — Vuelve Telegram · `[ ]`
 

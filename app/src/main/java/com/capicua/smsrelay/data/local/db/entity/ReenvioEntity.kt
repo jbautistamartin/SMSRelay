@@ -12,7 +12,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Entidad Room para la tabla de reenvíos: un envío a un número destino concreto.
+ * Entidad Room para la tabla de reenvíos: un envío a un destino concreto, por un canal concreto.
  *
  * Tabla: [reenvios]
  *
@@ -63,6 +63,10 @@ data class ReenvioEntity(
 
     @ColumnInfo(name = "nombre_regla")
     val nombreRegla: String,
+
+    /** Nombre de la constante de `Canal`, copiado de la regla al crear el reenvío. */
+    @ColumnInfo(name = "canal")
+    val canal: String,
 
     @ColumnInfo(name = "destino")
     val destino: String,

@@ -5,10 +5,11 @@
 
 package com.capicua.smsrelay.domain.model
 
+import com.capicua.smsrelay.domain.transport.Canal
 import java.time.Instant
 
 /**
- * Un envío concreto a un número destino, derivado de un [SmsMessage] y de la [Regla] que casó.
+ * Un envío concreto a un destino, derivado de un [SmsMessage] y de la [Regla] que casó.
  *
  * Es la unidad de despacho del sistema: un SMS entrante puede generar varios reenvíos si
  * varias reglas casan con él (ver [Regla.continuar]), y cada uno lleva su propio estado,
@@ -30,7 +31,14 @@ data class Reenvio(
     /** Nombre de la regla, copiado para que el historial sobreviva al borrado de la regla. */
     val nombreRegla: String,
 
-    /** Número de teléfono al que se envía. */
+    /**
+     * Por dónde sale, copiado de la regla igual que [nombreRegla]: un reenvío ya creado tiene que
+     * poder entregarse aunque la regla se edite o se borre, y el rescate de huérfanos tiene que
+     * saber por dónde reintentar sin volver a mirarla.
+     */
+    val canal: Canal,
+
+    /** A quién se entrega, en el formato de [canal]. */
     val destino: String,
 
     /** Texto ya resuelto a partir de la plantilla de la regla. */

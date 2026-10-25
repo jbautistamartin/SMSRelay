@@ -19,7 +19,8 @@ import androidx.room.PrimaryKey
  * - [regexTelefono]   Expresión regular sobre el remitente. Null = no filtra por teléfono.
  * - [regexMensaje]    Expresión regular sobre el cuerpo. Null = no filtra por mensaje.
  * - [ignorarMayusculas] true = las dos expresiones se aplican sin distinguir mayúsculas.
- * - [destino]         Chat de Telegram al que se entrega: `chat_id` o `@usuario`.
+ * - [canal]           Por dónde sale: el `name` de un `Canal`.
+ * - [destino]         A quién se entrega, en el formato del canal.
  * - [plantilla]       Texto a enviar, con marcadores `{mensaje}`, `{telefono}` y `{fecha}`.
  * - [activa]          false = la regla se ignora sin borrarla.
  * - [continuar]       true = tras casar, sigue evaluando las reglas siguientes.
@@ -51,6 +52,13 @@ data class ReglaEntity(
 
     @ColumnInfo(name = "ignorar_mayusculas", defaultValue = "0")
     val ignorarMayusculas: Boolean = false,
+
+    /**
+     * Sin `defaultValue`, por el mismo motivo que [plantilla]: el canal por defecto ya está
+     * escrito en `Canal.POR_DEFECTO`, y escribirlo otra vez aquí son dos sitios que divergen.
+     */
+    @ColumnInfo(name = "canal")
+    val canal: String,
 
     @ColumnInfo(name = "destino")
     val destino: String,

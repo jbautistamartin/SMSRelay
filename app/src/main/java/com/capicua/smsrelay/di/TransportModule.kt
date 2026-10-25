@@ -6,30 +6,41 @@
 package com.capicua.smsrelay.di
 
 import com.capicua.smsrelay.data.whatsapp.WhatsAppSender
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.transport.EnviadorDeMensajes
 import dagger.Binds
+import dagger.MapKey
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
+import dagger.multibindings.IntoMap
+
+/** Clave del mapa de transportes: el [Canal] que entrega cada implementación. */
+@MapKey
+annotation class ClaveCanal(val value: Canal)
 
 /**
- * Elige el transporte por el que salen los reenvíos.
+ * Los transportes por los que salen los reenvíos, uno por [Canal].
  *
  * Es el **único** sitio del proyecto que nombra una implementación concreta del medio de salida.
  * Todo lo demás —el worker de despacho, la pantalla de prueba, el editor de reglas— depende de
- * [EnviadorDeMensajes], así que cambiar de medio es cambiar esta línea.
+ * [com.capicua.smsrelay.domain.transport.Transportes], que recibe este mapa.
  *
- * Y eso es exactamente lo que ha pasado dos veces. En SMStoTelegram salió el andamio
- * `TransporteSinConfigurar` y entró `TelegramSender`; aquí ha salido `TelegramSender` y ha
- * entrado [WhatsAppSender], sin que se tocara ni el worker de despacho, ni el evaluador de
- * reglas, ni la cola, ni el rescate de huérfanos. Dos medios distintos, la misma línea.
+ * En las aplicaciones de las que nace SMSRelay esto era un único `@Binds`, y cambiar de medio era
+ * cambiar esa línea: así se pasó de `SmsManager` a Telegram y de Telegram a la Cloud API sin
+ * tocar la tubería. Aquí los medios no se sustituyen, se suman, y por eso cada uno entra con un
+ * `@IntoMap` bajo su canal. Añadir un medio sigue siendo una entrada en este fichero; lo que ya
+ * no basta es esa entrada sola, porque la regla tiene que poder elegirlo.
+ *
+ * Que una entrada falte no rompe la compilación ni el arranque: una regla con un canal sin
+ * transporte se cierra como fallo permanente con un motivo que lo dice.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class TransportModule {
 
     @Binds
-    @Singleton
-    abstract fun bindEnviadorDeMensajes(impl: WhatsAppSender): EnviadorDeMensajes
+    @IntoMap
+    @ClaveCanal(Canal.WHATSAPP)
+    abstract fun bindWhatsApp(impl: WhatsAppSender): EnviadorDeMensajes
 }

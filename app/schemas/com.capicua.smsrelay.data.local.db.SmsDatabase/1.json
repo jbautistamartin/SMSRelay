@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "0ff286b359adf1399ee92a1851f21345",
+    "identityHash": "55f6e2e50f0d6fb41258455e9053a276",
     "entities": [
       {
         "tableName": "sms",
@@ -41,8 +41,7 @@
           {
             "fieldPath": "motivoDescarte",
             "columnName": "motivo_descarte",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -70,12 +69,11 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_sms_fecha_recepcion` ON `${TABLE_NAME}` (`fecha_recepcion`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "reglas",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `orden` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `regex_telefono` TEXT, `regex_mensaje` TEXT, `ignorar_mayusculas` INTEGER NOT NULL DEFAULT 0, `destino` TEXT NOT NULL, `plantilla` TEXT NOT NULL, `activa` INTEGER NOT NULL DEFAULT 1, `continuar` INTEGER NOT NULL DEFAULT 0)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `orden` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `regex_telefono` TEXT, `regex_mensaje` TEXT, `ignorar_mayusculas` INTEGER NOT NULL DEFAULT 0, `canal` TEXT NOT NULL, `destino` TEXT NOT NULL, `plantilla` TEXT NOT NULL, `activa` INTEGER NOT NULL DEFAULT 1, `continuar` INTEGER NOT NULL DEFAULT 0)",
         "fields": [
           {
             "fieldPath": "id",
@@ -98,14 +96,12 @@
           {
             "fieldPath": "regexTelefono",
             "columnName": "regex_telefono",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "regexMensaje",
             "columnName": "regex_mensaje",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "ignorarMayusculas",
@@ -113,6 +109,12 @@
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "0"
+          },
+          {
+            "fieldPath": "canal",
+            "columnName": "canal",
+            "affinity": "TEXT",
+            "notNull": true
           },
           {
             "fieldPath": "destino",
@@ -157,12 +159,11 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_reglas_orden` ON `${TABLE_NAME}` (`orden`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "reenvios",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `sms_id` TEXT NOT NULL, `regla_id` INTEGER, `nombre_regla` TEXT NOT NULL, `destino` TEXT NOT NULL, `texto_final` TEXT NOT NULL, `estado` TEXT NOT NULL, `intentos` INTEGER NOT NULL DEFAULT 0, `ultimo_error` TEXT, `fecha_creacion` INTEGER NOT NULL, `fecha_envio` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`sms_id`) REFERENCES `sms`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`regla_id`) REFERENCES `reglas`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `sms_id` TEXT NOT NULL, `regla_id` INTEGER, `nombre_regla` TEXT NOT NULL, `canal` TEXT NOT NULL, `destino` TEXT NOT NULL, `texto_final` TEXT NOT NULL, `estado` TEXT NOT NULL, `intentos` INTEGER NOT NULL DEFAULT 0, `ultimo_error` TEXT, `fecha_creacion` INTEGER NOT NULL, `fecha_envio` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`sms_id`) REFERENCES `sms`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`regla_id`) REFERENCES `reglas`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -179,12 +180,17 @@
           {
             "fieldPath": "reglaId",
             "columnName": "regla_id",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "nombreRegla",
             "columnName": "nombre_regla",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canal",
+            "columnName": "canal",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -216,8 +222,7 @@
           {
             "fieldPath": "ultimoError",
             "columnName": "ultimo_error",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "fechaCreacion",
@@ -228,8 +233,7 @@
           {
             "fieldPath": "fechaEnvio",
             "columnName": "fecha_envio",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -311,20 +315,17 @@
           {
             "fieldPath": "smsId",
             "columnName": "sms_id",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "reenvioId",
             "columnName": "reenvio_id",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "destino",
             "columnName": "destino",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "detalle",
@@ -364,14 +365,12 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_log_entries_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       }
     ],
-    "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0ff286b359adf1399ee92a1851f21345')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '55f6e2e50f0d6fb41258455e9053a276')"
     ]
   }
 }

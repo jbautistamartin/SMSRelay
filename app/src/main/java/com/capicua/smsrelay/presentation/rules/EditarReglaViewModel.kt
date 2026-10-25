@@ -12,10 +12,13 @@ import com.capicua.smsrelay.domain.model.Regla
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
 import com.capicua.smsrelay.data.whatsapp.DestinoDeWhatsApp
 import com.capicua.smsrelay.data.whatsapp.MapeoDeRespuestas
-import com.capicua.smsrelay.domain.transport.EnviadorDeMensajes
+import com.capicua.smsrelay.domain.transport.Canal
+import com.capicua.smsrelay.domain.transport.Transportes
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
@@ -39,21 +42,36 @@ data class ErroresRegla(
 class EditarReglaViewModel @Inject constructor(
     private val reglaRepository: ReglaRepository,
     private val evaluador: EvaluadorDeReglas,
-    enviador: EnviadorDeMensajes
+    private val transportes: Transportes
 ) : ViewModel() {
 
+    private val _canal = MutableStateFlow(Canal.POR_DEFECTO)
+    /** Canal elegido en el selector. Lo cambia el fragment; de él dependen el límite y la validación. */
+    val canal: StateFlow<Canal> = _canal.asStateFlow()
+
+    /** Canales que esta compilación sabe entregar. Los demás salen deshabilitados en el selector. */
+    val canalesDisponibles: List<Canal> get() = transportes.disponibles
+
+    fun elegirCanal(canal: Canal) {
+        _canal.value = canal
+    }
+
     /**
-     * Longitud máxima que admite el transporte con la configuración actual.
+     * Longitud máxima que admite el transporte del canal elegido, con su configuración actual.
      *
-     * Es un [StateFlow] y no un `Int` porque el límite dejó de ser una constante del medio: la
-     * Cloud API admite 4.096 caracteres en un mensaje de texto libre y 1.024 renderizados en uno
-     * de plantilla, así que el que aplica depende de cómo esté configurado el transporte y hay
-     * que leerlo suspendiendo.
+     * Es un [StateFlow] y no un `Int` por dos motivos que se suman: el límite cambia con el canal
+     * —y el canal se elige en esta misma pantalla—, y dentro de un canal puede depender de la
+     * configuración, como en WhatsApp, donde son 4.096 caracteres en texto libre y bastantes
+     * menos dentro de una plantilla. Leerlo suspende.
      *
-     * Arranca en el límite del texto libre, que es el modo por defecto, para que el contador no
-     * parpadee ni enseñe un cero en el primer repintado.
+     * Arranca en el límite del texto libre de WhatsApp, que es el canal por defecto, para que el
+     * contador no parpadee ni enseñe un cero en el primer repintado.
      */
-    val limiteCaracteres: StateFlow<Int> = flow { emit(enviador.limiteCaracteres()) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val limiteCaracteres: StateFlow<Int> = _canal
+        .flatMapLatest { canal ->
+            flow { emit(transportes.de(canal)?.limiteCaracteres() ?: LIMITE_SIN_TRANSPORTE) }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
@@ -75,7 +93,9 @@ class EditarReglaViewModel @Inject constructor(
     fun cargar(reglaId: Long) {
         if (reglaId == NUEVA) return
         viewModelScope.launch {
-            _regla.value = reglaRepository.obtenerPorId(reglaId)
+            val regla = reglaRepository.obtenerPorId(reglaId)
+            regla?.let { _canal.value = it.canal }
+            _regla.value = regla
         }
     }
 
@@ -118,12 +138,15 @@ class EditarReglaViewModel @Inject constructor(
         nombre = if (regla.nombre.isBlank()) "Pon un nombre para reconocer la regla" else null,
         regexTelefono = evaluador.validarPatron(regla.regexTelefono),
         regexMensaje = evaluador.validarPatron(regla.regexMensaje),
-        destino = validarDestino(regla.destino),
+        destino = validarDestino(regla.canal, regla.destino),
         plantilla = if (regla.plantilla.isBlank()) "La plantilla no puede estar vacía" else null
     )
 
     /**
-     * Valida el destino y, sobre todo, **explica el error correcto**.
+     * Valida el destino según el canal y, sobre todo, **explica el error correcto**.
+     *
+     * Cada canal tiene su forma de destino. Aquí solo se valida la de los canales que esta
+     * compilación entrega; la de cada uno la trae su transporte.
      *
      * El caso probable no es un destino con una letra de más: es que **falte el prefijo
      * internacional**, porque el número está en la agenda tal como se marca en cada país.
@@ -139,9 +162,14 @@ class EditarReglaViewModel @Inject constructor(
      * convención que ya tenía la pantalla y mezclar literales con recursos sería peor que
      * cualquiera de las dos cosas por separado.
      */
-    private fun validarDestino(destino: String): String? = when {
+    private fun validarDestino(canal: Canal, destino: String): String? = when {
+        transportes.de(canal) == null ->
+            "Esta versión todavía no entrega por ${canal.etiqueta}: elige otro canal"
+
         destino.isBlank() ->
-            "El número de destino es obligatorio"
+            "El destino es obligatorio"
+
+        canal != Canal.WHATSAPP -> null
 
         DestinoDeWhatsApp.pareceValido(destino) -> null
 
@@ -157,5 +185,8 @@ class EditarReglaViewModel @Inject constructor(
     companion object {
         /** Id que indica que se está creando una regla, no editando una existente. */
         const val NUEVA = 0L
+
+        /** Lo que enseña el contador con un canal sin transporte: nada que medir. */
+        private const val LIMITE_SIN_TRANSPORTE = 0
     }
 }

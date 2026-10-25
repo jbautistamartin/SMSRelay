@@ -32,11 +32,11 @@ import javax.inject.Inject
  * Es la única entrada de mensajes al sistema. Sustituye al `SaveSmsUseCase` de la versión HTTP,
  * que solo guardaba y encolaba porque el destino era siempre el mismo.
  *
- * ## Destino de un reenvío
- * Es siempre el número fijo que escribió la regla, y **en el destino no se resuelve ningún
- * marcador**. SMStoSMS sí resolvía `{telefono}` ahí, para contestar a quien escribió; eso se fue
- * con el transporte por SMS y no vuelve, porque el cuerpo de un SMS de un tercero no puede
- * decidir a dónde se manda nada. Ver el KDoc de `Regla.destino`.
+ * ## Canal y destino de un reenvío
+ * Los dos se copian de la regla que casó. El canal decide qué transporte lo entrega y si la cola
+ * espera a tener red; el destino se guarda tal como lo escribió la regla, y **aquí no se resuelve
+ * ningún marcador**: el cuerpo de un SMS de un tercero no puede decidir a dónde se manda nada.
+ * Ver el KDoc de `Regla.destino`.
  *
  * ## Orden de las operaciones
  * ```
@@ -88,7 +88,7 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
         if (existentes.isNotEmpty()) {
             Timber.d("Procesar[${sms.id}]: ya tiene ${existentes.size} reenvío(s), solo reencolo")
             smsRepository.actualizarEstado(sms.id, EstadoSms.PROCESADO)
-            colaDeEnvios.encolarVarios(existentes.map { it.id })
+            colaDeEnvios.encolarVarios(existentes)
             return
         }
 
@@ -194,6 +194,7 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                 smsId = sms.id,
                 reglaId = coincidencia.reglaId,
                 nombreRegla = coincidencia.nombreRegla,
+                canal = coincidencia.canal,
                 destino = coincidencia.destino,
                 textoFinal = coincidencia.textoFinal,
                 fechaCreacion = ahora
@@ -210,13 +211,14 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                     smsId = sms.id,
                     reenvioId = reenvio.id,
                     destino = reenvio.destino,
-                    detalle = "Regla «${reenvio.nombreRegla}» → ${reenvio.destino}",
+                    detalle = "Regla «${reenvio.nombreRegla}» → ${reenvio.canal.etiqueta} " +
+                        reenvio.destino,
                     timestamp = Instant.now()
                 )
             )
         }
 
-        colaDeEnvios.encolarVarios(reenvios.map { it.id })
+        colaDeEnvios.encolarVarios(reenvios)
 
         Timber.i("Procesar[${sms.id}]: ${reenvios.size} reenvío(s) encolado(s)")
     }

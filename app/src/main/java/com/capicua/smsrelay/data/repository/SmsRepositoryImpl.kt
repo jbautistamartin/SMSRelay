@@ -5,6 +5,7 @@
 
 package com.capicua.smsrelay.data.repository
 
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.data.local.db.dao.SmsDao
 import com.capicua.smsrelay.data.local.db.entity.ReenvioEntity
 import com.capicua.smsrelay.data.local.db.entity.SmsEntity
@@ -109,6 +110,7 @@ class SmsRepositoryImpl @Inject constructor(
         smsId = smsId,
         reglaId = reglaId,
         nombreRegla = nombreRegla,
+        canal = Canal.valueOf(canal),
         destino = destino,
         textoFinal = textoFinal,
         estado = EstadoReenvio.valueOf(estado),

@@ -14,6 +14,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.capicua.smsrelay.data.config.ConfigDataStore
+import com.capicua.smsrelay.domain.model.Reenvio
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.util.Constants
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.await
@@ -29,21 +31,24 @@ import javax.inject.Singleton
  * encolado leía una constante. Ahora el backoff sale de [ConfigDataStore], que es lo que el
  * operador cree estar ajustando.
  *
- * ## Por qué vuelve a haber restricción de red
- * Las tres versiones de este proyecto han respondido distinto a esta pregunta, y conviene saber
- * por qué para no «arreglar» lo que no está roto:
+ * ## La restricción de red depende del canal
+ * Las aplicaciones de las que nace SMSRelay respondieron distinto a esta pregunta, y aquí las
+ * cuatro respuestas conviven porque cada una era correcta para su medio:
  *
- * - **SMSGateway** (HTTP a un servidor propio) no la ponía a propósito: Android no marca como
- *   «con internet» una red local sin salida, así que la restricción habría bloqueado justo el
- *   caso que esa versión servía.
- * - **SMStoSMS** no la necesitaba: un SMS sale por la radio del operador, no por datos, y la
- *   falta de cobertura ya la reportaba el propio envío como `RESULT_ERROR_NO_SERVICE`.
- * - **SMStoWhats** entrega por internet y sí la pone. Sin ella, cada reenvío encolado en un
- *   túnel se gastaría sus diez intentos contra una red que no está, y el reenvío acabaría
- *   `FALLIDO` por agotamiento en lugar de esperar a que vuelva la conexión.
+ * - **API** (SMSGateway, HTTP a un servidor propio) **sin restricción**, a propósito: Android no
+ *   marca como «con internet» una red local sin salida, así que la restricción bloquearía justo
+ *   el caso de un servidor en la misma red que el teléfono.
+ * - **SMS** (SMStoSMS) **sin restricción**: un SMS sale por la radio del operador, no por datos,
+ *   y la falta de cobertura ya la reporta el propio envío como `RESULT_ERROR_NO_SERVICE`. Exigir
+ *   datos para mandar un SMS dejaría de reenviar en un sitio con cobertura y sin datos.
+ * - **Telegram y WhatsApp** (SMStoTelegram, SMStoWhats) **con `CONNECTED`**: entregan por
+ *   internet, y sin la restricción cada reenvío encolado en un túnel se gastaría sus diez
+ *   intentos contra una red que no está y acabaría `FALLIDO` por agotamiento en lugar de esperar
+ *   a que vuelva la conexión.
  *
- * `NetworkType.CONNECTED` es el nivel correcto, no `UNMETERED`: un mensaje de texto por datos
- * móviles no es un coste que haya que ahorrar, y esperar al wifi sería dejar de reenviar.
+ * Por eso [encolar] recibe el reenvío entero y no solo su id: la restricción se decide con su
+ * canal. `NetworkType.CONNECTED` es el nivel correcto, no `UNMETERED`: un mensaje de texto por
+ * datos móviles no es un coste que haya que ahorrar, y esperar al wifi sería dejar de reenviar.
  */
 @Singleton
 class ColaDeEnvios @Inject constructor(
@@ -62,14 +67,14 @@ class ColaDeEnvios @Inject constructor(
      * reintento en curso— no se duplica. Es la primera línea de defensa contra enviar dos
      * veces el mismo mensaje.
      */
-    suspend fun encolar(reenvioId: String) {
+    suspend fun encolar(reenvio: Reenvio) {
         val config = configDataStore.config.first()
 
         val solicitud = OneTimeWorkRequestBuilder<DispatchWorker>()
-            .setInputData(workDataOf(Constants.WORKER_KEY_REENVIO_ID to reenvioId))
+            .setInputData(workDataOf(Constants.WORKER_KEY_REENVIO_ID to reenvio.id))
             .setConstraints(
                 Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .setRequiredNetworkType(redNecesaria(reenvio.canal))
                     .build()
             )
             .setBackoffCriteria(
@@ -80,12 +85,18 @@ class ColaDeEnvios @Inject constructor(
             .addTag(Constants.WORKER_DISPATCH_TAG)
             .build()
 
-        workManager.enqueueUniqueWork(nombreUnico(reenvioId), ExistingWorkPolicy.KEEP, solicitud)
+        workManager.enqueueUniqueWork(nombreUnico(reenvio.id), ExistingWorkPolicy.KEEP, solicitud)
     }
 
     /** Encola varios reenvíos, normalmente los derivados de un mismo SMS. */
-    suspend fun encolarVarios(reenvioIds: List<String>) {
-        reenvioIds.forEach { encolar(it) }
+    suspend fun encolarVarios(reenvios: List<Reenvio>) {
+        reenvios.forEach { encolar(it) }
+    }
+
+    /** La red que tiene que haber para intentar la entrega. Ver el KDoc de la clase. */
+    private fun redNecesaria(canal: Canal): NetworkType = when (canal) {
+        Canal.API, Canal.SMS -> NetworkType.NOT_REQUIRED
+        Canal.TELEGRAM, Canal.WHATSAPP -> NetworkType.CONNECTED
     }
 
     /**

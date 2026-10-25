@@ -5,6 +5,7 @@
 
 package com.capicua.smsrelay.data.repository
 
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.data.local.db.dao.ReglaDao
 import com.capicua.smsrelay.data.local.db.entity.ReglaEntity
 import com.capicua.smsrelay.domain.model.Regla
@@ -81,6 +82,7 @@ class ReglaRepositoryImpl @Inject constructor(
         regexTelefono = regexTelefono,
         regexMensaje = regexMensaje,
         ignorarMayusculas = ignorarMayusculas,
+        canal = canal.name,
         destino = destino,
         plantilla = plantilla,
         activa = activa,
@@ -94,6 +96,7 @@ class ReglaRepositoryImpl @Inject constructor(
         regexTelefono = regexTelefono,
         regexMensaje = regexMensaje,
         ignorarMayusculas = ignorarMayusculas,
+        canal = Canal.valueOf(canal),
         destino = destino,
         plantilla = plantilla,
         activa = activa,

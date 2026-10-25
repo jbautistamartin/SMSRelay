@@ -87,7 +87,7 @@ class OrphanRescueWorker @AssistedInject constructor(
         var reencolados = 0
         for (reenvio in pendientes) {
             if (!colaDeEnvios.tieneTrabajoActivo(reenvio.id)) {
-                colaDeEnvios.encolar(reenvio.id)
+                colaDeEnvios.encolar(reenvio)
                 reencolados++
                 Timber.d(
                     "OrphanRescueWorker: reencolado reenvío ${reenvio.id} → ${reenvio.destino} " +

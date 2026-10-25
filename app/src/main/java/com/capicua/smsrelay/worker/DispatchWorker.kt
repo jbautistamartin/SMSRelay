@@ -15,7 +15,7 @@ import com.capicua.smsrelay.data.repository.ReenvioRepository
 import com.capicua.smsrelay.domain.model.EstadoReenvio
 import com.capicua.smsrelay.domain.model.LogEntry
 import com.capicua.smsrelay.domain.model.LogTipo
-import com.capicua.smsrelay.domain.transport.EnviadorDeMensajes
+import com.capicua.smsrelay.domain.transport.Transportes
 import com.capicua.smsrelay.domain.transport.ResultadoEnvio
 import com.capicua.smsrelay.util.Constants
 import dagger.assisted.Assisted
@@ -31,10 +31,13 @@ import java.time.Instant
  * Trabaja sobre el id del reenvío, no sobre el del SMS: un mismo mensaje entrante puede tener
  * varios destinos y cada uno se reintenta por separado.
  *
- * **No sabe por qué medio sale.** Depende de [EnviadorDeMensajes] y de las tres respuestas que
- * ese interfaz admite, y eso es todo lo que necesita para decidir. Cuando el transporte era el
- * `SmsManager`, «transitorio» significaba sin cobertura o radio apagada; ahora significa otra
- * cosa y esta clase no se enteró.
+ * **No sabe por qué medio sale.** Pide a [Transportes] el del canal del reenvío y depende solo de
+ * las tres respuestas que admite `EnviadorDeMensajes`, y eso es todo lo que necesita para
+ * decidir. «Transitorio» significa sin cobertura para un SMS, un `retry_after` para Telegram o un
+ * `5xx` para la API, y esta clase no distingue ninguno de esos casos: no le hace falta.
+ *
+ * Un canal sin transporte en esta compilación se cierra como fallo permanente con un motivo que
+ * lo dice. Reintentarlo no cambiaría nada: el transporte no va a aparecer esperando.
  *
  * ## Estrategia de reintentos
  * | Resultado                            | Acción WorkManager | Estado en BD                |
@@ -55,7 +58,7 @@ class DispatchWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val reenvioRepository: ReenvioRepository,
     private val logRepository: LogRepository,
-    private val enviador: EnviadorDeMensajes,
+    private val transportes: Transportes,
     private val configDataStore: ConfigDataStore
 ) : CoroutineWorker(context, params) {
 
@@ -96,21 +99,22 @@ class DispatchWorker @AssistedInject constructor(
 
         Timber.d(
             "DispatchWorker[$reenvioId]: intento ${runAttemptCount + 1}/${config.maxReintentos} " +
-                "→ ${reenvio.destino}"
+                "→ ${reenvio.canal.etiqueta} ${reenvio.destino}"
         )
 
-        val resultado = enviador.enviar(
+        val enviador = transportes.de(reenvio.canal)
+        val resultado = enviador?.enviar(
             destino = reenvio.destino,
             texto = reenvio.textoFinal,
             timeoutSegundos = config.timeoutEnvioSegundos
-        )
+        ) ?: ResultadoEnvio.ErrorPermanente(transportes.motivoSinTransporte(reenvio.canal))
 
         return when (resultado) {
             is ResultadoEnvio.Enviado -> {
                 reenvioRepository.marcarComoEnviado(reenvioId, Instant.now())
                 registrar(
                     LogTipo.SMS_REENVIADO, reenvio.smsId, reenvioId, reenvio.destino,
-                    "Reenviado a ${reenvio.destino}"
+                    "Reenviado por ${reenvio.canal.etiqueta} a ${reenvio.destino}"
                 )
                 Timber.i("DispatchWorker[$reenvioId]: reenviado a ${reenvio.destino}")
                 Result.success()
@@ -143,10 +147,9 @@ class DispatchWorker @AssistedInject constructor(
      * esto, una espera pedida por el servicio se ignoraría y el reintento llegaría otra vez
      * pronto, se comería otro rechazo y gastaría un intento de los diez.
      *
-     * Se escribió para el `retry_after` de Telegram. **La Cloud API no manda ninguna espera**,
-     * así que hoy esto no se ejecuta nunca: `esperaSegundos` llega siempre null y la función
-     * retorna en la primera línea. Se queda porque el contrato de `ResultadoEnvio` admite la
-     * espera, y el día que un medio la pida otra vez el worker ya sabe respetarla.
+     * Se escribió para el `retry_after` de Telegram, que es el único canal que manda una espera.
+     * Con WhatsApp, el SMS y la API `esperaSegundos` llega null y la función retorna en la
+     * primera línea.
      *
      * La espera se **limita** a [MAX_ESPERA_SEGUNDOS]: un worker tiene unos diez minutos de
      * ejecución antes de que el sistema lo pare, y bloquear uno durante un cuarto de hora para

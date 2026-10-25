@@ -26,6 +26,9 @@ import kotlinx.coroutines.launch
 /**
  * Alta y edición de una regla.
  *
+ * El **canal** va antes que el destino porque decide qué es un destino válido: al cambiarlo
+ * cambian la ayuda, el teclado, la validación y el límite de caracteres de la previsualización.
+ *
  * Las expresiones regulares se validan **mientras se teclean**: una regla con un patrón roto se
  * descarta en silencio durante la evaluación, así que el único momento razonable para avisar es
  * aquí. La previsualización de la plantilla cumple la misma función con el texto de salida, e
@@ -77,13 +80,62 @@ class EditarReglaFragment : Fragment() {
 
         viewModel.cargar(args.reglaId)
 
+        configurarSelectorDeCanal()
         configurarValidacionEnVivo()
         configurarBotonGuardar()
         observarRegla()
+        observarCanal()
         observarErrores()
         observarGuardado()
 
         actualizarPrevisualizacion()
+    }
+
+    // ── Canal ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Habilita los chips de los canales que esta compilación entrega y avisa al ViewModel de cada
+     * cambio. Los demás quedan a la vista pero deshabilitados: es más honrado que esconderlos, y
+     * una regla importada con uno de esos canales se sigue pudiendo abrir y leer.
+     */
+    private fun configurarSelectorDeCanal() {
+        val disponibles = viewModel.canalesDisponibles
+        PresentacionDeCanal.entries.forEach { presentacion ->
+            binding.chipGroupCanal.findViewById<View>(presentacion.chip).isEnabled =
+                presentacion.canal in disponibles
+        }
+        binding.chipGroupCanal.setOnCheckedStateChangeListener { _, ids ->
+            ids.firstOrNull()
+                ?.let { PresentacionDeCanal.deChip(it) }
+                ?.let { viewModel.elegirCanal(it.canal) }
+        }
+    }
+
+    /** Repinta lo que depende del canal: el chip, la explicación, el destino y la previsualización. */
+    private fun observarCanal() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.canal.collect { canal ->
+                        val presentacion = PresentacionDeCanal.de(canal)
+                        if (binding.chipGroupCanal.checkedChipId != presentacion.chip) {
+                            binding.chipGroupCanal.check(presentacion.chip)
+                        }
+                        binding.textViewCanalAyuda.text = getString(
+                            if (canal in viewModel.canalesDisponibles) presentacion.ayudaCanal
+                            else R.string.canal_no_disponible
+                        )
+                        binding.tilDestino.hint = getString(presentacion.etiquetaDestino)
+                        binding.tilDestino.helperText = getString(presentacion.ayudaDestino)
+                        binding.tilDestino.error = null
+                        binding.editTextDestino.inputType = presentacion.tipoTeclado
+                    }
+                }
+                launch {
+                    viewModel.limiteCaracteres.collect { actualizarPrevisualizacion() }
+                }
+            }
+        }
     }
 
     // ── Validación en vivo ────────────────────────────────────────────────────
@@ -205,6 +257,7 @@ class EditarReglaFragment : Fragment() {
         regexMensaje = binding.editTextRegexMensaje.text?.toString()?.trim()
             ?.takeIf { it.isNotEmpty() },
         ignorarMayusculas = binding.switchIgnorarMayusculas.isChecked,
+        canal = viewModel.canal.value,
         destino = binding.editTextDestino.text?.toString()?.trim().orEmpty(),
         plantilla = binding.editTextPlantilla.text?.toString()?.trim().orEmpty(),
         activa = binding.switchActiva.isChecked,

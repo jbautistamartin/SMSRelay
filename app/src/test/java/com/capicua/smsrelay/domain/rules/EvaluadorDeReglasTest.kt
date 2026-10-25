@@ -6,6 +6,7 @@
 package com.capicua.smsrelay.domain.rules
 
 import com.capicua.smsrelay.domain.model.Regla
+import com.capicua.smsrelay.domain.transport.Canal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -32,6 +33,7 @@ class EvaluadorDeReglasTest {
         regexTelefono: String? = null,
         regexMensaje: String? = null,
         ignorarMayusculas: Boolean = false,
+        canal: Canal = Canal.POR_DEFECTO,
         destino: String = "+34600000001",
         plantilla: String = Regla.PLANTILLA_POR_DEFECTO,
         activa: Boolean = true,
@@ -43,6 +45,7 @@ class EvaluadorDeReglasTest {
         regexTelefono = regexTelefono,
         regexMensaje = regexMensaje,
         ignorarMayusculas = ignorarMayusculas,
+        canal = canal,
         destino = destino,
         plantilla = plantilla,
         activa = activa,
@@ -540,6 +543,33 @@ class EvaluadorDeReglasTest {
             .coincidencias.single()
 
         assertEquals("123456789", coincidencia.destino)
+    }
+
+    // ── Canal ─────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `cada coincidencia lleva el canal de su regla`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, canal = Canal.TELEGRAM, destino = "-1001234567890", continuar = true),
+                regla(id = 2, orden = 1, canal = Canal.WHATSAPP, destino = "+34600000002")
+            )
+        )
+
+        assertEquals(
+            listOf(Canal.TELEGRAM, Canal.WHATSAPP),
+            resultado.coincidencias.map { it.canal }
+        )
+    }
+
+    @Test
+    fun `el canal no interviene en si una regla casa`() {
+        val porCanal = Canal.entries.map { canal ->
+            evaluar(listOf(regla(canal = canal, regexMensaje = "codigo")), mensaje = "tu codigo")
+                .hayCoincidencias
+        }
+
+        assertTrue(porCanal.all { it })
     }
 
     // ── resolverPlantilla como API pública ────────────────────────────────────

@@ -10,17 +10,14 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.data.whatsapp.DestinoDeWhatsApp
-import com.capicua.smsrelay.data.whatsapp.MapeoDeRespuestas
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
 import com.capicua.smsrelay.domain.rules.ResultadoEvaluacion
-import com.capicua.smsrelay.domain.transport.EnviadorDeMensajes
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.transport.ResultadoEnvio
+import com.capicua.smsrelay.domain.transport.Transportes
 import com.capicua.smsrelay.util.toDisplayString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -32,8 +29,15 @@ import javax.inject.Inject
 data class CoincidenciaProbada(
     val posicion: Int,
     val nombreRegla: String,
+    val canal: Canal,
     val destino: String,
-    val textoFinal: String
+    val textoFinal: String,
+    /**
+     * Longitud máxima que admite el transporte de [canal] con su configuración actual, o null si
+     * esta compilación no entrega por él. Va en cada coincidencia y no una vez para toda la
+     * prueba porque cada regla puede salir por un canal distinto, y cada canal tiene su límite.
+     */
+    val limiteCaracteres: Int?
 )
 
 /** Resultado de probar las reglas con un SMS de ejemplo, listo para pintar. */
@@ -49,7 +53,7 @@ data class PruebaReglas(
 sealed interface EstadoEnvioPrueba {
     data object Inactivo : EstadoEnvioPrueba
     data object Enviando : EstadoEnvioPrueba
-    data class Correcto(val destino: String) : EstadoEnvioPrueba
+    data class Correcto(val canal: Canal, val destino: String) : EstadoEnvioPrueba
     data class Fallido(val motivo: String) : EstadoEnvioPrueba
 }
 
@@ -64,28 +68,9 @@ sealed interface EstadoEnvioPrueba {
 class ProbarReglasViewModel @Inject constructor(
     private val reglaRepository: ReglaRepository,
     private val evaluador: EvaluadorDeReglas,
-    private val enviador: EnviadorDeMensajes,
+    private val transportes: Transportes,
     private val configDataStore: ConfigDataStore
 ) : ViewModel() {
-
-    /**
-     * Longitud máxima que admite el transporte con la configuración actual, para mostrarla
-     * junto a cada texto final.
-     *
-     * Es un [StateFlow] y no un `Int` porque el límite dejó de ser una constante del medio: la
-     * Cloud API admite 4.096 caracteres en un mensaje de texto libre y 1.024 renderizados en uno
-     * de plantilla, así que el que aplica depende de cómo esté configurado el transporte y hay
-     * que leerlo suspendiendo.
-     *
-     * Arranca en el límite del texto libre, que es el modo por defecto, para que el contador no
-     * enseñe un cero en el primer repintado.
-     */
-    val limiteCaracteres: StateFlow<Int> = flow { emit(enviador.limiteCaracteres()) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Eagerly,
-            initialValue = MapeoDeRespuestas.LIMITE_CARACTERES
-        )
 
     private val _prueba = MutableStateFlow<PruebaReglas?>(null)
     val prueba: StateFlow<PruebaReglas?> = _prueba.asStateFlow()
@@ -112,8 +97,10 @@ class ProbarReglasViewModel @Inject constructor(
                     CoincidenciaProbada(
                         posicion = indice + 1,
                         nombreRegla = coincidencia.nombreRegla,
+                        canal = coincidencia.canal,
                         destino = coincidencia.destino,
-                        textoFinal = coincidencia.textoFinal
+                        textoFinal = coincidencia.textoFinal,
+                        limiteCaracteres = transportes.de(coincidencia.canal)?.limiteCaracteres()
                     )
                 },
                 avisos = construirAvisos(resultado)
@@ -137,15 +124,15 @@ class ProbarReglasViewModel @Inject constructor(
             _envio.value = EstadoEnvioPrueba.Enviando
             val config = configDataStore.config.first()
 
-            val resultado = enviador.enviar(
+            val resultado = transportes.de(primera.canal)?.enviar(
                 destino = primera.destino,
                 texto = primera.textoFinal,
                 timeoutSegundos = config.timeoutEnvioSegundos
-            )
+            ) ?: ResultadoEnvio.ErrorPermanente(transportes.motivoSinTransporte(primera.canal))
 
             _envio.value = when (resultado) {
                 is ResultadoEnvio.Enviado ->
-                    EstadoEnvioPrueba.Correcto(primera.destino)
+                    EstadoEnvioPrueba.Correcto(primera.canal, primera.destino)
                 is ResultadoEnvio.ErrorTransitorio ->
                     EstadoEnvioPrueba.Fallido(resultado.motivo)
                 is ResultadoEnvio.ErrorPermanente ->
@@ -175,6 +162,17 @@ class ProbarReglasViewModel @Inject constructor(
             // Un destino mal escrito no lo detecta la evaluación —casa igual— y el reenvío
             // solo falla cuando llega un SMS de verdad. Aquí hay un momento mejor para decirlo.
             resultado.coincidencias
+                .filter { transportes.de(it.canal) == null }
+                .forEach { coincidencia ->
+                    add(
+                        "La regla «${coincidencia.nombreRegla}» sale por " +
+                            "${coincidencia.canal.etiqueta}, y " +
+                            transportes.motivoSinTransporte(coincidencia.canal) +
+                            ": ese reenvío fallará"
+                    )
+                }
+            resultado.coincidencias
+                .filter { it.canal == Canal.WHATSAPP }
                 .filterNot { DestinoDeWhatsApp.pareceValido(it.destino) }
                 .forEach { coincidencia ->
                     add(
@@ -188,8 +186,12 @@ class ProbarReglasViewModel @Inject constructor(
                     )
                 }
 
-            enviador.motivoNoDisponible()?.let { motivo ->
-                add("La prueba real no funcionará: $motivo")
+            // La prueba real manda solo la primera coincidencia, así que el aviso que importa es
+            // el de su canal: que otro canal no esté listo no impide la prueba.
+            resultado.coincidencias.firstOrNull()?.let { primera ->
+                transportes.de(primera.canal)?.motivoNoDisponible()?.let { motivo ->
+                    add("La prueba real por ${primera.canal.etiqueta} no funcionará: $motivo")
+                }
             }
         }
 }

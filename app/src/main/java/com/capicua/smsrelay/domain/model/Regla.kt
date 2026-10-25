@@ -5,10 +5,12 @@
 
 package com.capicua.smsrelay.domain.model
 
+import com.capicua.smsrelay.domain.transport.Canal
+
 /**
  * Regla de reenvío configurada por el operador.
  *
- * Una regla decide **a qué número** se reenvía un SMS entrante y **con qué texto**.
+ * Una regla decide **por dónde** y **a quién** se reenvía un SMS entrante, y **con qué texto**.
  * Las reglas se evalúan en orden ascendente de [orden]: gana la primera que case, salvo
  * que lleve [continuar] activado, en cuyo caso la evaluación sigue con las siguientes.
  *
@@ -64,20 +66,25 @@ data class Regla(
     val ignorarMayusculas: Boolean = true,
 
     /**
-     * Número de WhatsApp que recibe el mensaje si la regla casa.
+     * Por dónde sale el reenvío. Decide qué es un [destino] válido, y por eso el editor lo pide
+     * antes que el destino.
+     */
+    val canal: Canal = Canal.POR_DEFECTO,
+
+    /**
+     * A quién se entrega si la regla casa, **en el idioma de [canal]**: un número E.164 para
+     * WhatsApp, un `chat_id` o un `@canal` para Telegram, un teléfono para el SMS, una plantilla
+     * de URL para la API. Lo valida el editor según el canal.
      *
-     * En formato internacional, con `+` y prefijo de país: ver `DestinoDeWhatsApp`. Siempre una
-     * persona, nunca un grupo.
+     * **No admite marcadores**, y eso es una propiedad de seguridad: **el cuerpo de un SMS de un
+     * tercero no puede decidir nunca a dónde se manda nada**. Permitirlo convertiría un SMS
+     * cualquiera en un selector de destinatario —en WhatsApp, sobre una cuenta de empresa que
+     * factura por mensaje—.
      *
-     * **No admite marcadores**, y eso es una propiedad de seguridad que sobrevivió al cambio de
-     * medio aunque su argumento original ya no valga. Cuando el destino era un teléfono y la
-     * salida era un SMS, se podía escribir `{telefono}` para contestar al remitente; con un chat
-     * de Telegram eso dejó de tener sentido porque eran identidades sin relación. Ahora el
-     * destino vuelve a ser un teléfono y el marcador *podría* resolverse otra vez.
-     *
-     * No se hace, y a propósito: **el cuerpo de un SMS no puede influir nunca en a dónde se
-     * manda nada**. Permitirlo convertiría un SMS de un tercero en un selector de destinatario
-     * sobre una cuenta de empresa que factura por mensaje.
+     * Hay dos excepciones, acotadas a su canal y explicadas donde se resuelven: `{telefono}` en
+     * el canal SMS, que contesta a quien escribió y no puede apuntar a nadie más, y los
+     * marcadores de la URL de la API, que rellenan huecos *después* del servidor y no pueden
+     * elegir a qué servidor se llama.
      */
     val destino: String,
 

@@ -31,19 +31,17 @@ import javax.inject.Singleton
  * Las expresiones distinguen mayúsculas salvo que la regla active [Regla.ignorarMayusculas],
  * que aplica [RegexOption.IGNORE_CASE] a las dos a la vez.
  *
- * ## Destino
- * [Regla.destino] es un chat de Telegram —un `chat_id` o un `@usuario` de canal— y se usa **tal
- * cual**, sin resolver marcadores.
+ * ## Canal y destino
+ * La regla dice por qué [Regla.canal] sale el reenvío y a qué [Regla.destino], y el evaluador
+ * los copia **tal cual** en la [Coincidencia]: la evaluación no depende del canal, y el destino
+ * no se resuelve aquí. Cada canal tiene su propia forma de destino —un E.164, un `chat_id`, un
+ * teléfono, una URL— y validarla es cosa del editor de reglas y de la importación, que saben de
+ * canales; el evaluador no.
  *
- * Esto cambió al cambiar el medio. Cuando el destino era un número de teléfono, se admitía
- * `{telefono}` para devolver el mensaje al propio remitente; con Telegram no hay forma de
- * convertir el remitente de un SMS en un chat, porque son dos identidades sin relación. El
- * marcador se fue de aquí, pero **no de la plantilla**, donde ahora importa más que antes: todo
- * llega del mismo bot, así que sin `{telefono}` en el texto se pierde el contexto que el SMS
- * daba gratis.
- *
- * Que ningún marcador se resuelva en el destino tiene además una consecuencia que conviene no
- * perder: **el cuerpo del SMS no puede influir en a dónde se envía nada**.
+ * Que aquí no se resuelva ningún marcador en el destino tiene una consecuencia que conviene no
+ * perder: **el cuerpo del SMS no puede influir en a dónde se envía nada**. Las dos excepciones
+ * que existen —`{telefono}` en el canal SMS y los huecos de la URL en el canal API— se resuelven
+ * más tarde, en su transporte, y cada una explica allí por qué no rompe esta propiedad.
  */
 @Singleton
 class EvaluadorDeReglas @Inject constructor() {
@@ -96,6 +94,7 @@ class EvaluadorDeReglas @Inject constructor() {
             coincidencias += Coincidencia(
                 reglaId = regla.id,
                 nombreRegla = regla.nombre,
+                canal = regla.canal,
                 destino = regla.destino.trim(),
                 textoFinal = resolverPlantilla(regla.plantilla, telefono, mensaje, fecha)
             )
