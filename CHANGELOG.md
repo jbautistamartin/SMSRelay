@@ -12,6 +12,29 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ---
 
+## [No publicado]
+
+### Cambiado
+
+- **Toolchain al día.** AGP 8.5.2 → 9.4.1, Kotlin 2.0.21 → 2.4.21, KSP 2.3.12, Gradle 9.3.0 →
+  9.8.2, Hilt 2.60.1, Room 2.8.5, WorkManager 2.12.0 y el resto de dependencias a su última
+  versión estable. `compileSdk` pasa a 37; `targetSdk` sigue en 35, así que el
+  comportamiento en el teléfono no cambia. Para compilar hace falta **Temurin 25** y la
+  **plataforma 37** del SDK. Se hizo a la vez en las cuatro aplicaciones de la familia.
+
+### Corregido
+
+- **Reglas de R8 con el paquete de SMStoTelegram.** `proguard-rules.pro` venía copiado tal cual y
+  las reglas de los enum que se guardan como texto y de los Fragments apuntaban a
+  `com.capicua.smstotelegram`, así que en esta aplicación no protegían nada. Ahora apuntan a
+  `com.capicua.smstowhats`.
+
+### Documentación
+
+- **`MASTERPLAN-GATEWAY.md`**, escrito a posteriori: el origen de SMSGateway y de la tubería que
+  heredaron las otras tres. Lo llevan las cuatro, para que todas tengan la misma estructura de
+  planes.
+
 ## [1.0.0] - 2026-10-18
 
 **La cadena funciona de punta a punta.** Un SMS recibido en la SIM del teléfono dedicado llega a
