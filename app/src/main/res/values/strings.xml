@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SMStoWhats</string>
+    <string name="app_name">SMSRelay</string>
 
     <!-- Dashboard -->
     <string name="dashboard_title">SMS Recibidos</string>
@@ -27,7 +27,7 @@
     <!-- Logs -->
     <string name="logs_title">Logs del sistema</string>
     <string name="logs_copiado">Entrada copiada al portapapeles</string>
-    <string name="logs_copiado_etiqueta">Registro de SMStoWhats</string>
+    <string name="logs_copiado_etiqueta">Registro de SMSRelay</string>
     <string name="logs_no_entries">Sin entradas de log</string>
     <string name="logs_limpiar">Limpiar</string>
     <string name="logs_filtro_reglas">Reglas</string>
@@ -92,7 +92,7 @@
     <string name="settings_autoinicio">Inicio automático</string>
     <string name="settings_autoinicio_detalle">Xiaomi, Huawei, Oppo y Vivo no dejan arrancar a una aplicación tras reiniciar el teléfono mientras no esté en su lista de inicio automático, que viene vacía. Sin ese permiso, después de cada reinicio no se recibe nada hasta abrir la aplicación a mano. No se puede conceder desde aquí ni comprobar si ya está: este botón abre la pantalla del sistema donde se activa.</string>
     <string name="settings_autoinicio_abrir">Abrir inicio automático</string>
-    <string name="settings_autoinicio_sin_pantalla">Este teléfono no permite abrir esa pantalla desde la app. Búscala en Ajustes → Aplicaciones → SMStoWhats → Inicio automático.</string>
+    <string name="settings_autoinicio_sin_pantalla">Este teléfono no permite abrir esa pantalla desde la app. Búscala en Ajustes → Aplicaciones → SMSRelay → Inicio automático.</string>
 
     <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
@@ -158,7 +158,7 @@
     <string name="about_actualizacion_apagada">El aviso automático está apagado. Puedes buscar a mano cuando quieras.</string>
     <string name="about_actualizacion_fallo">No se pudo comprobar: %1$s</string>
     <string name="about_actualizacion_fallo_descarga">No se pudo descargar: %1$s</string>
-    <string name="about_actualizacion_autorizar">Android necesita que autorices a SMStoWhats a instalar aplicaciones. Te llevo a esa pantalla; después vuelve y pulsa otra vez.</string>
+    <string name="about_actualizacion_autorizar">Android necesita que autorices a SMSRelay a instalar aplicaciones. Te llevo a esa pantalla; después vuelve y pulsa otra vez.</string>
     <string name="about_proyecto_titulo">Código abierto</string>
     <string name="about_proyecto_detalle">Todo el código de la aplicación está publicado en GitHub, con el registro de cambios, las versiones descargables y el sitio donde dar parte de un fallo.</string>
     <string name="about_proyecto_boton">Ver el proyecto en GitHub</string>
@@ -243,6 +243,6 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
 
     <!-- Permissions -->
     <string name="permiso_sms_titulo">Permiso obligatorio</string>
-    <string name="permiso_sms_mensaje">Esta aplicación necesita permiso para recibir SMS. Sin él no entra ningún mensaje y no hay nada que reenviar. Concédelo en Ajustes → Aplicaciones → SMStoWhats → Permisos.</string>
+    <string name="permiso_sms_mensaje">Esta aplicación necesita permiso para recibir SMS. Sin él no entra ningún mensaje y no hay nada que reenviar. Concédelo en Ajustes → Aplicaciones → SMSRelay → Permisos.</string>
     <string name="permiso_entendido">Entendido</string>
 </resources>

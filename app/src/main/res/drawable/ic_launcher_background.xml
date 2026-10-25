@@ -2,32 +2,26 @@
 <!--
     Fondo del icono adaptativo.
 
-    Verde, el color primario de la aplicación (`md_theme_primary`). La regla viene de antes y se
+    Naranja, el color primario de la aplicación (`md_theme_primary`). La regla viene de antes y se
     mantiene: **el fondo del icono es el primario del tema**, no un color elegido aparte. Si
     algún día cambia uno, tienen que cambiar los dos.
 
-    El color es lo que identifica a esta aplicación de un vistazo, y por eso ha ido cambiando.
-    SMSGateway era azul #1565C0 —hoy es violeta, porque entrega a una API y no a una aplicación
-    de mensajería—; SMStoSMS pasó a verde azulado porque las dos podían convivir en
-    el mismo teléfono; SMStoTelegram volvió a la familia azul —la de Telegram— porque es la que
-    dice a dónde entrega.
+    El color es lo que identifica a cada aplicación de la casa de un vistazo, porque pueden
+    convivir en el mismo teléfono y a 48 dp se distingue el color antes que el dibujo. Los cuatro
+    que ya había están todos en la mitad fría del círculo: violeta SMSGateway (~262°), azul
+    SMStoTelegram (~207°), turquesa SMStoSMS (~186°) y verde SMStoWhats (~140°). SMSRelay entrega
+    por los cuatro medios, así que no le corresponde el color de ninguno: le corresponde el
+    único hueco que queda lejos de todos, el **naranja** (~23°).
 
-    SMStoWhats **deja ese azul** y pasa al verde. Heredarlo de SMStoTelegram la dejaba con el
-    icono exacto de aquella —mismo fondo, mismo dibujo, misma capa monocroma—, y a 48 dp el
-    usuario distingue el color antes que el dibujo, así que dos azules del mismo autor se leen
-    como la misma aplicación. El argumento que antes descartaba
-    el verde —que se confundiría con el verde azulado de SMStoSMS— se resuelve eligiendo un verde
-    lejos del azul: el teal de SMStoSMS está en el tono ~186°, casi cian, y este verde en ~140°,
-    que es separación de sobra para leerlos distintos de un vistazo. Y de paso el color vuelve a
-    decir a dónde entrega.
-
-    **No es el verde de marca de WhatsApp** (#25D366, claro y saturado). Es el tono 40 del verde
-    de Material 3, el que corresponde a un primario en esta paleta: hace falta una familia de
-    color propia, no reproducir una identidad ajena.
+    Es un naranja rojizo y no un ámbar a propósito. El ámbar (~40°) ya significa «todavía no» en
+    los colores de estado del registro (`status_pending`, `log_sin_regla`), y un primario de ese
+    tono haría que la marca y el aviso se confundieran. Tampoco es rojo: el rojo es el error del
+    tema y no puede ser el primario de nadie.
 
     El degradado es sutil a propósito. A 48 dp no se percibe como degradado, solo evita que el
     icono se vea plano junto a los demás. Los dos extremos se derivan del primario con el mismo
-    reparto que tenían el teal y el azul: uno aclarado y otro oscurecido alrededor de él.
+    reparto que tenían el verde, el azul y el turquesa: uno aclarado y otro oscurecido alrededor
+    de él.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
@@ -44,8 +38,8 @@
                 android:startY="0"
                 android:endX="108"
                 android:endY="108"
-                android:startColor="#008A23"
-                android:endColor="#004612" />
+                android:startColor="#CA4F00"
+                android:endColor="#682800" />
         </aapt:attr>
     </path>
 

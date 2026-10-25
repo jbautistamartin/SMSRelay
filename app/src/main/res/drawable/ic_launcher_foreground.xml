@@ -1,28 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Primer plano del icono adaptativo: un bocadillo de mensaje con un avión de papel calado.
+    Primer plano del icono adaptativo: un bocadillo de mensaje con un punto y tres puntas caladas.
 
-    Dice lo que hace la aplicación: entra un mensaje y sale hacia otra parte. El bocadillo se
-    hereda de SMStoSMS porque la **entrada** no ha cambiado —sigue siendo un SMS— y lo que
-    cambia es por dónde sale, así que lo que cambia es lo de dentro: donde aquella tenía una
-    flecha de reenvío, esta tiene el avión.
+    Dice lo que hace la aplicación: entra un mensaje y sale hacia **varios** sitios. El bocadillo
+    se hereda de SMStoSMS, SMStoTelegram y SMStoWhats porque la entrada no ha cambiado —sigue
+    siendo un SMS—, y lo que cambia es lo de dentro: donde aquellas tenían una flecha de reenvío
+    o un avión de papel, que dicen «sale hacia allí», esta tiene un origen y tres salidas, que
+    dice «sale hacia donde diga cada regla».
 
-    **No es el logotipo de nadie.** Es un avión de papel, que es el símbolo universal de
-    «enviar». Se dibujó cuando la salida era Telegram y se queda al cambiar a WhatsApp, porque
-    nunca dijo «Telegram»: dice «sale de aquí». Reproducir el teléfono verde de WhatsApp sería
-    usar una marca ajena, y además haría el icono indistinguible del de WhatsApp en el lanzador.
+    **No es el logotipo de nadie**, y tampoco mezcla los de los medios por los que entrega: ni el
+    avión de Telegram ni el teléfono de WhatsApp. Usar marcas ajenas sería un problema por sí
+    mismo, y además el icono se confundiría con el de esas aplicaciones en el lanzador.
 
-    El avión es un **hueco**, no una figura encima: ambas subrutas van en el mismo `pathData`
-    con `fillType="evenOdd"`, de modo que por el avión se ve el fondo. Hacerlo así evita tener
-    que repetir el color del fondo aquí, que con un degradado no encajaría.
+    Las cuatro piezas son **huecos**, no figuras encima: todas las subrutas van en el mismo
+    `pathData` con `fillType="evenOdd"`, de modo que por ellas se ve el fondo. Hacerlo así evita
+    repetir aquí el color del fondo, que con un degradado no encajaría.
 
-    La silueta del avión es un cuadrilátero **simple**, sin autointersecciones, y eso no es
-    casual: el glifo habitual de «enviar» se dibuja con una ruta que se cruza consigo misma, y
-    bajo `evenOdd` esos cruces se cuentan dos veces y vuelven a rellenarse. Cuatro vértices
-    —punta, dos alas y la muesca de la cola— dan la misma lectura sin ese riesgo.
+    Tres reglas que este dibujo cumple y que cualquier cambio tiene que seguir cumpliendo:
 
-    Todo el dibujo cabe en los 72 dp centrales del lienzo de 108, que es la zona que ninguna
-    máscara del lanzador recorta.
+    - **Cada subruta es un polígono simple y ninguna toca a otra.** Bajo `evenOdd` un cruce se
+      cuenta dos veces y vuelve a rellenarse. Por eso el reparto son tres puntas apiladas y no un
+      abanico que nazca del punto: un abanico así obliga a que las puntas se acerquen en el
+      origen, y a 48 dp se funden.
+    - **Todo cae dentro del bocadillo**, con margen. Un hueco que se saliera del bocadillo no
+      sería un hueco: bajo `evenOdd`, fuera de la figura una subruta sola se rellena.
+    - **Todo cabe en los 72 dp centrales** del lienzo de 108, que es la zona que ninguna máscara
+      del lanzador recorta.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -46,8 +49,10 @@
             android:fillColor="#FFFFFF"
             android:fillType="evenOdd"
             android:pathData="M38,26 L70,26 A12,12 0 0 1 82,38 L82,58 A12,12 0 0 1 70,70 L52,70 L38,84 L38,70 A12,12 0 0 1 26,58 L26,38 A12,12 0 0 1 38,26 Z
-                              M38,36 L72,48 L38,60 L47,48 Z" />
+                              M38,42 A6,6 0 1 0 38,54 A6,6 0 1 0 38,42 Z
+                              M50,28 L70,33 L50,38 Z
+                              M50,43 L70,48 L50,53 Z
+                              M50,58 L70,63 L50,68 Z" />
     </group>
-
 
 </vector>

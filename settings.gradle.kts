@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SMStoWhats"
+rootProject.name = "SMSRelay"
 include(":app")
