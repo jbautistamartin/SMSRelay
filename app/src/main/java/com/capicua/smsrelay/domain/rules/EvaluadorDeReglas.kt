@@ -6,6 +6,7 @@
 package com.capicua.smsrelay.domain.rules
 
 import com.capicua.smsrelay.domain.model.Regla
+import com.capicua.smsrelay.domain.transport.Canal
 import java.util.regex.PatternSyntaxException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,15 +34,22 @@ import javax.inject.Singleton
  *
  * ## Canal y destino
  * La regla dice por qué [Regla.canal] sale el reenvío y a qué [Regla.destino], y el evaluador
- * los copia **tal cual** en la [Coincidencia]: la evaluación no depende del canal, y el destino
- * no se resuelve aquí. Cada canal tiene su propia forma de destino —un E.164, un `chat_id`, un
- * teléfono, una URL— y validarla es cosa del editor de reglas y de la importación, que saben de
- * canales; el evaluador no.
+ * los copia en la [Coincidencia]: la evaluación no depende del canal. Cada canal tiene su
+ * propia forma de destino —un E.164, un `chat_id`, un teléfono, una URL— y validarla es cosa
+ * del editor de reglas y de la importación, que saben de canales; el evaluador no.
  *
- * Que aquí no se resuelva ningún marcador en el destino tiene una consecuencia que conviene no
- * perder: **el cuerpo del SMS no puede influir en a dónde se envía nada**. Las dos excepciones
- * que existen —`{telefono}` en el canal SMS y los huecos de la URL en el canal API— se resuelven
- * más tarde, en su transporte, y cada una explica allí por qué no rompe esta propiedad.
+ * En el destino no se resuelve ningún marcador **salvo en dos canales, y cada uno el suyo**, y
+ * se resuelven aquí y no en el transporte porque el transporte solo recibe el destino y el
+ * texto: no sabe quién mandó el SMS.
+ *
+ * - **SMS:** `{telefono}` como destino es contestar a quien escribió, la función de SMStoSMS.
+ *   La coincidencia lo marca con [Coincidencia.respondeAlRemitente] para que la guarda
+ *   antibucle sepa que esa circularidad es intencionada.
+ * - **API:** los huecos de la URL, en la fase 5 del masterplan.
+ *
+ * Ninguno de los dos deja que **el cuerpo del SMS** influya en a dónde se envía nada, que es la
+ * propiedad que importa: `{mensaje}` no se sustituye nunca en el destino de un SMS, y en la URL
+ * solo puede rellenar huecos después del servidor.
  */
 @Singleton
 class EvaluadorDeReglas @Inject constructor() {
@@ -91,12 +99,14 @@ class EvaluadorDeReglas @Inject constructor() {
             if (!patronTelefono.casaCon(telefono)) continue
             if (!patronMensaje.casaCon(mensaje)) continue
 
+            val contesta = regla.canal == Canal.SMS && respondeAlRemitente(regla.destino)
             coincidencias += Coincidencia(
                 reglaId = regla.id,
                 nombreRegla = regla.nombre,
                 canal = regla.canal,
-                destino = regla.destino.trim(),
-                textoFinal = resolverPlantilla(regla.plantilla, telefono, mensaje, fecha)
+                destino = if (contesta) resolverDestino(regla.destino, telefono) else regla.destino.trim(),
+                textoFinal = resolverPlantilla(regla.plantilla, telefono, mensaje, fecha),
+                respondeAlRemitente = contesta
             )
 
             if (!regla.continuar) break
@@ -104,6 +114,25 @@ class EvaluadorDeReglas @Inject constructor() {
 
         return ResultadoEvaluacion(coincidencias, invalidas)
     }
+
+    /**
+     * Resuelve el destino de una regla del canal SMS que contesta al remitente.
+     *
+     * Solo se sustituye `{telefono}`: `{mensaje}` y `{fecha}` no tienen sentido como destino y
+     * dejarlos fuera evita que el cuerpo del SMS —contenido ajeno— pueda influir en a dónde se
+     * envía nada.
+     */
+    fun resolverDestino(destino: String, telefono: String): String =
+        destino.replace(MARCADOR_TELEFONO, telefono).trim()
+
+    /**
+     * true si [destino] pide contestar a quien escribió.
+     *
+     * Solo significa eso con el canal SMS; quien llama decide si el canal lo admite. El editor
+     * lo usa para validar y el evaluador para marcar la coincidencia.
+     */
+    fun respondeAlRemitente(destino: String?): Boolean =
+        destino?.contains(MARCADOR_TELEFONO) == true
 
     /**
      * Sustituye los marcadores de [plantilla] por los valores del SMS.

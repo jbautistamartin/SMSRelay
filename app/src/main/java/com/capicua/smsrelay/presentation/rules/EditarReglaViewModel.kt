@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.domain.model.Regla
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
+import com.capicua.smsrelay.domain.rules.NormalizadorTelefono
 import com.capicua.smsrelay.data.telegram.DescubridorDeChats
 import com.capicua.smsrelay.data.telegram.DestinoDeTelegram
 import com.capicua.smsrelay.data.telegram.ResultadoDescubrimiento
@@ -203,7 +204,38 @@ class EditarReglaViewModel @Inject constructor(
 
         canal == Canal.TELEGRAM -> validarDestinoTelegram(destino)
 
+        canal == Canal.SMS -> validarDestinoSms(destino)
+
         else -> null
+    }
+
+    /**
+     * Un número al que se pueda mandar un SMS, o `{telefono}` para contestar a quien escribió.
+     *
+     * Se valida poco a propósito, como en SMStoSMS: un número corto de servicio tiene cuatro
+     * dígitos y un número nacional va sin prefijo, y los dos son destinos legítimos de un SMS.
+     * Lo que sí se atrapa es un chat de Telegram, que con cuatro canales en el mismo campo es el
+     * error con más probabilidades.
+     */
+    private fun validarDestinoSms(destino: String): String? {
+        val limpio = destino.trim()
+        return when {
+            limpio == EvaluadorDeReglas.MARCADOR_TELEFONO -> null
+
+            evaluador.respondeAlRemitente(limpio) ->
+                "Para contestar al remitente, el destino tiene que ser {telefono} y nada más"
+
+            DestinoDeTelegram.esInequivocamenteChat(limpio) ->
+                "Esto parece un chat de Telegram, no un teléfono. Si es para Telegram, cambia el " +
+                    "canal de la regla"
+
+            NormalizadorTelefono.esDestinoEnviable(limpio) &&
+                limpio.all { it.isDigit() || it in " +-()" } -> null
+
+            else ->
+                "No parece un número de teléfono. Escríbelo tal como lo marcarías, o pon " +
+                    "{telefono} para contestar a quien mandó el SMS"
+        }
     }
 
     /**

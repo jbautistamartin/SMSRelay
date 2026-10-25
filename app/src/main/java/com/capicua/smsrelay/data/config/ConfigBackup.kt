@@ -158,11 +158,14 @@ class ConfigBackup @Inject constructor(
 
             fichero.configuracion?.let { importados ->
                 val actual = configDataStore.config.first()
-                // El token del bot no está todavía en el formato 5, así que se conserva siempre
-                // el de este teléfono. El formato 6 lo trae como credencial opcional.
+                // El formato 5 no tiene ni el token del bot, ni la SIM, ni la guarda antibucle,
+                // así que se conservan los de este teléfono. El formato 6 trae los que viajan.
                 configDataStore.guardar(
-                    importados.aDominio(actual.tokenAcceso, actual.idNumeroTelefono)
-                        .copy(tokenBot = actual.tokenBot)
+                    importados.aDominio(actual.tokenAcceso, actual.idNumeroTelefono).copy(
+                        tokenBot = actual.tokenBot,
+                        subscriptionId = actual.subscriptionId,
+                        protegerBucles = actual.protegerBucles
+                    )
                 )
             }
 

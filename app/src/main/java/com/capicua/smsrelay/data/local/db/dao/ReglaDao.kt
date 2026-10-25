@@ -73,6 +73,17 @@ interface ReglaDao {
     @Query("SELECT * FROM reglas WHERE id = :id")
     suspend fun obtenerPorId(id: Long): ReglaEntity?
 
+    /**
+     * Destinos de las reglas activas **del canal SMS**, sin repetir.
+     *
+     * Base de la guarda antibucle: un SMS cuyo remitente sea uno de estos números viene de un
+     * destino nuestro y no debe reenviarse otra vez. Solo el canal SMS, porque es el único cuyos
+     * destinos pueden contestar con un SMS que vuelva a entrar por aquí: un `chat_id` o una URL
+     * no son remitentes posibles, y un número de WhatsApp que escriba lo hace por WhatsApp.
+     */
+    @Query("SELECT DISTINCT destino FROM reglas WHERE activa = 1 AND canal = 'SMS'")
+    suspend fun obtenerDestinosSmsActivos(): List<String>
+
     /** Mayor `orden` en uso, o -1 si la tabla está vacía. Para añadir al final de la lista. */
     @Query("SELECT COALESCE(MAX(orden), -1) FROM reglas")
     suspend fun ordenMaximo(): Int

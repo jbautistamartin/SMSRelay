@@ -33,10 +33,19 @@ data class Coincidencia(
     /** Por dónde sale, copiado de la regla. */
     val canal: Canal,
 
-    /** Destino tal como lo escribió la regla, en el formato de [canal]. Aquí no se resuelve nada. */
+    /**
+     * Destino final, en el formato de [canal]: el de la regla tal cual, salvo en el canal SMS
+     * con `{telefono}`, donde es el remitente.
+     */
     val destino: String,
 
-    val textoFinal: String
+    val textoFinal: String,
+
+    /**
+     * true si la regla, del canal SMS, declaraba `{telefono}` como destino: el reenvío vuelve al
+     * remitente **a propósito**, y la guarda antibucle no debe bloquearlo.
+     */
+    val respondeAlRemitente: Boolean = false
 )
 
 /** Una regla descartada porque su expresión regular no compila. */

@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.data.telegram.DestinoDeTelegram
+import com.capicua.smsrelay.domain.rules.NormalizadorTelefono
 import com.capicua.smsrelay.data.whatsapp.DestinoDeWhatsApp
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
 import com.capicua.smsrelay.domain.rules.ResultadoEvaluacion
@@ -170,6 +171,18 @@ class ProbarReglasViewModel @Inject constructor(
                             "${coincidencia.canal.etiqueta}, y " +
                             transportes.motivoSinTransporte(coincidencia.canal) +
                             ": ese reenvío fallará"
+                    )
+                }
+            // Con `{telefono}` el destino ya viene resuelto al remitente de la prueba, así que esto
+            // también avisa de contestar a un remitente alfanumérico, que no recibe SMS.
+            resultado.coincidencias
+                .filter { it.canal == Canal.SMS }
+                .filterNot { NormalizadorTelefono.esDestinoEnviable(it.destino) }
+                .forEach { coincidencia ->
+                    add(
+                        "La regla «${coincidencia.nombreRegla}» enviaría un SMS a " +
+                            "«${coincidencia.destino}», que no es un número al que se pueda " +
+                            "enviar: ese reenvío se omitirá o fallará"
                     )
                 }
             resultado.coincidencias

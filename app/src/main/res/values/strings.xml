@@ -104,6 +104,18 @@
     <string name="settings_autoinicio_abrir">Abrir inicio automático</string>
     <string name="settings_autoinicio_sin_pantalla">Este teléfono no permite abrir esa pantalla desde la app. Búscala en Ajustes → Aplicaciones → SMSRelay → Inicio automático.</string>
 
+    <string name="settings_seccion_sms">SMS</string>
+    <string name="settings_sms_permiso_falta">Falta el permiso de enviar SMS. Sin él, las reglas del canal SMS fallan.</string>
+    <string name="settings_sms_permiso_ok">✓ Permiso de enviar SMS concedido</string>
+    <string name="settings_sms_permiso_pedir">Conceder el permiso</string>
+    <string name="settings_sms_permiso_denegado">Android no ha concedido el permiso. Si no vuelve a preguntar, concédelo a mano en la ficha de la aplicación, en Ajustes del sistema.</string>
+    <string name="settings_sim">Tarjeta con la que enviar</string>
+    <string name="settings_sim_ayuda">Solo afecta a los reenvíos del canal SMS. Con la predeterminada, decide el sistema.</string>
+    <string name="settings_sim_por_defecto">Predeterminada del sistema</string>
+    <string name="settings_sim_detectar">Elegir la SIM de envío</string>
+    <string name="settings_sim_detectar_ayuda">Para saber qué tarjetas hay puestas, Android pide el permiso de leer el estado del teléfono. Solo hace falta en un teléfono con dos SIM.</string>
+    <string name="settings_proteger_bucles">Evitar bucles de reenvío</string>
+    <string name="settings_proteger_bucles_detalle">Solo para el canal SMS: descarta los SMS cuyo remitente sea el destino de una regla SMS, y salta las reglas SMS que reenviarían al propio remitente. Desactívalo solo en pruebas controladas.</string>
     <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
     <string name="settings_max_reenvios_ayuda">Corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>
@@ -222,6 +234,8 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_chats_ninguno">Nadie ha escrito al bot todavía. Un bot no puede escribir primero: pídele a quien va a recibir los avisos que abra el bot en Telegram y le mande /start. Después vuelve aquí.</string>
     <string name="regla_chats_sin_token">Configura primero el token del bot en Ajustes</string>
     <string name="regla_chats_error">No se pudo preguntar al bot: %1$s</string>
+    <string name="regla_destino_remitente">Contestar al remitente ({telefono})</string>
+    <string name="regla_sms_permiso">Para entregar por SMS hace falta el permiso de enviar SMS. Sin él, las reglas de este canal fallarán.</string>
     <string name="regla_canal">Canal</string>
     <string name="canal_whatsapp">WhatsApp</string>
     <string name="canal_telegram">Telegram</string>

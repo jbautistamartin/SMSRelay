@@ -5,12 +5,16 @@
 
 package com.capicua.smsrelay.presentation.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -50,6 +54,31 @@ class SettingsFragment : Fragment() {
 
     private var cargaInicial = true
 
+    /** SIM elegida en el selector; se guarda con el resto al pulsar Guardar. */
+    private var simElegida = AppConfig.SIM_POR_DEFECTO
+
+    /**
+     * Lo último que llegó de DataStore. Guardar parte de aquí y no de un `AppConfig()` vacío,
+     * para que un ajuste que esta pantalla no enseña no vuelva a su valor por defecto.
+     */
+    private var configCargada: AppConfig? = null
+
+    // ── Permisos del canal SMS ────────────────────────────────────────────────
+
+    private val pedirPermisoEnviar = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        pintarEstadoSms()
+        if (!concedido) {
+            Snackbar.make(binding.root, R.string.settings_sms_permiso_denegado, Snackbar.LENGTH_LONG)
+                .show()
+        }
+    }
+
+    private val pedirPermisoSims = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { configurarSelectorSim() }
+
     // ── Selectores de fichero del sistema ─────────────────────────────────────
     //
     // La copia se escribe y se lee sobre el fichero que elige el operador, así que no hace
@@ -81,6 +110,7 @@ class SettingsFragment : Fragment() {
 
         configurarBateria()
         configurarAutoinicio()
+        configurarSms()
         configurarCopia()
         configurarComprobacionDeCuenta()
         configurarComprobacionDelBot()
@@ -100,6 +130,10 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         pintarEstadoBateria()
+        // Los dos permisos del canal SMS también se pueden conceder fuera, en la ficha de la
+        // aplicación, y lo que hay que ver al volver es el estado nuevo.
+        pintarEstadoSms()
+        configurarSelectorSim()
     }
 
     // ── Entrega: la plantilla ─────────────────────────────────────────────────
@@ -172,6 +206,69 @@ class SettingsFragment : Fragment() {
                 }
             }
         }
+    }
+
+    // ── SMS ───────────────────────────────────────────────────────────────────
+
+    private fun configurarSms() {
+        binding.buttonSmsPermiso.setOnClickListener {
+            pedirPermisoEnviar.launch(Manifest.permission.SEND_SMS)
+        }
+        binding.buttonSimDetectar.setOnClickListener {
+            pedirPermisoSims.launch(Manifest.permission.READ_PHONE_STATE)
+        }
+        binding.dropdownSim.setOnItemClickListener { _, _, posicion, _ ->
+            val sims = viewModel.simsDisponibles
+            simElegida =
+                if (posicion == 0) AppConfig.SIM_POR_DEFECTO else sims[posicion - 1].subscriptionId
+        }
+    }
+
+    private fun pintarEstadoSms() {
+        val puede = viewModel.puedeEnviarSms
+        binding.textViewSmsPermiso.setText(
+            if (puede) R.string.settings_sms_permiso_ok else R.string.settings_sms_permiso_falta
+        )
+        binding.textViewSmsPermiso.setTextColor(
+            resources.getColor(if (puede) R.color.status_delivered else R.color.status_failed, null)
+        )
+        binding.buttonSmsPermiso.isVisible = !puede
+    }
+
+    /**
+     * El selector de SIM, solo si hay dos o más.
+     *
+     * Sin `READ_PHONE_STATE` no se puede saber cuántas hay, así que en su lugar sale el botón que
+     * pide el permiso. Con una sola, ni selector ni botón: no hay nada que elegir.
+     */
+    private fun configurarSelectorSim() {
+        val tienePermiso = ContextCompat.checkSelfPermission(
+            requireContext(), Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED
+        val sims = viewModel.simsDisponibles
+
+        binding.layoutSimDetectar.isVisible = !tienePermiso
+        binding.tilSim.isVisible = sims.size >= 2
+        if (sims.size < 2) return
+
+        val etiquetas = buildList {
+            add(getString(R.string.settings_sim_por_defecto))
+            addAll(sims.map { it.etiqueta })
+        }
+        binding.dropdownSim.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, etiquetas)
+        )
+        pintarSimElegida()
+    }
+
+    private fun pintarSimElegida() {
+        val sims = viewModel.simsDisponibles
+        if (sims.size < 2) return
+        val elegida = sims.firstOrNull { it.subscriptionId == simElegida }
+        binding.dropdownSim.setText(
+            elegida?.etiqueta ?: getString(R.string.settings_sim_por_defecto),
+            false
+        )
     }
 
     // ── Comprobación del bot de Telegram ──────────────────────────────────────
@@ -448,6 +545,7 @@ class SettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.config.collect { config ->
+                    if (config != null) configCargada = config
                     // config es null mientras DataStore no ha emitido su primer valor real;
                     // esperamos a ese valor antes de rellenar los campos.
                     if (config != null && cargaInicial) {
@@ -463,6 +561,9 @@ class SettingsFragment : Fragment() {
         binding.editTextTokenAcceso.setText(config.tokenAcceso)
         binding.editTextIdNumero.setText(config.idNumeroTelefono)
         binding.editTextTokenBot.setText(config.tokenBot)
+        binding.switchProtegerBucles.isChecked = config.protegerBucles
+        simElegida = config.subscriptionId
+        pintarSimElegida()
         binding.editTextPlantillaNombre.setText(config.plantillaNombre)
         binding.editTextPlantillaIdioma.setText(config.plantillaIdioma)
         binding.radioGroupModo.check(
@@ -511,10 +612,12 @@ class SettingsFragment : Fragment() {
             }
 
             viewModel.guardar(
-                AppConfig(
+                (configCargada ?: AppConfig()).copy(
                     tokenAcceso = token,
                     idNumeroTelefono = idNumero,
                     tokenBot = tokenBot,
+                    subscriptionId = simElegida,
+                    protegerBucles = binding.switchProtegerBucles.isChecked,
                     modoDeEntrega = modo,
                     plantillaNombre = plantillaNombre,
                     plantillaIdioma = plantillaIdioma,

@@ -493,48 +493,95 @@ class EvaluadorDeReglasTest {
         assertEquals(1, resultado.reglasInvalidas.size)
     }
 
-    // ── Destino: se usa tal cual ─────────────────────────────────────────────
+    // ── Destino ──────────────────────────────────────────────────────────────
 
     /**
-     * Esta sección sustituye a la que probaba `{telefono}` como destino.
+     * En el destino no se resuelve ningún marcador **salvo `{telefono}` en el canal SMS**, que
+     * es contestar a quien escribió.
      *
-     * Con el SMS, escribir `{telefono}` en el destino significaba «contesta a quien me
-     * escribió». Con Telegram no hay forma de convertir el remitente de un SMS en un chat, y la
-     * consecuencia directa es que **en el destino no se resuelve ningún marcador**. Lo que estos
-     * tests fijan es justamente eso, porque es una propiedad de seguridad y no solo una
-     * simplificación: si algún día se resolviera `{mensaje}` ahí, el cuerpo de un SMS ajeno
-     * decidiría a dónde se entrega.
+     * Lo que fijan estos tests es una propiedad de seguridad y no solo una simplificación: si
+     * algún día se resolviera `{mensaje}` ahí, el cuerpo de un SMS ajeno decidiría a dónde se
+     * entrega. Y en los canales que no son SMS, `{telefono}` tampoco se resuelve: el remitente de
+     * un SMS no es un chat de Telegram, y por WhatsApp contestar sería escribir desde una cuenta
+     * de empresa a alguien que no pidió nada.
      */
     @Test
     fun `el destino se usa tal cual, sin resolver marcadores`() {
         val coincidencia = evaluar(
-            listOf(regla(destino = "-1001234567890")),
+            listOf(regla(canal = Canal.TELEGRAM, destino = "-1001234567890")),
             telefono = "+34611111111"
         ).coincidencias.single()
 
         assertEquals("-1001234567890", coincidencia.destino)
+        assertFalse(coincidencia.respondeAlRemitente)
     }
 
     @Test
-    fun `el marcador de telefono en el destino no se sustituye`() {
+    fun `fuera del canal SMS el marcador de telefono en el destino no se sustituye`() {
+        listOf(Canal.WHATSAPP, Canal.TELEGRAM, Canal.API).forEach { canal ->
+            val coincidencia = evaluar(
+                listOf(regla(canal = canal, destino = "{telefono}")),
+                telefono = "+34611111111"
+            ).coincidencias.single()
+
+            assertEquals(canal.name, "{telefono}", coincidencia.destino)
+            assertFalse(canal.name, coincidencia.respondeAlRemitente)
+        }
+    }
+
+    @Test
+    fun `en el canal SMS el marcador de telefono resuelve al remitente`() {
         val coincidencia = evaluar(
-            listOf(regla(destino = "{telefono}")),
+            listOf(regla(canal = Canal.SMS, destino = " {telefono} ")),
             telefono = "+34611111111"
         ).coincidencias.single()
 
-        assertEquals("{telefono}", coincidencia.destino)
+        assertEquals("+34611111111", coincidencia.destino)
+        assertTrue(coincidencia.respondeAlRemitente)
+    }
+
+    @Test
+    fun `en el canal SMS un destino fijo no se marca como respuesta al remitente`() {
+        val coincidencia = evaluar(listOf(regla(canal = Canal.SMS, destino = "600000001")))
+            .coincidencias.single()
+
+        assertEquals("600000001", coincidencia.destino)
+        assertFalse(coincidencia.respondeAlRemitente)
     }
 
     @Test
     fun `el cuerpo del SMS no puede influir en el destino`() {
-        // Si {mensaje} se resolviera aquí, un tercero decidiria a donde se entrega su propio
-        // mensaje escribiendo un chat_id en el texto del SMS.
+        // Si {mensaje} se resolviera aquí, un tercero decidiría a dónde se entrega su propio
+        // mensaje escribiendo un destino en el texto del SMS. Ni siquiera el canal SMS lo hace.
+        Canal.entries.forEach { canal ->
+            val coincidencia = evaluar(
+                listOf(regla(canal = canal, destino = "{mensaje}")),
+                mensaje = "+34699999999"
+            ).coincidencias.single()
+
+            assertEquals(canal.name, "{mensaje}", coincidencia.destino)
+        }
+    }
+
+    @Test
+    fun `contestar a un remitente alfanumerico deja el destino sin digitos`() {
+        // El evaluador no decide si se puede enviar; solo resuelve. Quien tramita el SMS
+        // comprueba después que el destino sea enviable.
         val coincidencia = evaluar(
-            listOf(regla(destino = "{mensaje}")),
-            mensaje = "-1009999999999"
+            listOf(regla(canal = Canal.SMS, destino = "{telefono}")),
+            telefono = "BANCO"
         ).coincidencias.single()
 
-        assertEquals("{mensaje}", coincidencia.destino)
+        assertEquals("BANCO", coincidencia.destino)
+        assertTrue(coincidencia.respondeAlRemitente)
+        assertFalse(NormalizadorTelefono.esDestinoEnviable(coincidencia.destino))
+    }
+
+    @Test
+    fun `respondeAlRemitente reconoce el marcador para la validacion del formulario`() {
+        assertTrue(evaluador.respondeAlRemitente("{telefono}"))
+        assertFalse(evaluador.respondeAlRemitente("+34600000001"))
+        assertFalse(evaluador.respondeAlRemitente(null))
     }
 
     @Test

@@ -67,6 +67,9 @@ class ReglaRepositoryImpl @Inject constructor(
     override suspend fun obtenerActivas(): List<Regla> =
         reglaDao.obtenerActivas().map { it.aDominio() }
 
+    override suspend fun obtenerDestinosSmsActivos(): List<String> =
+        reglaDao.obtenerDestinosSmsActivos()
+
     override suspend fun obtenerTodas(): List<Regla> =
         reglaDao.obtenerTodas().map { it.aDominio() }
 

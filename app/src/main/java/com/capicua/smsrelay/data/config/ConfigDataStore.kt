@@ -34,6 +34,8 @@ class ConfigDataStore @Inject constructor(
             tokenAcceso                = prefs[Keys.TOKEN_ACCESO]         ?: porDefecto.tokenAcceso,
             idNumeroTelefono           = prefs[Keys.ID_NUMERO]            ?: porDefecto.idNumeroTelefono,
             tokenBot                   = prefs[Keys.TOKEN_BOT]            ?: porDefecto.tokenBot,
+            subscriptionId             = prefs[Keys.SUBSCRIPTION_ID]       ?: porDefecto.subscriptionId,
+            protegerBucles             = prefs[Keys.PROTEGER_BUCLES]       ?: porDefecto.protegerBucles,
             modoDeEntrega              = ModoDeEntrega.de(prefs[Keys.MODO_ENTREGA]),
             plantillaNombre            = prefs[Keys.PLANTILLA_NOMBRE]     ?: porDefecto.plantillaNombre,
             plantillaIdioma            = prefs[Keys.PLANTILLA_IDIOMA]     ?: porDefecto.plantillaIdioma,
@@ -52,6 +54,8 @@ class ConfigDataStore @Inject constructor(
             prefs[Keys.TOKEN_ACCESO]        = config.tokenAcceso
             prefs[Keys.ID_NUMERO]           = config.idNumeroTelefono
             prefs[Keys.TOKEN_BOT]           = config.tokenBot
+            prefs[Keys.SUBSCRIPTION_ID]     = config.subscriptionId
+            prefs[Keys.PROTEGER_BUCLES]     = config.protegerBucles
             prefs[Keys.MODO_ENTREGA]        = config.modoDeEntrega.name
             prefs[Keys.PLANTILLA_NOMBRE]    = config.plantillaNombre
             prefs[Keys.PLANTILLA_IDIOMA]    = config.plantillaIdioma
@@ -68,6 +72,8 @@ class ConfigDataStore @Inject constructor(
         val TOKEN_ACCESO        = stringPreferencesKey("token_acceso")
         val ID_NUMERO           = stringPreferencesKey("id_numero_telefono")
         val TOKEN_BOT           = stringPreferencesKey("token_bot")
+        val SUBSCRIPTION_ID     = intPreferencesKey("subscription_id")
+        val PROTEGER_BUCLES     = booleanPreferencesKey("proteger_bucles")
         val MODO_ENTREGA        = stringPreferencesKey("modo_entrega")
         val PLANTILLA_NOMBRE    = stringPreferencesKey("plantilla_nombre")
         val PLANTILLA_IDIOMA    = stringPreferencesKey("plantilla_idioma")

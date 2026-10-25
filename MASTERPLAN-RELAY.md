@@ -290,7 +290,7 @@ vuelve**, porque el motivo por el que se fue era el canal y no la aplicación: n
 >   seguridad. El formato 5 no tiene dónde ponerlo, e importar **conserva** el del teléfono en
 >   lugar de borrarlo. Entra en el formato 6, en la fase 7.
 
-### Fase 4 — Vuelve el SMS · `[ ]`
+### Fase 4 — Vuelve el SMS · `[x]`
 
 De SMStoSMS. Es la fase con más que reconciliar, porque SMStoSMS es anterior a la juntura y
 enviaba en línea.
@@ -315,6 +315,21 @@ enviaba en línea.
 - `limiteCaracteres()` del SMS: se trocea en multiparte, así que el aviso es de **coste** (cuántas
   partes), no de pérdida.
 - Ajustes: sección «SMS» con la SIM y la protección de bucles.
+
+> **Cómo se cerró (25 oct 2026).** Tests en verde (198, 0 fallos), con los 18 de
+> `NormalizadorTelefonoTest` de vuelta y la sección de destino de `EvaluadorDeReglasTest`
+> reescrita para los cuatro canales.
+>
+> - **`{telefono}` se resuelve en el evaluador, no en el transporte**, al revés de lo que decía
+>   el KDoc de la fase 2: el transporte solo recibe destino y texto y no sabe quién escribió. La
+>   coincidencia lleva `respondeAlRemitente`, y solo con el canal SMS.
+> - **Las guardas registran `LIMITE_ALCANZADO`** en lugar de resucitar `BUCLE_EVITADO`: «una
+>   protección dijo que no» es lo que ese tipo ya significa.
+> - **Los permisos no se piden al arrancar.** `SEND_SMS` se pide al elegir el canal SMS en el
+>   editor o desde Ajustes; `READ_PHONE_STATE`, solo con el botón «Elegir la SIM de envío».
+> - **Ajustes guarda a partir de la configuración cargada** (`copy`) y no de un `AppConfig()`
+>   nuevo, para que los campos que una pantalla no enseña no vuelvan a su valor por defecto.
+> - Importar el formato 5 conserva la SIM y la guarda antibucle del teléfono hasta el formato 6.
 
 ### Fase 5 — Vuelve la API REST · `[ ]`
 

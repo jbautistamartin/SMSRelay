@@ -5,10 +5,14 @@
 
 package com.capicua.smsrelay.presentation.rules
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -22,6 +26,7 @@ import com.capicua.smsrelay.data.telegram.ChatDescubierto
 import com.capicua.smsrelay.data.telegram.ResultadoDescubrimiento
 import com.capicua.smsrelay.databinding.FragmentEditarReglaBinding
 import com.capicua.smsrelay.domain.model.Regla
+import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
 import com.capicua.smsrelay.domain.transport.Canal
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -50,6 +55,21 @@ class EditarReglaFragment : Fragment() {
     private val args: EditarReglaFragmentArgs by navArgs()
 
     private var cargaInicial = true
+
+    /** Para pedir el permiso de enviar SMS una vez por visita, no en cada cambio de canal. */
+    private var permisoSmsPedido = false
+
+    /**
+     * El permiso de enviar SMS se pide aquí, al elegir el canal SMS, y no al arrancar la
+     * aplicación: quien solo entrega por Telegram o WhatsApp no tiene por qué ver ese diálogo.
+     */
+    private val pedirPermisoEnviar = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (!concedido) {
+            Snackbar.make(binding.root, R.string.regla_sms_permiso, Snackbar.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -87,6 +107,7 @@ class EditarReglaFragment : Fragment() {
 
         configurarSelectorDeCanal()
         configurarDescubrimientoDeChats()
+        configurarAtajoRemitente()
         configurarValidacionEnVivo()
         configurarBotonGuardar()
         observarRegla()
@@ -138,6 +159,9 @@ class EditarReglaFragment : Fragment() {
                         binding.editTextDestino.inputType = presentacion.tipoTeclado
                         binding.buttonDescubrirChats.visibility =
                             if (canal == Canal.TELEGRAM) View.VISIBLE else View.GONE
+                        binding.buttonDestinoRemitente.visibility =
+                            if (canal == Canal.SMS) View.VISIBLE else View.GONE
+                        if (canal == Canal.SMS) pedirPermisoSmsSiFalta()
                     }
                 }
                 launch {
@@ -145,6 +169,32 @@ class EditarReglaFragment : Fragment() {
                 }
             }
         }
+    }
+
+    // ── Canal SMS ─────────────────────────────────────────────────────────────
+
+    /**
+     * Rellena el destino con el marcador que contesta al remitente.
+     *
+     * El marcador se podría teclear a mano, pero solo si se sabe que existe; el botón es lo que
+     * convierte «devolver el SMS a quien lo mandó» en algo que se encuentra sin leer la
+     * documentación. Solo se ve con el canal SMS, el único en que `{telefono}` es un destino.
+     */
+    private fun configurarAtajoRemitente() {
+        binding.buttonDestinoRemitente.setOnClickListener {
+            binding.editTextDestino.setText(EvaluadorDeReglas.MARCADOR_TELEFONO)
+            binding.tilDestino.error = null
+        }
+    }
+
+    private fun pedirPermisoSmsSiFalta() {
+        if (permisoSmsPedido) return
+        val concedido = ContextCompat.checkSelfPermission(
+            requireContext(), Manifest.permission.SEND_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (concedido) return
+        permisoSmsPedido = true
+        pedirPermisoEnviar.launch(Manifest.permission.SEND_SMS)
     }
 
     // ── Chats del bot ─────────────────────────────────────────────────────────

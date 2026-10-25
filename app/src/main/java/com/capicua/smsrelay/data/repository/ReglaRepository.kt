@@ -48,5 +48,8 @@ interface ReglaRepository {
 
     suspend fun obtenerTodas(): List<Regla>
 
+    /** Destinos de las reglas SMS activas, para la guarda antibucle. */
+    suspend fun obtenerDestinosSmsActivos(): List<String>
+
     suspend fun obtenerPorId(id: Long): Regla?
 }

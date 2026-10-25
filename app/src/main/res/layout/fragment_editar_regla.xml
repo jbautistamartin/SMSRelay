@@ -260,6 +260,18 @@
             android:text="@string/regla_descubrir_chats"
             android:visibility="gone" />
 
+        <!-- Solo con el canal SMS: el atajo de «contesta a quien me escribió». Teclear
+             {telefono} a mano exige saber que el marcador existe. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_destino_remitente"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="-8dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/regla_destino_remitente"
+            android:visibility="gone" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_plantilla"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"

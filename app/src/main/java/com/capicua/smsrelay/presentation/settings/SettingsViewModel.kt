@@ -13,6 +13,9 @@ import com.capicua.smsrelay.data.config.AppConfig
 import com.capicua.smsrelay.data.config.ConfigBackup
 import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.config.ResultadoCopia
+import com.capicua.smsrelay.data.sms.ProveedorDeSims
+import com.capicua.smsrelay.data.sms.SimDisponible
+import com.capicua.smsrelay.data.sms.SmsSender
 import com.capicua.smsrelay.data.telegram.ComprobadorDelBot
 import com.capicua.smsrelay.data.telegram.EstadoDelBot
 import com.capicua.smsrelay.data.telegram.ResultadoDelBot
@@ -41,8 +44,19 @@ class SettingsViewModel @Inject constructor(
     private val estadoDeLaCuenta: EstadoDeLaCuenta,
     private val comprobadorDeCuenta: ComprobadorDeCuenta,
     private val estadoDelBot: EstadoDelBot,
-    private val comprobadorDelBot: ComprobadorDelBot
+    private val comprobadorDelBot: ComprobadorDelBot,
+    private val proveedorDeSims: ProveedorDeSims,
+    private val smsSender: SmsSender
 ) : AndroidViewModel(application) {
+
+    /**
+     * SIM activas del dispositivo. Vacía sin `READ_PHONE_STATE`; de un elemento, nada que elegir.
+     * Se lee cada vez y no se guarda: una SIM se puede quitar o poner con la aplicación abierta.
+     */
+    val simsDisponibles: List<SimDisponible> get() = proveedorDeSims.simsDisponibles()
+
+    /** true si la aplicación puede enviar SMS, para la línea de estado de la sección SMS. */
+    val puedeEnviarSms: Boolean get() = smsSender.tienePermisoEnviar()
 
     /** En qué punto está la comprobación de las credenciales. */
     sealed interface EstadoComprobacion {

@@ -57,6 +57,25 @@ data class AppConfig(
     val tokenBot: String = "",
 
     /**
+     * Id de suscripción de la SIM con la que salen los reenvíos del canal SMS, en dispositivos
+     * con más de una. [SIM_POR_DEFECTO] deja que el sistema elija la SIM de SMS predeterminada.
+     *
+     * No viaja en la copia de seguridad: identifica una tarjeta de *este* teléfono, y restaurada
+     * en otro apuntaría a una SIM que no existe o, peor, a otra que sí.
+     */
+    val subscriptionId: Int = SIM_POR_DEFECTO,
+
+    /**
+     * Las guardas antibucle del canal SMS: descartar un SMS cuyo remitente sea el destino de una
+     * regla SMS activa, y saltarse una regla SMS cuyo destino sea el propio remitente.
+     *
+     * Solo existen para el canal SMS porque es el único en el que un reenvío puede volver a
+     * entrar por la radio: otro teléfono pasarela que reenvíe a este cierra el círculo. Un
+     * mensaje de Telegram, de WhatsApp o una llamada a una API no vuelven nunca como SMS.
+     */
+    val protegerBucles: Boolean = true,
+
+    /**
      * Cómo sale cada reenvío: texto libre, plantilla, o lo que haga falta.
      *
      * Ver [ModoDeEntrega]. El valor por defecto entrega siempre sin gastar más de lo necesario,
@@ -155,4 +174,9 @@ data class AppConfig(
      * esto corta la entrada, no la salida.
      */
     val recepcionActiva: Boolean = true
-)
+) {
+    companion object {
+        /** Valor de [subscriptionId] que deja elegir la SIM al sistema. */
+        const val SIM_POR_DEFECTO = -1
+    }
+}
