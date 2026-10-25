@@ -13,6 +13,9 @@ import com.capicua.smsrelay.data.config.AppConfig
 import com.capicua.smsrelay.data.config.ConfigBackup
 import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.config.ResultadoCopia
+import com.capicua.smsrelay.data.telegram.ComprobadorDelBot
+import com.capicua.smsrelay.data.telegram.EstadoDelBot
+import com.capicua.smsrelay.data.telegram.ResultadoDelBot
 import com.capicua.smsrelay.data.whatsapp.ComprobadorDeCuenta
 import com.capicua.smsrelay.data.whatsapp.EstadoDeLaCuenta
 import com.capicua.smsrelay.data.whatsapp.ResultadoDeCuenta
@@ -36,7 +39,9 @@ class SettingsViewModel @Inject constructor(
     private val configDataStore: ConfigDataStore,
     private val configBackup: ConfigBackup,
     private val estadoDeLaCuenta: EstadoDeLaCuenta,
-    private val comprobadorDeCuenta: ComprobadorDeCuenta
+    private val comprobadorDeCuenta: ComprobadorDeCuenta,
+    private val estadoDelBot: EstadoDelBot,
+    private val comprobadorDelBot: ComprobadorDelBot
 ) : AndroidViewModel(application) {
 
     /** En qué punto está la comprobación de las credenciales. */
@@ -66,6 +71,33 @@ class SettingsViewModel @Inject constructor(
             _comprobacion.value = EstadoComprobacion.Terminada(
                 comprobadorDeCuenta.comprobar(token, idNumero)
             )
+        }
+    }
+
+    /** En qué punto está la comprobación del token del bot de Telegram. */
+    sealed interface EstadoComprobacionBot {
+        data object Inactivo : EstadoComprobacionBot
+        data object Comprobando : EstadoComprobacionBot
+        data class Terminada(val resultado: ResultadoDelBot) : EstadoComprobacionBot
+    }
+
+    private val _comprobacionBot =
+        MutableStateFlow<EstadoComprobacionBot>(EstadoComprobacionBot.Inactivo)
+    val comprobacionBot: StateFlow<EstadoComprobacionBot> = _comprobacionBot.asStateFlow()
+
+    /**
+     * Pregunta a Telegram por [token] sin guardarlo.
+     *
+     * Va aparte de [comprobarCuenta] y con su propio estado porque son dos servicios distintos:
+     * comprobar la cuenta de WhatsApp no dice nada del bot, y una comprobación en curso de uno no
+     * debe bloquear el botón del otro.
+     */
+    fun comprobarBot(token: String) {
+        if (_comprobacionBot.value == EstadoComprobacionBot.Comprobando) return
+        viewModelScope.launch {
+            _comprobacionBot.value = EstadoComprobacionBot.Comprobando
+            _comprobacionBot.value =
+                EstadoComprobacionBot.Terminada(comprobadorDelBot.comprobar(token))
         }
     }
 
@@ -100,6 +132,7 @@ class SettingsViewModel @Inject constructor(
             // «Meta las rechazó». Dejarlo puesto mandaría a arreglar lo ya arreglado; si las
             // nuevas tampoco sirven, el siguiente envío lo pondrá otra vez.
             estadoDeLaCuenta.olvidarCredencialRechazada()
+            estadoDelBot.olvidarTokenRechazado()
             ControlRecepcion.aplicar(getApplication(), config.recepcionActiva)
         }
     }

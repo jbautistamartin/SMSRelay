@@ -11,6 +11,7 @@ import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.repository.ReenvioRepository
 import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.data.repository.SmsRepository
+import com.capicua.smsrelay.data.telegram.EstadoDelBot
 import com.capicua.smsrelay.data.whatsapp.ContadorDeMensajes
 import com.capicua.smsrelay.data.whatsapp.EstadoDeLaCuenta
 import com.capicua.smsrelay.data.whatsapp.MensajesDelMes
@@ -36,6 +37,7 @@ class DashboardViewModel @Inject constructor(
     private val smsRepository: SmsRepository,
     private val transportes: Transportes,
     private val estadoDeLaCuenta: EstadoDeLaCuenta,
+    private val estadoDelBot: EstadoDelBot,
     contadorDeMensajes: ContadorDeMensajes,
     configDataStore: ConfigDataStore,
     reenvioRepository: ReenvioRepository,
@@ -95,8 +97,9 @@ class DashboardViewModel @Inject constructor(
     val avisoTransporte: Flow<String?> = combine(
         configDataStore.config,
         estadoDeLaCuenta.credencialRechazada,
+        estadoDelBot.tokenRechazado,
         reglaRepository.observarTodas()
-    ) { _, _, reglas ->
+    ) { _, _, _, reglas ->
         reglas.filter { it.activa }
             .map { it.canal }
             .distinct()

@@ -18,8 +18,13 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.capicua.smsrelay.R
+import com.capicua.smsrelay.data.telegram.ChatDescubierto
+import com.capicua.smsrelay.data.telegram.ResultadoDescubrimiento
 import com.capicua.smsrelay.databinding.FragmentEditarReglaBinding
 import com.capicua.smsrelay.domain.model.Regla
+import com.capicua.smsrelay.domain.transport.Canal
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -81,10 +86,12 @@ class EditarReglaFragment : Fragment() {
         viewModel.cargar(args.reglaId)
 
         configurarSelectorDeCanal()
+        configurarDescubrimientoDeChats()
         configurarValidacionEnVivo()
         configurarBotonGuardar()
         observarRegla()
         observarCanal()
+        observarDescubrimiento()
         observarErrores()
         observarGuardado()
 
@@ -129,6 +136,8 @@ class EditarReglaFragment : Fragment() {
                         binding.tilDestino.helperText = getString(presentacion.ayudaDestino)
                         binding.tilDestino.error = null
                         binding.editTextDestino.inputType = presentacion.tipoTeclado
+                        binding.buttonDescubrirChats.visibility =
+                            if (canal == Canal.TELEGRAM) View.VISIBLE else View.GONE
                     }
                 }
                 launch {
@@ -136,6 +145,91 @@ class EditarReglaFragment : Fragment() {
                 }
             }
         }
+    }
+
+    // ── Chats del bot ─────────────────────────────────────────────────────────
+
+    /**
+     * Ofrece los chats que han escrito al bot, para elegir el destino de una lista.
+     *
+     * Nadie se sabe su `chat_id` —Telegram no lo muestra en ninguna pantalla— así que sin esto
+     * configurar una regla de Telegram obliga a salir de la aplicación a buscarlo con un bot de
+     * terceros. El botón solo se ve con el canal Telegram elegido.
+     */
+    private fun configurarDescubrimientoDeChats() {
+        binding.buttonDescubrirChats.setOnClickListener {
+            viewModel.descubrirChats()
+        }
+    }
+
+    private fun observarDescubrimiento() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.descubrimiento.collect { estado ->
+                    when (estado) {
+                        EditarReglaViewModel.EstadoDescubrimiento.Inactivo -> {
+                            binding.buttonDescubrirChats.isEnabled = true
+                            binding.buttonDescubrirChats.setText(R.string.regla_descubrir_chats)
+                        }
+
+                        EditarReglaViewModel.EstadoDescubrimiento.Buscando -> {
+                            binding.buttonDescubrirChats.isEnabled = false
+                            binding.buttonDescubrirChats.setText(R.string.regla_chats_buscando)
+                        }
+
+                        is EditarReglaViewModel.EstadoDescubrimiento.Terminado -> {
+                            binding.buttonDescubrirChats.isEnabled = true
+                            binding.buttonDescubrirChats.setText(R.string.regla_descubrir_chats)
+                            atenderDescubrimiento(estado.resultado)
+                            viewModel.descubrimientoAtendido()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun atenderDescubrimiento(resultado: ResultadoDescubrimiento) {
+        when (resultado) {
+            is ResultadoDescubrimiento.Encontrados -> elegirChat(resultado.chats)
+
+            // Que no haya ninguno no es un error, y decirlo mal deja a la gente atascada: un
+            // bot no puede escribir primero, así que lo que falta es un /start del otro lado.
+            ResultadoDescubrimiento.Ninguno -> avisar(R.string.regla_chats_ninguno)
+
+            ResultadoDescubrimiento.SinToken -> avisar(R.string.regla_chats_sin_token)
+
+            is ResultadoDescubrimiento.NoSePudo -> Snackbar.make(
+                binding.root,
+                getString(R.string.regla_chats_error, resultado.motivo),
+                Snackbar.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun elegirChat(chats: List<ChatDescubierto>) {
+        // Se enseña el nombre y el tipo, no el id: el id es lo que se guarda, pero lo que
+        // permite reconocer el chat es cómo se llama.
+        val etiquetas = chats
+            .map { "${it.nombre} · ${it.tipo}" }
+            .toTypedArray()
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.regla_chats_titulo)
+            .setItems(etiquetas) { _, indice ->
+                binding.editTextDestino.setText(chats[indice].id)
+                binding.tilDestino.error = null
+            }
+            .setNegativeButton(R.string.cancelar, null)
+            .show()
+    }
+
+    private fun avisar(mensaje: Int) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.regla_chats_titulo)
+            .setMessage(mensaje)
+            .setPositiveButton(R.string.permiso_entendido, null)
+            .show()
     }
 
     // ── Validación en vivo ────────────────────────────────────────────────────

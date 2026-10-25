@@ -247,7 +247,18 @@
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        
+        <!-- Solo con el canal Telegram: nadie se sabe su chat_id, que Telegram no muestra en
+             ninguna pantalla. Esto pregunta al bot quién le ha escrito y ofrece la lista. Lo
+             enseña y lo esconde el fragment según el canal. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_descubrir_chats"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="-8dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/regla_descubrir_chats"
+            android:visibility="gone" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_plantilla"

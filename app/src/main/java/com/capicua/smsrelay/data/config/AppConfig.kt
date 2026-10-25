@@ -47,6 +47,16 @@ data class AppConfig(
     val idNumeroTelefono: String = "",
 
     /**
+     * Token del bot de Telegram, tal como lo entrega @BotFather. Vacío significa «sin
+     * configurar», y una instalación que no use el canal Telegram lo deja así para siempre.
+     *
+     * Es la credencial del canal Telegram y tiene las mismas tres obligaciones que [tokenAcceso]:
+     * no se escribe nunca en el log —va dentro de la URL del Bot API, así que la URL tampoco—,
+     * se enmascara en la pantalla y no viaja en la copia de seguridad salvo que se pida.
+     */
+    val tokenBot: String = "",
+
+    /**
      * Cómo sale cada reenvío: texto libre, plantilla, o lo que haga falta.
      *
      * Ver [ModoDeEntrega]. El valor por defecto entrega siempre sin gastar más de lo necesario,

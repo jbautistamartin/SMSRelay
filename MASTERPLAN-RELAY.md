@@ -252,7 +252,7 @@ Si algo cambia en lo que ve quien recibe, la fase está mal.
 >   regla activa: avisar de un token de Telegram ausente a quien solo reenvía por SMS sería
 >   ruido.
 
-### Fase 3 — Vuelve Telegram · `[ ]`
+### Fase 3 — Vuelve Telegram · `[x]`
 
 De SMStoTelegram, casi sin tocar: `data/telegram/` entero —`TelegramSender`, `MapeoDeRespuestas`,
 `DestinoDeTelegram`, `TokenDeBot`, `ComprobadorDelBot`, `EstadoDelBot`— y **`DescubridorDeChats`
@@ -271,6 +271,24 @@ vuelve**, porque el motivo por el que se fue era el canal y no la aplicación: n
   aplicación nueva, más que el prefijo.
 - Tests de SMStoTelegram que vuelven: `DestinoDeTelegramTest` (10), `MapeoDeRespuestasTest` de
   Telegram (18) y `TokenDeBotTest` (6).
+
+> **Cómo se cerró (25 oct 2026).** 176 tests en verde: los 140 de la fase 2, los 34 que vuelven
+> de SMStoTelegram y dos nuevos en `DestinoDeTelegramTest` para la detección cruzada. Las siete
+> clases de `data/telegram/` entraron con dos cambios: `limiteCaracteres` pasa a ser la
+> `suspend fun` del contrato actual, y `DestinoDeTelegram` gana `esInequivocamenteChat()`.
+>
+> - **La detección cruzada vive en `DestinoDeTelegram`, no en el editor.** Es la única parte
+>   que se puede probar sin Android: un id negativo o un `@canal` son chats sin discusión; un
+>   id positivo no, porque `600112233` es también un móvil sin prefijo, y con el canal WhatsApp
+>   gana esa lectura y su mensaje. El editor ordena los mensajes: falta de prefijo, chat de
+>   Telegram y, si no, forma inválida.
+> - **El aviso del Panel dice de qué canal es** porque cada motivo sale prefijado con la
+>   etiqueta del canal, y el flujo escucha también `EstadoDelBot.tokenRechazado`.
+> - **Ajustes lleva la sección del bot** detrás de la cuenta de WhatsApp, con su propio estado
+>   de comprobación: comprobar una credencial no debe bloquear el botón de la otra.
+> - **Lo que no se hizo aquí, a propósito:** el token del bot todavía no viaja en la copia de
+>   seguridad. El formato 5 no tiene dónde ponerlo, e importar **conserva** el del teléfono en
+>   lugar de borrarlo. Entra en el formato 6, en la fase 7.
 
 ### Fase 4 — Vuelve el SMS · `[ ]`
 

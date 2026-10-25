@@ -408,6 +408,62 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp" />
 
+        <!-- ── Bot de Telegram ─────────────────────────────────────────────
+             La credencial del canal Telegram, después de la del canal WhatsApp. Una
+             instalación que no use el canal la deja vacía y no pasa nada: el aviso del Panel
+             solo mira los canales que usa alguna regla activa. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_seccion_bot"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="8dp" />
+
+        <!-- password_toggle: enmascarado por defecto, con el ojo para comprobar lo que se
+             ha pegado. Un token es una credencial y no debe quedarse legible en pantalla, pero
+             esconderlo sin poder verlo haría imposible detectar un pegado a medias. -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_token_bot"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/settings_token_bot"
+            app:endIconMode="password_toggle"
+            app:helperText="@string/settings_token_bot_ayuda"
+            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_text_token_bot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:imeOptions="actionDone"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_validar_bot"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/settings_validar_bot" />
+
+        <TextView
+            android:id="@+id/text_view_resultado_bot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:visibility="gone" />
+
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp" />
+
         <!-- ── Protecciones ────────────────────────────────────────────────── -->
         <TextView
             android:layout_width="match_parent"

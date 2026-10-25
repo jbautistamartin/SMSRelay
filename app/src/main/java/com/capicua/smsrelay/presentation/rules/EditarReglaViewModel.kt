@@ -10,6 +10,9 @@ import androidx.lifecycle.viewModelScope
 import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.domain.model.Regla
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
+import com.capicua.smsrelay.data.telegram.DescubridorDeChats
+import com.capicua.smsrelay.data.telegram.DestinoDeTelegram
+import com.capicua.smsrelay.data.telegram.ResultadoDescubrimiento
 import com.capicua.smsrelay.data.whatsapp.DestinoDeWhatsApp
 import com.capicua.smsrelay.data.whatsapp.MapeoDeRespuestas
 import com.capicua.smsrelay.domain.transport.Canal
@@ -42,7 +45,8 @@ data class ErroresRegla(
 class EditarReglaViewModel @Inject constructor(
     private val reglaRepository: ReglaRepository,
     private val evaluador: EvaluadorDeReglas,
-    private val transportes: Transportes
+    private val transportes: Transportes,
+    private val descubridorDeChats: DescubridorDeChats
 ) : ViewModel() {
 
     private val _canal = MutableStateFlow(Canal.POR_DEFECTO)
@@ -77,6 +81,32 @@ class EditarReglaViewModel @Inject constructor(
             started = SharingStarted.Eagerly,
             initialValue = MapeoDeRespuestas.LIMITE_CARACTERES
         )
+
+    /** En qué punto está la búsqueda de chats del bot. Solo tiene sentido con el canal Telegram. */
+    sealed interface EstadoDescubrimiento {
+        data object Inactivo : EstadoDescubrimiento
+        data object Buscando : EstadoDescubrimiento
+        data class Terminado(val resultado: ResultadoDescubrimiento) : EstadoDescubrimiento
+    }
+
+    private val _descubrimiento =
+        MutableStateFlow<EstadoDescubrimiento>(EstadoDescubrimiento.Inactivo)
+    val descubrimiento: StateFlow<EstadoDescubrimiento> = _descubrimiento.asStateFlow()
+
+    /** Pregunta al bot quién le ha escrito. Ver [DescubridorDeChats] para sus límites. */
+    fun descubrirChats() {
+        if (_descubrimiento.value == EstadoDescubrimiento.Buscando) return
+        viewModelScope.launch {
+            _descubrimiento.value = EstadoDescubrimiento.Buscando
+            _descubrimiento.value =
+                EstadoDescubrimiento.Terminado(descubridorDeChats.descubrir())
+        }
+    }
+
+    /** El fragment ya ha enseñado el resultado; volver a reposo para no enseñarlo dos veces. */
+    fun descubrimientoAtendido() {
+        _descubrimiento.value = EstadoDescubrimiento.Inactivo
+    }
 
     private val _regla = MutableStateFlow<Regla?>(null)
     /** Regla en edición. Null mientras se carga, o para una regla nueva sin valores. */
@@ -169,17 +199,47 @@ class EditarReglaViewModel @Inject constructor(
         destino.isBlank() ->
             "El destino es obligatorio"
 
-        canal != Canal.WHATSAPP -> null
+        canal == Canal.WHATSAPP -> validarDestinoWhatsApp(destino)
 
+        canal == Canal.TELEGRAM -> validarDestinoTelegram(destino)
+
+        else -> null
+    }
+
+    /**
+     * Un número E.164. El error más probable es que falte el prefijo, y el segundo, desde que
+     * los cuatro canales comparten este campo, que lo escrito sea un chat de Telegram.
+     */
+    private fun validarDestinoWhatsApp(destino: String): String? = when {
         DestinoDeWhatsApp.pareceValido(destino) -> null
 
         DestinoDeWhatsApp.faltaPrefijo(destino) ->
             "Falta el prefijo internacional. Escríbelo empezando por «+» y el prefijo del " +
                 "país, por ejemplo +34600112233"
 
+        DestinoDeTelegram.esInequivocamenteChat(destino) ->
+            "Esto parece un chat de Telegram, no un teléfono. Si es para Telegram, cambia el " +
+                "canal de la regla"
+
         else ->
             "No parece un número de teléfono. Va en formato internacional: «+», el prefijo " +
                 "del país y el número, sin espacios ni guiones"
+    }
+
+    /**
+     * Un `chat_id` o un `@canal`. El caso probable es el inverso del de WhatsApp: un teléfono
+     * escrito con el canal Telegram marcado.
+     */
+    private fun validarDestinoTelegram(destino: String): String? = when {
+        DestinoDeTelegram.pareceValido(destino) -> null
+
+        DestinoDeTelegram.pareceTelefono(destino) ->
+            "Esto es un número de teléfono, no un chat de Telegram. Si es para WhatsApp o SMS, " +
+                "cambia el canal; si es para Telegram, usa «Elegir de los chats del bot»"
+
+        else ->
+            "No parece un chat de Telegram. Un chat_id son solo dígitos, con un signo menos " +
+                "delante si es un grupo o un canal"
     }
 
     companion object {

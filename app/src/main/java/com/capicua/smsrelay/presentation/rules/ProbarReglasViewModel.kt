@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.repository.ReglaRepository
+import com.capicua.smsrelay.data.telegram.DestinoDeTelegram
 import com.capicua.smsrelay.data.whatsapp.DestinoDeWhatsApp
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
 import com.capicua.smsrelay.domain.rules.ResultadoEvaluacion
@@ -169,6 +170,19 @@ class ProbarReglasViewModel @Inject constructor(
                             "${coincidencia.canal.etiqueta}, y " +
                             transportes.motivoSinTransporte(coincidencia.canal) +
                             ": ese reenvío fallará"
+                    )
+                }
+            resultado.coincidencias
+                .filter { it.canal == Canal.TELEGRAM }
+                .filterNot { DestinoDeTelegram.pareceValido(it.destino) }
+                .forEach { coincidencia ->
+                    add(
+                        "La regla «${coincidencia.nombreRegla}» apunta a «${coincidencia.destino}», " +
+                            if (DestinoDeTelegram.pareceTelefono(coincidencia.destino)) {
+                                "que es un teléfono y no un chat de Telegram: ese reenvío fallará"
+                            } else {
+                                "que no tiene forma de chat de Telegram: ese reenvío fallará"
+                            }
                     )
                 }
             resultado.coincidencias

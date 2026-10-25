@@ -21,6 +21,8 @@ import com.capicua.smsrelay.R
 import com.capicua.smsrelay.data.config.AppConfig
 import com.capicua.smsrelay.data.config.ResultadoCopia
 import com.capicua.smsrelay.data.config.ModoDeEntrega
+import com.capicua.smsrelay.data.telegram.ResultadoDelBot
+import com.capicua.smsrelay.data.telegram.TokenDeBot
 import com.capicua.smsrelay.data.whatsapp.IdNumeroTelefono
 import com.capicua.smsrelay.data.whatsapp.PlantillaDeWhatsApp
 import com.capicua.smsrelay.data.whatsapp.ResultadoDeCuenta
@@ -81,9 +83,11 @@ class SettingsFragment : Fragment() {
         configurarAutoinicio()
         configurarCopia()
         configurarComprobacionDeCuenta()
+        configurarComprobacionDelBot()
         configurarPlantilla()
         observarConfiguracion()
         observarComprobacionDeCuenta()
+        observarComprobacionDelBot()
         observarCopias()
         configurarBotonGuardar()
     }
@@ -166,6 +170,73 @@ class SettingsFragment : Fragment() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // ── Comprobación del bot de Telegram ──────────────────────────────────────
+
+    private fun configurarComprobacionDelBot() {
+        binding.buttonValidarBot.setOnClickListener {
+            // Lo escrito, no lo guardado: la gracia es saberlo antes de guardar un token que no
+            // sirve.
+            viewModel.comprobarBot(binding.editTextTokenBot.text?.toString().orEmpty())
+        }
+    }
+
+    private fun observarComprobacionDelBot() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.comprobacionBot.collect { estado ->
+                    val vista = binding.textViewResultadoBot
+                    binding.buttonValidarBot.isEnabled =
+                        estado != SettingsViewModel.EstadoComprobacionBot.Comprobando
+
+                    when (estado) {
+                        SettingsViewModel.EstadoComprobacionBot.Inactivo ->
+                            vista.visibility = View.GONE
+
+                        SettingsViewModel.EstadoComprobacionBot.Comprobando -> {
+                            vista.visibility = View.VISIBLE
+                            vista.setText(R.string.settings_bot_comprobando)
+                            vista.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
+                        }
+
+                        is SettingsViewModel.EstadoComprobacionBot.Terminada -> {
+                            vista.visibility = View.VISIBLE
+                            pintarResultadoDelBot(vista, estado.resultado)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun pintarResultadoDelBot(vista: android.widget.TextView, resultado: ResultadoDelBot) {
+        when (resultado) {
+            is ResultadoDelBot.Correcto -> {
+                // Enseñar de qué bot se trata es lo que hace la respuesta comprobable: quien
+                // la pidió puede reconocer su bot, o ver que ha pegado el de otro.
+                vista.text = getString(
+                    R.string.settings_bot_correcto, resultado.nombre, resultado.usuario
+                )
+                vista.setTextColor(resources.getColor(R.color.status_delivered, null))
+            }
+
+            is ResultadoDelBot.Rechazado -> {
+                vista.text = getString(R.string.settings_bot_rechazado, resultado.motivo)
+                vista.setTextColor(resources.getColor(R.color.status_failed, null))
+            }
+
+            is ResultadoDelBot.NoSePudo -> {
+                // Sin red no se sabe si el token vale: decir que está mal sería mentir.
+                vista.text = getString(R.string.settings_bot_sin_red, resultado.motivo)
+                vista.setTextColor(resources.getColor(R.color.status_pending, null))
+            }
+
+            ResultadoDelBot.SinToken -> {
+                vista.setText(R.string.settings_bot_sin_token)
+                vista.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
             }
         }
     }
@@ -391,6 +462,7 @@ class SettingsFragment : Fragment() {
     private fun rellenarCampos(config: AppConfig) {
         binding.editTextTokenAcceso.setText(config.tokenAcceso)
         binding.editTextIdNumero.setText(config.idNumeroTelefono)
+        binding.editTextTokenBot.setText(config.tokenBot)
         binding.editTextPlantillaNombre.setText(config.plantillaNombre)
         binding.editTextPlantillaIdioma.setText(config.plantillaIdioma)
         binding.radioGroupModo.check(
@@ -416,6 +488,9 @@ class SettingsFragment : Fragment() {
             val idNumero = IdNumeroTelefono.normalizar(
                 binding.editTextIdNumero.text?.toString().orEmpty()
             )
+            val tokenBot = TokenDeBot.normalizar(
+                binding.editTextTokenBot.text?.toString().orEmpty()
+            )
             val plantillaNombre =
                 binding.editTextPlantillaNombre.text?.toString()?.trim().orEmpty()
             val plantillaIdioma =
@@ -428,7 +503,7 @@ class SettingsFragment : Fragment() {
             val intervalo = binding.editTextIntervalo.entero(VALORES.intervaloReintentoSegundos)
 
             if (!validar(
-                    token, idNumero, modo, plantillaNombre, plantillaIdioma,
+                    token, idNumero, tokenBot, modo, plantillaNombre, plantillaIdioma,
                     maxPorMinuto, maxPorMes, timeoutEnvio, maxReintentos, intervalo
                 )
             ) {
@@ -439,6 +514,7 @@ class SettingsFragment : Fragment() {
                 AppConfig(
                     tokenAcceso = token,
                     idNumeroTelefono = idNumero,
+                    tokenBot = tokenBot,
                     modoDeEntrega = modo,
                     plantillaNombre = plantillaNombre,
                     plantillaIdioma = plantillaIdioma,
@@ -474,6 +550,7 @@ class SettingsFragment : Fragment() {
     private fun validar(
         token: String,
         idNumero: String,
+        tokenBot: String,
         modo: ModoDeEntrega,
         plantillaNombre: String,
         plantillaIdioma: String,
@@ -508,6 +585,15 @@ class SettingsFragment : Fragment() {
                     R.string.settings_id_numero_invalido
                 }
             )
+            valido = false
+        }
+
+        // Lo mismo para el bot: solo la forma, que atrapa pegar media línea del mensaje de
+        // @BotFather. Si sirve lo dice el botón de comprobación.
+        if (TokenDeBot.pareceValido(tokenBot)) {
+            binding.tilTokenBot.error = null
+        } else {
+            binding.tilTokenBot.error = getString(R.string.settings_token_bot_invalido)
             valido = false
         }
 

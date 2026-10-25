@@ -42,6 +42,16 @@
     <string name="settings_guardado">Configuración guardada</string>
     <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se entregará nada.</string>
 
+    <string name="settings_seccion_bot">Bot de Telegram</string>
+    <string name="settings_token_bot">Token del bot</string>
+    <string name="settings_token_bot_ayuda">Crea un bot escribiendo a @BotFather en Telegram y pega aquí el token que te dé. Sin token no se entrega nada por Telegram. El token solo viaja en la copia de seguridad si lo pides al exportar.</string>
+    <string name="settings_validar_bot">Comprobar el token</string>
+    <string name="settings_bot_comprobando">Preguntando a Telegram…</string>
+    <string name="settings_bot_correcto">✓ El token sirve · %1$s (@%2$s)</string>
+    <string name="settings_bot_rechazado">✗ Telegram no acepta este token: %1$s</string>
+    <string name="settings_bot_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>
+    <string name="settings_bot_sin_token">Escribe primero un token para poder comprobarlo</string>
+    <string name="settings_token_bot_invalido">El token no tiene la forma que entrega @BotFather (números, dos puntos y una cadena larga)</string>
     <string name="settings_seccion_cuenta">Cuenta de WhatsApp</string>
     <string name="settings_token_acceso">Token de acceso</string>
     <string name="settings_token_acceso_ayuda">El token de usuario de sistema de tu app de Meta, con caducidad «Nunca». El que la consola enseña por defecto caduca en 24 horas y dejaría la aplicación muda al día siguiente. No se incluye en la copia de seguridad.</string>
@@ -206,6 +216,12 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_ignorar_mayusculas">Ignorar mayúsculas</string>
     <string name="regla_ignorar_mayusculas_ayuda">Aplica las dos expresiones sin distinguir mayúsculas de minúsculas: «hola» casa con «HOLA». Equivale a escribir (?i) en ambas.</string>
 
+    <string name="regla_descubrir_chats">Elegir de los chats del bot</string>
+    <string name="regla_chats_buscando">Preguntando al bot…</string>
+    <string name="regla_chats_titulo">Chats que han escrito al bot</string>
+    <string name="regla_chats_ninguno">Nadie ha escrito al bot todavía. Un bot no puede escribir primero: pídele a quien va a recibir los avisos que abra el bot en Telegram y le mande /start. Después vuelve aquí.</string>
+    <string name="regla_chats_sin_token">Configura primero el token del bot en Ajustes</string>
+    <string name="regla_chats_error">No se pudo preguntar al bot: %1$s</string>
     <string name="regla_canal">Canal</string>
     <string name="canal_whatsapp">WhatsApp</string>
     <string name="canal_telegram">Telegram</string>

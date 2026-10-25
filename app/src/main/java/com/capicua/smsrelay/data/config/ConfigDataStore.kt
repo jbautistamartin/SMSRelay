@@ -33,6 +33,7 @@ class ConfigDataStore @Inject constructor(
         AppConfig(
             tokenAcceso                = prefs[Keys.TOKEN_ACCESO]         ?: porDefecto.tokenAcceso,
             idNumeroTelefono           = prefs[Keys.ID_NUMERO]            ?: porDefecto.idNumeroTelefono,
+            tokenBot                   = prefs[Keys.TOKEN_BOT]            ?: porDefecto.tokenBot,
             modoDeEntrega              = ModoDeEntrega.de(prefs[Keys.MODO_ENTREGA]),
             plantillaNombre            = prefs[Keys.PLANTILLA_NOMBRE]     ?: porDefecto.plantillaNombre,
             plantillaIdioma            = prefs[Keys.PLANTILLA_IDIOMA]     ?: porDefecto.plantillaIdioma,
@@ -50,6 +51,7 @@ class ConfigDataStore @Inject constructor(
         dataStore.edit { prefs ->
             prefs[Keys.TOKEN_ACCESO]        = config.tokenAcceso
             prefs[Keys.ID_NUMERO]           = config.idNumeroTelefono
+            prefs[Keys.TOKEN_BOT]           = config.tokenBot
             prefs[Keys.MODO_ENTREGA]        = config.modoDeEntrega.name
             prefs[Keys.PLANTILLA_NOMBRE]    = config.plantillaNombre
             prefs[Keys.PLANTILLA_IDIOMA]    = config.plantillaIdioma
@@ -65,6 +67,7 @@ class ConfigDataStore @Inject constructor(
     private object Keys {
         val TOKEN_ACCESO        = stringPreferencesKey("token_acceso")
         val ID_NUMERO           = stringPreferencesKey("id_numero_telefono")
+        val TOKEN_BOT           = stringPreferencesKey("token_bot")
         val MODO_ENTREGA        = stringPreferencesKey("modo_entrega")
         val PLANTILLA_NOMBRE    = stringPreferencesKey("plantilla_nombre")
         val PLANTILLA_IDIOMA    = stringPreferencesKey("plantilla_idioma")
