@@ -220,7 +220,9 @@ object ImportacionDeCopia {
             Canal.TELEGRAM -> DestinoDeTelegram.pareceValido(limpio)
             Canal.SMS -> limpio == EvaluadorDeReglas.MARCADOR_TELEFONO ||
                 (NormalizadorTelefono.esDestinoEnviable(limpio) &&
-                    limpio.all { it.isDigit() || it in " +-()" })
+                    limpio.all { it.isDigit() || it in " +-()" } &&
+                    // Un -100… son solo dígitos y un guion, pero es un grupo de Telegram.
+                    !DestinoDeTelegram.esInequivocamenteChat(limpio))
             Canal.API -> PlantillaDeUrl.esValida(limpio)
         }
     }

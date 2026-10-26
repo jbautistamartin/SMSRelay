@@ -148,6 +148,15 @@ class PlantillaDeWhatsAppTest {
     }
 
     @Test
+    fun `el presupuesto vale exactamente 980`() {
+        // El literal está escrito en CLAUDE.md, en docs/ARCHITECTURE.md y en la guía de la
+        // cuenta, y ya se desvió una vez (992 en los documentos, 978 en el código) porque ningún
+        // test lo afirmaba. Si este falla porque cambió CUERPO_RECOMENDADO, cambia el número
+        // aquí y en esos tres documentos a la vez.
+        assertEquals(980, PlantillaDeWhatsApp.PRESUPUESTO)
+    }
+
+    @Test
     fun `el presupuesto es mucho menor que el del texto libre`() {
         // La otra cara del precio de poder escribir fuera de la ventana de 24 h.
         assertTrue(PlantillaDeWhatsApp.PRESUPUESTO < MapeoDeRespuestas.LIMITE_CARACTERES / 4)

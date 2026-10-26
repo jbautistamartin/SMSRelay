@@ -109,11 +109,12 @@ class ImportacionDeCopiaTest {
                 {"nombre":"Chat por WhatsApp","canal":"WHATSAPP","destino":"-1001234567890"},
                 {"nombre":"Sin mensaje","canal":"API","destino":"https://h/x"},
                 {"nombre":"Alfanumerico","canal":"SMS","destino":"BANCO"},
+                {"nombre":"Grupo por SMS","canal":"SMS","destino":"-1001234567890"},
                 {"nombre":"Telefono por Telegram","canal":"TELEGRAM","destino":"+34 600 11 22 33"}]}"""
         )
 
         assertTrue(copia.reglas.isEmpty())
-        assertEquals(4, copia.rechazadas)
+        assertEquals(5, copia.rechazadas)
     }
 
     @Test

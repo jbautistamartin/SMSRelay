@@ -483,7 +483,7 @@ aplicación vieja, importar en la nueva, rellenar credenciales.
 > trabajo de esta fase: `DispatchWorker.esperarSiLoPiden()` nunca dejó de existir, y volvió a
 > dormir en cuanto la fase 3 trajo un transporte que manda la espera.
 
-### Fase 9 — Documentación y privacidad · `[ ]`
+### Fase 9 — Documentación y privacidad · `[x]`
 
 - `CLAUDE.md` reescrito. Muchas afirmaciones de hoy dejan de ser verdad en esta aplicación: «no
   hay `SEND_SMS`», «el destino es siempre un E.164», «`TransportModule` es un `@Binds`», «los
@@ -503,6 +503,28 @@ aplicación vieja, importar en la nueva, rellenar credenciales.
   `PlantillaDeUrlTest`, el mapeo de la API, el de canales y las importaciones de la fase 7.
   `PlantillaDeWhatsAppTest` debería **afirmar el literal** del presupuesto, que es la deuda que el
   CLAUDE.md de SMStoWhats deja escrita.
+
+> **Cómo se cerró (25 oct 2026).** 234 tests en verde, en 14 clases: los ~220 previstos más los de
+> la fase 7, y uno nuevo en `PlantillaDeWhatsAppTest` que afirma `PRESUPUESTO == 980`. Las menciones
+> a 978 que quedaban en `docs/ARCHITECTURE.md` y en la guía de la cuenta pasaron a 980.
+>
+> - `CLAUDE.md`, `README.md` y `docs/ARCHITECTURE.md` reescritos para los cuatro canales. El
+>   `CLAUDE.md` deja escrito que lo que dicen los planes antiguos —sin `SEND_SMS`, destino siempre
+>   E.164, sin guardas antibucle, ajustes sustituidos al importar— ya no es verdad aquí, y por qué.
+> - `docs/BOT-TELEGRAM.md` nuevo, desde el README de SMStoTelegram. `docs/CUENTA-WHATSAPP-BUSINESS.md`
+>   se queda, con el nombre de la aplicación cambiado.
+> - El aviso de privacidad de «Acerca de» es ahora lo común y un párrafo por canal, con el de
+>   WhatsApp entero; el descargo de responsabilidad añade al operador, a Telegram y al servidor de
+>   la API. También cambiaron la descripción, la tarjeta de marcadores (qué marcadores valen en el
+>   destino de cada canal) y el aviso de exportar con credenciales, que ahora incluye el token del
+>   bot. Las seis tarjetas siguen en el orden común.
+> - `CHANGELOG.md` recoge por fin lo de las fases 2 a 9 bajo `[No publicado]`.
+> - El `CLAUDE.md` de la carpeta raíz —que no está en ningún repositorio— tiene SMSRelay en la
+>   tabla, en el linaje, en los planes y en los colores.
+>
+> De paso, al escribir la documentación del importador salió una incoherencia con el editor: un
+> `-1001234567890` con el canal SMS pasaba la validación de importar, por ser solo dígitos y un
+> guion. Ahora se rechaza igual que en el editor, con su caso en `ImportacionDeCopiaTest`.
 
 ### Fase 10 — Dispositivo real y release 1.0.0 · `[ ]`
 
