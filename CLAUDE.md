@@ -113,10 +113,11 @@ instale sobre la anterior sin perder nada.
 Queda la **fase 10**: ver salir un SMS real por cada canal real, la batería de pruebas de esa fase
 y publicar la 1.0.0. Hasta entonces la aplicación está en `1.0.0`/`versionCode 1` sin publicar.
 
-**El repositorio `github.com/jbautistamartin/SMSRelay` no existe todavía** (decisión F del
-masterplan). El comprobador de actualizaciones y la tarjeta *Código abierto* apuntan ya a él; un
-404 de GitHub se interpreta como «todavía no hay releases», así que mientras no exista la
-aplicación simplemente no avisa de nada.
+**El repositorio es `github.com/jbautistamartin/SMSRelay`**, público, y existe desde el 25 oct
+2026; las fases 1 a 9 están integradas en `develop`. **`main` sigue teniendo SMStoWhats** —el repo
+se creó con sus ramas— hasta que la 1.0.0 lo actualice. Todavía no hay ningún release, así que el
+comprobador de actualizaciones recibe un 404, que interpreta como «todavía no hay releases», y no
+avisa de nada.
 
 **Qué pasa con las cuatro anteriores** es la decisión D: una última versión de cada una cuya tarjeta
 de actualizaciones diga que la aplicación sigue en SMSRelay, y después archivar sus repositorios.
@@ -567,7 +568,7 @@ Lleva las mismas seis tarjetas, en el mismo orden, que las cuatro aplicaciones a
     instalada deja de perder.
   - **Las versiones se comparan como números** (`VersionPublicada`, con tests): `"1.10.0" < "1.9.0"`
     alfabéticamente.
-  - **Un 404 significa que no hay releases.** Hoy, que el repositorio no existe, es lo que pasa.
+  - **Un 404 significa que no hay releases.** Es lo que pasa hasta publicar la 1.0.0.
   - `DownloadManager` descarga el APK y el instalador del sistema lo instala;
     `REQUEST_INSTALL_PACKAGES` exige además autorizar a *esta* app, y se comprueba **antes** de
     descargar. **La firma es el modelo de seguridad**: Android solo actualiza un APK firmado con la

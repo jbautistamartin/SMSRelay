@@ -56,7 +56,8 @@ contradice el código es peor que no tener comentario.
   (toolchain al día), con el historial de Git completo: el linaje se lee con `git log` igual que
   en las anteriores.
 - **Rama `feature/20261025_SMSRelay`**, sacada de `develop`. Sin remoto todavía: el repositorio
-  `github.com/jbautistamartin/SMSRelay` no existe (ver punto 9, decisión F).
+  `github.com/jbautistamartin/SMSRelay` no existe (ver punto 9, decisión F). *Ya existe: ver la
+  nota del punto 9.*
 - Este fichero.
 
 > **Corregido en la fase 1.** Este punto decía que `local.properties` apuntaba todavía al almacén
@@ -602,5 +603,7 @@ que alguien confirme antes de empezar, con la recomendada primero:
 
 > **Cómo se decidió (25 oct 2026).** A, B, C y D, con la opción recomendada; D sigue sin hacer,
 > porque es trabajo de los otros cuatro repositorios. E se resolvió en la fase 7: los formatos 1,
-> 2 y 3 de SMStoSMS se aceptan, como reglas del canal SMS. F se aplazó: el repositorio **no** se
-> crea todavía, y mientras no exista el comprobador de versiones recibe un 404 y no avisa de nada.
+> 2 y 3 de SMStoSMS se aceptan, como reglas del canal SMS. F se aplazó al cerrar la fase 9, y el
+> mismo 25 oct 2026 el repositorio se creó, público, con las ramas de SMStoWhats; la rama de la
+> mudanza se integró en `develop` y se borró. `main` sigue siendo SMStoWhats hasta la 1.0.0, y
+> hasta entonces el comprobador de versiones recibe un 404 y no avisa de nada.
