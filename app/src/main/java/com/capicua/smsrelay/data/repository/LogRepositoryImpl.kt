@@ -7,6 +7,7 @@ package com.capicua.smsrelay.data.repository
 
 import com.capicua.smsrelay.data.local.db.dao.LogDao
 import com.capicua.smsrelay.data.local.db.entity.LogEntity
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.model.LogEntry
 import com.capicua.smsrelay.domain.model.LogTipo
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +31,10 @@ class LogRepositoryImpl @Inject constructor(
     override fun observarPorTipo(tipo: LogTipo, limite: Int): Flow<List<LogEntry>> =
         logDao.observarPorTipo(tipo.name, limite).map { lista -> lista.map { it.aDominio() } }
 
+    override fun observarFiltrados(tipo: LogTipo?, canal: Canal?, limite: Int): Flow<List<LogEntry>> =
+        logDao.observarFiltrados(tipo?.name, canal?.name, limite)
+            .map { lista -> lista.map { it.aDominio() } }
+
     override suspend fun obtenerTodosParaExportar(): List<LogEntry> =
         logDao.obtenerTodosParaExportar().map { it.aDominio() }
 
@@ -47,6 +52,7 @@ class LogRepositoryImpl @Inject constructor(
         smsId = smsId,
         reenvioId = reenvioId,
         destino = destino,
+        canal = canal?.name,
         detalle = detalle,
         timestamp = timestamp.toEpochMilli()
     )
@@ -57,6 +63,7 @@ class LogRepositoryImpl @Inject constructor(
         smsId = smsId,
         reenvioId = reenvioId,
         destino = destino,
+        canal = Canal.de(canal),
         detalle = detalle,
         timestamp = Instant.ofEpochMilli(timestamp)
     )

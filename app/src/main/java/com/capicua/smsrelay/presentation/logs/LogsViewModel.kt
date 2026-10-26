@@ -11,6 +11,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.capicua.smsrelay.data.repository.LogRepository
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.model.LogEntry
 import com.capicua.smsrelay.domain.model.LogTipo
 import com.capicua.smsrelay.util.Constants
@@ -19,6 +20,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -39,19 +41,22 @@ class LogsViewModel @Inject constructor(
     private val _filtroActivo = MutableStateFlow<LogTipo?>(null)
     val filtroActivo: StateFlow<LogTipo?> = _filtroActivo
 
-    /** Lista de logs según el filtro activo */
-    val logs: Flow<List<LogEntry>> = _filtroActivo.flatMapLatest { tipo ->
-        if (tipo == null) {
-            logRepository.observarRecientes(500)
-        } else {
-            logRepository.observarPorTipo(tipo, 500)
-        }
-    }
+    /** Filtro de canal: null = todos los canales, y también las entradas que no son de un reenvío. */
+    private val _canalActivo = MutableStateFlow<Canal?>(null)
+    val canalActivo: StateFlow<Canal?> = _canalActivo
+
+    /** Lista de logs según los dos filtros, que se combinan. */
+    val logs: Flow<List<LogEntry>> = combine(_filtroActivo, _canalActivo) { tipo, canal -> tipo to canal }
+        .flatMapLatest { (tipo, canal) -> logRepository.observarFiltrados(tipo, canal, 500) }
 
     val totalLogs: Flow<Int> = logRepository.observarTotal()
 
     fun aplicarFiltro(tipo: LogTipo?) {
         _filtroActivo.value = tipo
+    }
+
+    fun aplicarCanal(canal: Canal?) {
+        _canalActivo.value = canal
     }
 
     fun limpiarTodos() {
@@ -89,6 +94,7 @@ class LogsViewModel @Inject constructor(
         append("[${FORMATO_FECHA.format(log.timestamp)}]")
         append(" [${log.tipo.name.padEnd(14)}]")
         log.smsId?.let { append(" [SMS: ${it.take(8)}…]") }
+        log.canal?.let { append(" [${it.etiqueta}]") }
         log.destino?.let { append(" [→ $it]") }
         append(" ${log.detalle}")
     }

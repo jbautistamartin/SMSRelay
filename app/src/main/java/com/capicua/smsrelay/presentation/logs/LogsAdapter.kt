@@ -52,7 +52,9 @@ class LogsAdapter(
             binding.textViewDetalle.text   = log.detalle
             binding.textViewTipo.text      = log.tipo.name
 
-            binding.textViewDestino.text = log.destino?.let { "→ $it" }.orEmpty()
+            binding.textViewDestino.text = log.destino?.let { destino ->
+                log.canal?.let { "→ ${it.etiqueta} · $destino" } ?: "→ $destino"
+            }.orEmpty()
 
             val (colorRes, iconRes) = when (log.tipo) {
                 LogTipo.SMS_RECIBIDO   -> Pair(R.color.log_recibido,  android.R.drawable.ic_dialog_info)

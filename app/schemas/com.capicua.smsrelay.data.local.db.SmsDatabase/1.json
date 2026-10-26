@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "55f6e2e50f0d6fb41258455e9053a276",
+    "identityHash": "520e5c1086d986e7e83f77412761a433",
     "entities": [
       {
         "tableName": "sms",
@@ -298,7 +298,7 @@
       },
       {
         "tableName": "log_entries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tipo` TEXT NOT NULL, `sms_id` TEXT, `reenvio_id` TEXT, `destino` TEXT, `detalle` TEXT NOT NULL, `timestamp` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tipo` TEXT NOT NULL, `sms_id` TEXT, `reenvio_id` TEXT, `destino` TEXT, `canal` TEXT, `detalle` TEXT NOT NULL, `timestamp` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -325,6 +325,11 @@
           {
             "fieldPath": "destino",
             "columnName": "destino",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "canal",
+            "columnName": "canal",
             "affinity": "TEXT"
           },
           {
@@ -370,7 +375,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '55f6e2e50f0d6fb41258455e9053a276')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '520e5c1086d986e7e83f77412761a433')"
     ]
   }
 }

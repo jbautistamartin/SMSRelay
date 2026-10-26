@@ -182,6 +182,45 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp" />
 
+        <!-- ── Canales ─────────────────────────────────────────────────────
+             La sección «destino» del orden común de la casa (la conexión en SMSGateway, la SIM
+             en SMStoSMS, el bot en SMStoTelegram, la cuenta en SMStoWhats). Aquí son cuatro, así
+             que arriba va un resumen: si cada canal está listo y cuántas reglas activas lo usan.
+             Una regla activa por un canal sin configurar sale en ámbar, porque es un aviso. Las
+             subsecciones de debajo, una por canal, son las de siempre. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_seccion_canales"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/settings_canales_ayuda"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutline"
+            app:strokeWidth="1dp">
+
+            <!-- Lo rellena el fragment: una línea por canal. -->
+            <LinearLayout
+                android:id="@+id/layout_estado_canales"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp" />
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- ── Cuenta de WhatsApp ──────────────────────────────────────────
              Tercera sección, donde las otras tres aplicaciones de la familia ponen su destino
              (la conexión en SMSGateway, la SIM en SMStoSMS, el bot en SMStoTelegram): las dos

@@ -5,6 +5,7 @@
 
 package com.capicua.smsrelay.data.repository
 
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.model.LogEntry
 import com.capicua.smsrelay.domain.model.LogTipo
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,9 @@ interface LogRepository {
 
     /** Flujo reactivo filtrado por tipo */
     fun observarPorTipo(tipo: LogTipo, limite: Int = 500): Flow<List<LogEntry>>
+
+    /** Por tipo y por canal a la vez; null en cualquiera de los dos es «todos». */
+    fun observarFiltrados(tipo: LogTipo?, canal: Canal?, limite: Int = 500): Flow<List<LogEntry>>
 
     /** Todas las entradas para exportar a fichero */
     suspend fun obtenerTodosParaExportar(): List<LogEntry>

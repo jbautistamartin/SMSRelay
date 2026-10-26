@@ -21,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.capicua.smsrelay.R
 import com.capicua.smsrelay.databinding.FragmentLogsBinding
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.model.LogEntry
 import com.capicua.smsrelay.domain.model.LogTipo
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -89,6 +90,12 @@ class LogsFragment : Fragment() {
         binding.chipLimite.setOnClickListener        { viewModel.aplicarFiltro(LogTipo.LIMITE_ALCANZADO) }
         binding.chipErrores.setOnClickListener       { viewModel.aplicarFiltro(LogTipo.ERROR) }
         binding.chipSistema.setOnClickListener       { viewModel.aplicarFiltro(LogTipo.SISTEMA) }
+
+        binding.chipCanalLogTodos.setOnClickListener    { viewModel.aplicarCanal(null) }
+        binding.chipCanalLogWhatsapp.setOnClickListener { viewModel.aplicarCanal(Canal.WHATSAPP) }
+        binding.chipCanalLogTelegram.setOnClickListener { viewModel.aplicarCanal(Canal.TELEGRAM) }
+        binding.chipCanalLogSms.setOnClickListener      { viewModel.aplicarCanal(Canal.SMS) }
+        binding.chipCanalLogApi.setOnClickListener      { viewModel.aplicarCanal(Canal.API) }
     }
 
     private fun configurarLimpiar() {

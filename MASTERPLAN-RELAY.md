@@ -380,7 +380,7 @@ De SMSGateway, que es la más lejana: no tiene reglas, no tiene juntura y manda 
 > - La plantilla de una regla nueva cambia a `{mensaje}` al elegir el canal API, y vuelve a la
 >   de siempre al salir, pero solo si nadie la ha tocado.
 
-### Fase 6 — Ajustes, Panel y prueba de reglas por canal · `[ ]`
+### Fase 6 — Ajustes, Panel y prueba de reglas por canal · `[x]`
 
 - **Ajustes** mantiene el orden común de la casa —recepción, fiabilidad, destino, límites, envío y
   reintentos, copia— y la sección «destino» pasa a ser «Canales», con una tarjeta por canal. Cada
@@ -393,6 +393,23 @@ De SMSGateway, que es la más lejana: no tiene reglas, no tiene juntura y manda 
 - **Lista de reglas**: el canal de cada regla a la vista, con un icono por canal en el tono del
   tema (no en los colores de las marcas).
 - **Registro**: el canal en cada entrada de reenvío, y como filtro.
+
+> **Cómo se cerró (25 oct 2026).** 220 tests en verde; esta fase no añade lógica pura que probar.
+> Parte del trabajo ya estaba hecho en fases anteriores: la prueba de reglas es por canal desde
+> la 2, y el aviso del Panel nombra el canal desde la 3.
+>
+> - **Ajustes no se reordenó en tarjetas, sino que ganó un resumen.** La sección «Canales» abre
+>   con una línea por canal —listo o qué le falta, y cuántas reglas activas lo usan—, en ámbar
+>   cuando hay reglas activas y el canal no puede entregar. Debajo siguen las subsecciones de
+>   cada canal tal como entraron en las fases 3 a 5. Es la mitad barata de lo que pedía el plan
+>   y dice lo mismo; repartirlas en tarjetas plegables queda para cuando se vea en el teléfono.
+> - **`log_entries` gana la columna `canal`**, nullable, en el esquema v1, que todavía se puede
+>   editar porque no hay ninguna instalación. El filtro por canal es un segundo carrusel de
+>   chips que se combina con el de tipo, y deja fuera las entradas que no son de un reenvío.
+> - **La lista de reglas enseña el canal como texto** («WhatsApp · +34…») y no con un icono: es
+>   más claro y no obliga a dibujar cuatro iconos que no se parezcan a las marcas. La URL de una
+>   regla API se enseña sin query.
+> - El contador del mes del Panel se esconde si ninguna regla activa usa WhatsApp.
 
 ### Fase 7 — Copia de seguridad: formato 6 y la migración desde las cuatro · `[ ]`
 

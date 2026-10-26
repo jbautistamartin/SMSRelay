@@ -16,8 +16,9 @@ import androidx.room.PrimaryKey
  * Índice en [smsId] para consultas rápidas por mensaje.
  * Índice en [timestamp] para ordenar y purgar entradas antiguas.
  *
- * [destino] se guarda desnormalizado a propósito: así el registro se lee de principio a fin
- * sin cruzar con `reenvios`, y sigue siendo legible aunque el reenvío se haya purgado.
+ * [destino] y [canal] se guardan desnormalizados a propósito: así el registro se lee de
+ * principio a fin sin cruzar con `reenvios`, y sigue siendo legible —y filtrable por canal—
+ * aunque el reenvío se haya purgado.
  */
 @Entity(
     tableName = "log_entries",
@@ -43,6 +44,10 @@ data class LogEntity(
 
     @ColumnInfo(name = "destino")
     val destino: String? = null,
+
+    /** Nombre de la constante de `Canal`, o null si la entrada no es de un reenvío. */
+    @ColumnInfo(name = "canal")
+    val canal: String? = null,
 
     @ColumnInfo(name = "detalle")
     val detalle: String,

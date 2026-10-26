@@ -15,7 +15,12 @@ import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.config.ResultadoCopia
 import com.capicua.smsrelay.data.sms.ProveedorDeSims
 import com.capicua.smsrelay.data.sms.SimDisponible
+import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.data.sms.SmsSender
+import com.capicua.smsrelay.domain.transport.Canal
+import com.capicua.smsrelay.domain.transport.Transportes
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import com.capicua.smsrelay.data.telegram.ComprobadorDelBot
 import com.capicua.smsrelay.data.telegram.EstadoDelBot
 import com.capicua.smsrelay.data.telegram.ResultadoDelBot
@@ -46,8 +51,48 @@ class SettingsViewModel @Inject constructor(
     private val estadoDelBot: EstadoDelBot,
     private val comprobadorDelBot: ComprobadorDelBot,
     private val proveedorDeSims: ProveedorDeSims,
-    private val smsSender: SmsSender
+    private val smsSender: SmsSender,
+    private val transportes: Transportes,
+    reglaRepository: ReglaRepository
 ) : AndroidViewModel(application) {
+
+    private val refrescos = MutableStateFlow(0)
+
+    /** Cómo está un canal: si está listo y cuántas reglas activas lo usan. */
+    data class EstadoCanal(
+        val canal: Canal,
+        /** Por qué no puede entregar, o null si está listo. */
+        val motivo: String?,
+        val reglasActivas: Int
+    )
+
+    /**
+     * El resumen de la sección «Canales».
+     *
+     * Se recalcula con la configuración, con el aviso de credencial rechazada de cada servicio
+     * y con las reglas, que son las tres cosas que pueden cambiarlo. El permiso de enviar SMS
+     * no emite nada al concederse, así que el fragment pide [refrescarCanales] al volver.
+     */
+    val estadoCanales: Flow<List<EstadoCanal>> = combine(
+        configDataStore.config,
+        estadoDeLaCuenta.credencialRechazada,
+        estadoDelBot.tokenRechazado,
+        reglaRepository.observarTodas(),
+        refrescos
+    ) { _, _, _, reglas, _ ->
+        Canal.entries.map { canal ->
+            EstadoCanal(
+                canal = canal,
+                motivo = transportes.de(canal)?.motivoNoDisponible()
+                    ?: transportes.motivoSinTransporte(canal).takeIf { transportes.de(canal) == null },
+                reglasActivas = reglas.count { it.activa && it.canal == canal }
+            )
+        }
+    }
+
+    fun refrescarCanales() {
+        refrescos.value += 1
+    }
 
     /**
      * SIM activas del dispositivo. Vacía sin `READ_PHONE_STATE`; de un elemento, nada que elegir.

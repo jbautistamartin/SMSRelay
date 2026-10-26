@@ -5,6 +5,7 @@
 
 package com.capicua.smsrelay.domain.model
 
+import com.capicua.smsrelay.domain.transport.Canal
 import java.time.Instant
 
 /**
@@ -24,6 +25,12 @@ data class LogEntry(
 
     /** Número destino implicado, para poder leer el log sin cruzar tablas. */
     val destino: String? = null,
+
+    /**
+     * Canal del reenvío implicado, o null si el evento no es de un reenvío (un SMS recibido, un
+     * SMS sin regla, un evento del sistema). Desnormalizado por la misma razón que [destino].
+     */
+    val canal: Canal? = null,
 
     /** Descripción legible del evento. */
     val detalle: String,

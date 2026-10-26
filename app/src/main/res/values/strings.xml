@@ -37,7 +37,7 @@
 
     <!-- Settings -->
     <string name="settings_title">Configuración</string>
-    <string name="settings_subtitulo">Las credenciales de la Cloud API y los ajustes que afectan a todas las entregas. Las reglas que deciden a qué número acaba yendo cada SMS tienen su propia pantalla.</string>
+    <string name="settings_subtitulo">Lo que necesita cada canal y los ajustes que afectan a todas las entregas. Las reglas que deciden por dónde y a quién sale cada SMS tienen su propia pantalla.</string>
     <string name="settings_guardar">Guardar configuración</string>
     <string name="settings_guardado">Configuración guardada</string>
     <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se entregará nada.</string>
@@ -52,6 +52,13 @@
     <string name="settings_bot_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>
     <string name="settings_bot_sin_token">Escribe primero un token para poder comprobarlo</string>
     <string name="settings_token_bot_invalido">El token no tiene la forma que entrega @BotFather (números, dos puntos y una cadena larga)</string>
+    <string name="settings_seccion_canales">Canales</string>
+    <string name="settings_canales_ayuda">Por dónde puede salir cada reenvío. Cada regla elige su canal; solo hace falta configurar los que usen tus reglas.</string>
+    <string name="settings_canal_listo">%1$s · listo · %2$d regla(s) activa(s)</string>
+    <string name="settings_canal_sin_uso">%1$s · sin reglas que lo usen</string>
+    <string name="settings_canal_falta">%1$s · ⚠ %2$d regla(s) activa(s), pero %3$s</string>
+    <string name="settings_canal_falta_sin_uso">%1$s · sin reglas · %2$s</string>
+    <string name="logs_filtro_todos_canales">Todos los canales</string>
     <string name="settings_seccion_cuenta">Cuenta de WhatsApp</string>
     <string name="settings_token_acceso">Token de acceso</string>
     <string name="settings_token_acceso_ayuda">El token de usuario de sistema de tu app de Meta, con caducidad «Nunca». El que la consola enseña por defecto caduca en 24 horas y dejaría la aplicación muda al día siguiente. No se incluye en la copia de seguridad.</string>

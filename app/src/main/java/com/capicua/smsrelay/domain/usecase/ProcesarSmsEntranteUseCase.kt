@@ -221,6 +221,7 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                     tipo = LogTipo.LIMITE_ALCANZADO,
                     smsId = sms.id,
                     destino = coincidencia.destino,
+                    canal = coincidencia.canal,
                     detalle = "Regla «${coincidencia.nombreRegla}» reenviaría por SMS al propio " +
                         "remitente ${sms.telefono}: omitida. Si la intención era contestarle, " +
                         "pon {telefono} como destino de la regla",
@@ -245,6 +246,7 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                     tipo = LogTipo.ERROR,
                     smsId = sms.id,
                     destino = coincidencia.destino,
+                    canal = coincidencia.canal,
                     detalle = "Regla «${coincidencia.nombreRegla}» contesta al remitente, pero " +
                         "«${sms.telefono}» no es un número al que se pueda enviar un SMS: omitida",
                     timestamp = Instant.now()
@@ -290,6 +292,7 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                     smsId = sms.id,
                     reenvioId = reenvio.id,
                     destino = reenvio.destino,
+                    canal = reenvio.canal,
                     detalle = "Regla «${reenvio.nombreRegla}» → ${reenvio.canal.etiqueta} " +
                         reenvio.destino,
                     timestamp = Instant.now()

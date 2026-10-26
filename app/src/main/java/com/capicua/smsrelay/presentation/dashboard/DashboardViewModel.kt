@@ -15,6 +15,7 @@ import com.capicua.smsrelay.data.telegram.EstadoDelBot
 import com.capicua.smsrelay.data.whatsapp.ContadorDeMensajes
 import com.capicua.smsrelay.data.whatsapp.EstadoDeLaCuenta
 import com.capicua.smsrelay.data.whatsapp.MensajesDelMes
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.transport.Transportes
 import com.capicua.smsrelay.domain.model.SmsConReenvios
 import com.capicua.smsrelay.domain.usecase.ObtenerListaSmsUseCase
@@ -72,10 +73,16 @@ class DashboardViewModel @Inject constructor(
      * Van juntos el contador y el tope porque por separado no dicen nada: «143 mensajes» no es
      * ni mucho ni poco hasta que se sabe contra qué.
      */
-    val mensajesDelMes: Flow<Pair<MensajesDelMes, Int>> = combine(
+    val mensajesDelMes: Flow<Pair<MensajesDelMes, Int>?> = combine(
         contadorDeMensajes.mesEnCurso,
-        configDataStore.config
-    ) { mes, config -> mes to config.maxMensajesPorMes }
+        configDataStore.config,
+        reglaRepository.observarTodas()
+    ) { mes, config, reglas ->
+        // Null sin ninguna regla activa por WhatsApp: los mensajes que cuentan dinero son los de
+        // la Cloud API, y a quien solo reenvía por Telegram esa cifra no le dice nada.
+        if (reglas.none { it.activa && it.canal == Canal.WHATSAPP }) null
+        else mes to config.maxMensajesPorMes
+    }
 
     /**
      * Por qué no se puede entregar por alguno de los canales en uso, o null si todos están

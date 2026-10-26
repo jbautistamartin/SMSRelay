@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.capicua.smsrelay.R
 import com.capicua.smsrelay.databinding.ItemReglaBinding
+import com.capicua.smsrelay.domain.rules.PlantillaDeUrl
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.model.Regla
 
 /**
@@ -49,9 +51,12 @@ class ReglasAdapter(
             binding.textViewOrden.text = (posicion + 1).toString()
             binding.textViewNombre.text = regla.nombre
             binding.textViewCriterios.text = describirCriterios(regla)
+            // El canal va delante del destino: con cuatro canales, «→ 600112233» no dice si sale
+            // por SMS o por WhatsApp. Una URL se enseña sin query, que es donde suele ir la clave.
+            val destino = if (regla.canal == Canal.API) PlantillaDeUrl.sinQuery(regla.destino) else regla.destino
             binding.textViewDestino.text = ctx.getString(
                 if (regla.continuar) R.string.reglas_destino_continua else R.string.reglas_destino,
-                regla.destino
+                ctx.getString(R.string.destino_por_canal, regla.canal.etiqueta, destino)
             )
 
             // Una regla desactivada se atenúa entera: así se distingue de un vistazo sin tener

@@ -69,6 +69,7 @@ class SettingsFragment : Fragment() {
         ActivityResultContracts.RequestPermission()
     ) { concedido ->
         pintarEstadoSms()
+        viewModel.refrescarCanales()
         if (!concedido) {
             Snackbar.make(binding.root, R.string.settings_sms_permiso_denegado, Snackbar.LENGTH_LONG)
                 .show()
@@ -111,6 +112,7 @@ class SettingsFragment : Fragment() {
         configurarBateria()
         configurarAutoinicio()
         configurarSms()
+        observarCanales()
         configurarCopia()
         configurarComprobacionDeCuenta()
         configurarComprobacionDelBot()
@@ -134,6 +136,7 @@ class SettingsFragment : Fragment() {
         // aplicación, y lo que hay que ver al volver es el estado nuevo.
         pintarEstadoSms()
         configurarSelectorSim()
+        viewModel.refrescarCanales()
     }
 
     // ── Entrega: la plantilla ─────────────────────────────────────────────────
@@ -205,6 +208,54 @@ class SettingsFragment : Fragment() {
                     }
                 }
             }
+        }
+    }
+
+    // ── Canales ───────────────────────────────────────────────────────────────
+
+    private fun observarCanales() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.estadoCanales.collect { estados -> pintarCanales(estados) }
+            }
+        }
+    }
+
+    /**
+     * Una línea por canal. Verde si está listo, ámbar si tiene reglas activas y no puede
+     * entregar —eso es un aviso, no un detalle—, y en el color tenue de siempre si no lo usa
+     * nadie, esté como esté: un canal sin configurar que no usa ninguna regla no es un problema.
+     */
+    private fun pintarCanales(estados: List<SettingsViewModel.EstadoCanal>) {
+        val contenedor = binding.layoutEstadoCanales
+        contenedor.removeAllViews()
+        estados.forEach { estado ->
+            val linea = android.widget.TextView(requireContext()).apply {
+                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+                setPadding(0, 4, 0, 4)
+            }
+            val etiqueta = estado.canal.etiqueta
+            when {
+                estado.motivo == null && estado.reglasActivas > 0 -> {
+                    linea.text = getString(R.string.settings_canal_listo, etiqueta, estado.reglasActivas)
+                    linea.setTextColor(resources.getColor(R.color.status_delivered, null))
+                }
+                estado.motivo == null -> {
+                    linea.text = getString(R.string.settings_canal_sin_uso, etiqueta)
+                    linea.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
+                }
+                estado.reglasActivas > 0 -> {
+                    linea.text = getString(
+                        R.string.settings_canal_falta, etiqueta, estado.reglasActivas, estado.motivo
+                    )
+                    linea.setTextColor(resources.getColor(R.color.status_pending, null))
+                }
+                else -> {
+                    linea.text = getString(R.string.settings_canal_falta_sin_uso, etiqueta, estado.motivo)
+                    linea.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
+                }
+            }
+            contenedor.addView(linea)
         }
     }
 

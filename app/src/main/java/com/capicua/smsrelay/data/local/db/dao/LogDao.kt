@@ -26,6 +26,20 @@ interface LogDao {
     @Query("SELECT * FROM log_entries WHERE tipo = :tipo ORDER BY timestamp DESC LIMIT :limite")
     fun observarPorTipo(tipo: String, limite: Int = 500): Flow<List<LogEntity>>
 
+    /**
+     * Por tipo y por canal; un parámetro null no filtra.
+     *
+     * Filtrar por canal deja fuera las entradas sin canal —un SMS recibido, uno sin regla—, que
+     * es lo que se quiere: quien pide «solo Telegram» busca qué ha pasado con los reenvíos por
+     * Telegram.
+     */
+    @Query(
+        "SELECT * FROM log_entries " +
+            "WHERE (:tipo IS NULL OR tipo = :tipo) AND (:canal IS NULL OR canal = :canal) " +
+            "ORDER BY timestamp DESC LIMIT :limite"
+    )
+    fun observarFiltrados(tipo: String?, canal: String?, limite: Int = 500): Flow<List<LogEntity>>
+
     /** Todos para exportar (sin límite) */
     @Query("SELECT * FROM log_entries ORDER BY timestamp DESC")
     suspend fun obtenerTodosParaExportar(): List<LogEntity>

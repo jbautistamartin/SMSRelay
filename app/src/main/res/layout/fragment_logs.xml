@@ -115,6 +115,66 @@
             </HorizontalScrollView>
         </com.capicua.smsrelay.presentation.common.NestedScrollableHost>
 
+        <!-- Segundo filtro, por canal, que se combina con el de tipo. Su propio carrusel y su
+             propio NestedScrollableHost: el pager se queda el gesto si no. -->
+        <com.capicua.smsrelay.presentation.common.NestedScrollableHost
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="8dp">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chip_group_canal_log"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_canal_log_todos"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/logs_filtro_todos_canales" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_canal_log_whatsapp"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/canal_whatsapp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_canal_log_telegram"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/canal_telegram" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_canal_log_sms"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/canal_sms" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_canal_log_api"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/canal_api" />
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
+        </com.capicua.smsrelay.presentation.common.NestedScrollableHost>
+
         <TextView
             android:id="@+id/text_view_sin_logs"
             android:layout_width="wrap_content"

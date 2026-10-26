@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.repository.LogRepository
 import com.capicua.smsrelay.data.repository.ReenvioRepository
+import com.capicua.smsrelay.domain.model.Reenvio
 import com.capicua.smsrelay.domain.model.EstadoReenvio
 import com.capicua.smsrelay.domain.model.LogEntry
 import com.capicua.smsrelay.domain.model.LogTipo
@@ -93,7 +94,7 @@ class DispatchWorker @AssistedInject constructor(
             val error = "Máximo de ${config.maxReintentos} reintentos alcanzado"
             Timber.w("DispatchWorker[$reenvioId]: $error")
             reenvioRepository.marcarComoFallido(reenvioId, error)
-            registrar(LogTipo.ERROR, reenvio.smsId, reenvioId, reenvio.destino, error)
+            registrar(LogTipo.ERROR, reenvio, error)
             return Result.failure()
         }
 
@@ -112,8 +113,7 @@ class DispatchWorker @AssistedInject constructor(
         return when (resultado) {
             is ResultadoEnvio.Enviado -> {
                 reenvioRepository.marcarComoEnviado(reenvioId, Instant.now())
-                registrar(
-                    LogTipo.SMS_REENVIADO, reenvio.smsId, reenvioId, reenvio.destino,
+                registrar(LogTipo.SMS_REENVIADO, reenvio,
                     "Reenviado por ${reenvio.canal.etiqueta} a ${reenvio.destino}"
                 )
                 Timber.i("DispatchWorker[$reenvioId]: reenviado a ${reenvio.destino}")
@@ -123,7 +123,7 @@ class DispatchWorker @AssistedInject constructor(
             is ResultadoEnvio.ErrorPermanente -> {
                 val error = "Fallo permanente: ${resultado.motivo}"
                 reenvioRepository.marcarComoFallido(reenvioId, error)
-                registrar(LogTipo.ERROR, reenvio.smsId, reenvioId, reenvio.destino, error)
+                registrar(LogTipo.ERROR, reenvio, error)
                 Timber.e("DispatchWorker[$reenvioId]: $error")
                 Result.failure()
             }
@@ -131,7 +131,7 @@ class DispatchWorker @AssistedInject constructor(
             is ResultadoEnvio.ErrorTransitorio -> {
                 val error = "Fallo transitorio: ${resultado.motivo}"
                 reenvioRepository.registrarError(reenvioId, error)
-                registrar(LogTipo.ERROR, reenvio.smsId, reenvioId, reenvio.destino, error)
+                registrar(LogTipo.ERROR, reenvio, error)
                 Timber.w("DispatchWorker[$reenvioId]: $error, reintentando")
                 esperarSiLoPiden(resultado.esperaSegundos)
                 Result.retry()
@@ -163,19 +163,14 @@ class DispatchWorker @AssistedInject constructor(
         delay(espera * 1000L)
     }
 
-    private suspend fun registrar(
-        tipo: LogTipo,
-        smsId: String,
-        reenvioId: String,
-        destino: String,
-        detalle: String
-    ) {
+    private suspend fun registrar(tipo: LogTipo, reenvio: Reenvio, detalle: String) {
         logRepository.insertar(
             LogEntry(
                 tipo = tipo,
-                smsId = smsId,
-                reenvioId = reenvioId,
-                destino = destino,
+                smsId = reenvio.smsId,
+                reenvioId = reenvio.id,
+                destino = reenvio.destino,
+                canal = reenvio.canal,
                 detalle = detalle,
                 timestamp = Instant.now()
             )
