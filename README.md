@@ -1,72 +1,69 @@
-# SMStoWhats
+# SMSRelay
 
-[![Última versión](https://img.shields.io/github/v/release/jbautistamartin/SMStoWhats?label=descargar&color=2E7D32)](https://github.com/jbautistamartin/SMStoWhats/releases/latest)
+[![Última versión](https://img.shields.io/github/v/release/jbautistamartin/SMSRelay?label=descargar&color=E65100)](https://github.com/jbautistamartin/SMSRelay/releases/latest)
 [![Licencia](https://img.shields.io/badge/licencia-LGPL--2.1-blue)](LICENSE)
 [![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/jbautistamartin)
 
-Aplicación Android que convierte un dispositivo con SIM en un **puente de SMS a WhatsApp**:
-recibe los mensajes que llegan a su número y los entrega automáticamente en WhatsApp, al número
-de una persona, a través de la Cloud API de Meta y una cuenta de empresa propia, según reglas con
-expresiones regulares sobre el remitente y el texto.
+Aplicación Android que convierte un dispositivo con SIM en un **repetidor de SMS**: recibe los
+mensajes que llegan a su número y los reenvía automáticamente según reglas con expresiones
+regulares sobre el remitente y el texto. **Cada regla elige por dónde sale el mensaje**:
 
-> **Esta aplicación nace de [SMStoTelegram](https://github.com/jbautistamartin/SMStoTelegram)**,
-> que hace lo mismo con la entrada y entrega en Telegram a través de un bot. Son aplicaciones
-> **distintas**, con `applicationId` propio y base de datos propia, y pueden convivir en el mismo
-> dispositivo.
->
-> **Antes de empezar, lee [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer).**
-> Entregar en WhatsApp no se parece a entregar en Telegram: hace falta una cuenta de empresa de
-> Meta, un número dedicado, y hay un límite de 24 horas que condiciona todo lo demás.
->
-> Y cuando sepas a qué te enfrentas, la guía que monta esa cuenta de WhatsApp Business paso a
-> paso es **[`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md)**.
+| Canal | Entrega en |
+|---|---|
+| **WhatsApp** | El número de una persona, a través de la Cloud API de Meta y una cuenta de empresa propia |
+| **Telegram** | Una persona, un grupo o un canal, a través de un bot |
+| **SMS** | Otro teléfono, desde la SIM de este. También puede contestar a quien escribió |
+| **API** | Una API REST propia, con una petición GET a una URL con plantilla |
 
-**Versión actual: [v1.0.0](https://github.com/jbautistamartin/SMStoWhats/releases/tag/v1.0.0)** —
-descarga el APK firmado desde la
-[página de releases](https://github.com/jbautistamartin/SMStoWhats/releases). El 1.0 llegó cuando
-la cadena entera —SMS recibido en la SIM, entregado en un WhatsApp a través de la Cloud API— **se
-vio funcionar contra una cuenta de Meta**, que es lo que las ocho fases de tests no pueden
-demostrar por sí solas.
+> **SMSRelay junta en una sola aplicación a las cuatro anteriores de la casa:**
+> [SMSGateway](https://github.com/jbautistamartin/SMSGateway) (API),
+> [SMStoSMS](https://github.com/jbautistamartin/SMStoSMS) (SMS),
+> [SMStoTelegram](https://github.com/jbautistamartin/SMStoTelegram) (Telegram) y
+> [SMStoWhats](https://github.com/jbautistamartin/SMStoWhats) (WhatsApp). Hace lo mismo que
+> cualquiera de ellas, y además lo que ninguna podía: mandar los códigos del banco por Telegram y
+> las alertas de la alarma por SMS desde el mismo teléfono. Si vienes de una de ellas, ver
+> [Migrar desde las aplicaciones anteriores](#migrar-desde-las-aplicaciones-anteriores).
 
-> **Que la aplicación funcione no significa que puedas usarla mañana.** La validación se hizo con
-> el **número de prueba** de Meta, que no exige verificación de empresa y admite cinco
-> destinatarios. Para un número propio hace falta **verificar la empresa** —un trámite de días,
-> sin el cual Meta no deja ni registrar el número— y dar de alta la plantilla en la WABA de
-> producción. Todo eso está en
-> [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md), y es la parte larga.
+**Todavía no hay versión publicada.** La 1.0.0 saldrá cuando un SMS real se vea salir por cada uno
+de los cuatro canales, que es lo que los tests no pueden demostrar por sí solos. Lo que cambia en
+cada versión está en [`CHANGELOG.md`](CHANGELOG.md).
 
-No está en Google Play: `RECEIVE_SMS` pertenece a un grupo de permisos restringido cuya
-publicación exige una declaración aprobada. Lo que cambia en cada versión está en
-[`CHANGELOG.md`](CHANGELOG.md).
+No está en Google Play: `RECEIVE_SMS`, `READ_SMS` y `SEND_SMS` pertenecen a un grupo de permisos
+restringido cuya publicación exige una declaración aprobada.
 
 ---
 
 ## Para qué sirve
 
 El caso típico: un número al que llegan avisos —códigos de verificación, notificaciones de un
-proveedor, alertas de un sistema de monitorización— y una o varias personas que necesitan
-recibirlos donde ya están mirando, que es WhatsApp.
+proveedor, alertas de un sistema de monitorización— y una o varias personas, o un sistema, que
+necesitan recibirlos en otro sitio.
 
-Las reglas permiten separar ese tráfico: los SMS del banco a una persona, los de la alarma a otra,
-y el resto a ninguna parte.
+Las reglas separan ese tráfico: los SMS del banco a una persona por WhatsApp, los de la alarma a un
+grupo de Telegram, los de un proveedor a la API de tu sistema de tickets, y el resto a ninguna
+parte. Con **Seguir evaluando**, un mismo SMS puede salir por varios canales a la vez.
 
-Frente a reenviar por SMS, entregar en WhatsApp cambia dos cosas a favor:
+**Qué canal conviene**, en una línea cada uno:
 
-- **Caben 4.096 caracteres** por mensaje en lugar de 160, así que no hay mensajes troceados.
-- **Llega a donde la gente mira**, sin que el destinatario tenga que instalar nada nuevo.
+- **Telegram** es el más fácil de montar —un bot en un minuto, gratis, sin límites que importen— y
+  el único que entrega en grupos.
+- **WhatsApp** llega a donde la gente ya mira, pero exige una cuenta de empresa de Meta, un número
+  dedicado y plantillas aprobadas, y se factura. Lee
+  [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer) antes de elegirlo.
+- **SMS** no necesita internet ni cuentas de nadie, y cuesta lo que cueste un SMS en tu tarifa.
+- **API** es para máquinas: un `GET` a la URL que quieras, con el texto, el remitente y la fecha
+  donde los espere tu servidor.
 
-Y añade una que hay que tener presente: **el contenido de los SMS sale a internet** y pasa por
-los servidores de Meta, desde una cuenta de empresa registrada a tu nombre. Está explicado en el
+Todos menos el SMS sacan **el contenido de los SMS a internet**. Está explicado en el
 [aviso legal](#aviso-legal) y dentro de la propia aplicación.
 
 ---
 
 ## Lo que WhatsApp no te deja hacer
 
-Esta sección está antes que las características a propósito. **WhatsApp no tiene nada parecido a
-un bot de Telegram**: no hay forma gratuita de escribir a quien quieras, cuando quieras, el texto
-que quieras. Lo que hay es la Cloud API de Meta, que es una plataforma de empresa a cliente, y
-tiene estas reglas:
+**WhatsApp no tiene nada parecido a un bot de Telegram**: no hay forma gratuita de escribir a quien
+quieras, cuando quieras, el texto que quieras. Lo que hay es la Cloud API de Meta, que es una
+plataforma de empresa a cliente:
 
 | | Texto libre | Plantilla |
 |---|---|---|
@@ -76,123 +73,65 @@ tiene estas reglas:
 | Hay que pedir permiso a Meta | No | Sí, por plantilla y por idioma |
 | Coste | Los primeros **1.000 al mes** gratis | **Cada** mensaje se factura |
 
-Un SMS llega cuando llega, no cuando al destinatario le apetece escribirte. Así que, en la
-práctica, **las plantillas son el camino principal** y el texto libre es lo que se aprovecha
-cuando la ventana está abierta. La aplicación hace las dos cosas y decide sola, pero conviene
-saberlo antes de montar nada.
+Un SMS llega cuando llega, así que **las plantillas son el camino principal** y el texto libre es
+lo que se aprovecha cuando la ventana está abierta. La aplicación hace las dos cosas y decide sola.
 
-Lo que hace falta tener, y no se puede hacer desde la aplicación:
+Lo que hace falta tener, y no se puede hacer desde la aplicación: una **app en Meta for Developers**
+con el producto WhatsApp, un **número dedicado** (para empezar vale el de prueba de Meta, gratis y
+con hasta 5 destinatarios), un **token de usuario de sistema** con caducidad «Nunca», el **`Phone
+number ID`** y una **plantilla aprobada** con el cuerpo que la aplicación te deja copiar en
+**Ajustes → Entrega**. Para un número propio hace falta además **verificar la empresa**, un trámite
+de días.
 
-1. Una **app en Meta for Developers** con el producto WhatsApp.
-2. Un **número dedicado**. Un número en la Cloud API no puede estar al mismo tiempo en la app de
-   WhatsApp. Para empezar vale el número de prueba que Meta crea solo: es gratis, no pide
-   verificación de empresa y admite hasta **5 destinatarios**.
-3. Un **token de usuario de sistema** con caducidad «Nunca». El que la consola enseña por defecto
-   caduca en 24 horas y dejaría la aplicación muda al día siguiente.
-4. El **`Phone number ID`**, que no es el número de teléfono.
-5. Una **plantilla aprobada**, con el cuerpo exacto que la propia aplicación te deja copiar en
-   **Ajustes → Entrega**.
+> **Cada clic de eso está en [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md)**,
+> con una lista de comprobación y los códigos de error de Meta que de verdad se ven.
 
-> **Esos cinco puntos, con cada clic y cada pantalla de la consola de Meta, están en
-> [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md)**, que empieza
-> explicando qué es cada cosa —la app de Meta, la cuenta de empresa, la WABA, el número— y acaba
-> con una lista de comprobación y una tabla de los códigos de error de Meta que de verdad se ven.
-> Si solo vas a leer un documento antes de montar esto, es ese.
-
-Y lo que se pierde respecto a Telegram, sin adornos:
-
-- **Grupos.** Esta aplicación entrega solo a personas, por decisión. La Cloud API admite grupos
-  desde 2026, pero solo creados por ella, de hasta ocho participantes y con Cuenta Oficial de
-  Empresa.
-- **Entregar gratis y sin límite.**
-- **La inmediatez sin condiciones.** Sale siempre *si* hay plantilla aprobada, cuota y número en
-  buen estado.
-
-Lo que se gana es que es legal, es estable y no depende de que WhatsApp no se dé cuenta.
+Los destinos de WhatsApp son siempre **personas**: para grupos está Telegram. Y como cada mensaje de
+plantilla se factura, la aplicación lleva un **tope mensual de WhatsApp** (900 por defecto, por
+debajo del tramo gratuito) que, al agotarse, deja de reenviar por WhatsApp sin tocar los demás
+canales.
 
 ---
 
 ## Características principales
 
-- **Reglas ordenadas** — expresiones regulares sobre el remitente y el mensaje; gana la primera
-  que casa, y una regla puede dejar que la evaluación continúe para entregar a varios números
-- **Plantilla por regla** — el texto que sale se compone con `{mensaje}`, `{telefono}` y
-  `{fecha}`. Conviene dejar los tres: en WhatsApp todo llega del mismo número, y sin el remitente
-  no se sabe de quién era cada SMS
-- **Texto libre o plantilla, decidido solo** — intenta el texto libre, que es gratis, y si la
-  ventana de 24 horas está cerrada reenvía como plantilla sin gastar un reintento
-- **Las credenciales se comprueban antes de usarlas** — un botón pregunta a Meta y responde con el
-  nombre verificado y el número, en lugar de descubrir el fallo cuando llegue el primer SMS. De
-  paso enseña la **calidad** que Meta da al número, que es el único aviso que llega antes de un
-  bloqueo
-- **Contador de gasto en el Panel** — los mensajes entregados este mes contra el tope
-  configurado, separando los gratis de los facturados. Es la única cifra de la aplicación que
-  cuesta dinero
-- **Tope mensual** — pasado el tope, los SMS se descartan y queda en el registro. Por defecto 900,
-  por debajo de los 1.000 gratuitos de Meta, para que una instalación recién hecha no facture nada
-- **Panel de prueba** — se pega un SMS de ejemplo y la app dice qué regla casa, a qué número iría
-  y con qué texto, sin entregar nada
-- **Sin pérdida de mensajes** — patrón outbox: el SMS se persiste en Room antes de hacer nada más
-- **Confirmación real de entrega** — se espera la respuesta de la Cloud API; una entrega solo se
-  da por buena cuando Meta la confirma
-- **Mayúsculas opcionales** — cada regla decide si sus expresiones distinguen mayúsculas
-- **Aviso cuando no se puede entregar** — sin credenciales, o con unas rechazadas, el Panel lo
-  dice. Es el único fallo que afecta a todas las entregas por igual
-- **Reintentos automáticos** — WorkManager con backoff configurable y rescate cada 30 segundos de
-  lo que se quede atascado. Los cuatro códigos de límite de Meta se reintentan; los errores de
-  configuración, no, porque reintentar los mismos bytes no cambia la respuesta
-- **Arranque automático** — los workers se reactivan tras reiniciar el dispositivo, y Ajustes
-  lleva al permiso de inicio automático del fabricante, que es lo que lo impide en Xiaomi,
-  Huawei, Oppo y Vivo
-- **Interruptor de recepción** — un ajuste apaga la lectura de SMS sin desinstalar ni
-  desconfigurar nada; lo que ya estuviera en cola se termina de entregar
-- **Registro de auditoría** — cada paso queda anotado, con filtros y exportación a fichero
-- **Copia de seguridad** — ajustes y reglas en un solo fichero JSON, desde la pestaña
-  Configuración. **Las credenciales no viajan en él**, y tampoco el id del número: identifica a
-  esta cuenta y restaurado en otro teléfono enviaría por donde no es
-- **Aviso de versión nueva** — comprueba una vez al día si hay un release más reciente, lo marca
-  con un punto en la pestaña **Acerca de** y desde ahí se descarga e instala; se puede apagar
+- **Cuatro canales, elegidos regla a regla**, con el destino validado según el canal: un número
+  E.164 para WhatsApp, un chat para Telegram, un teléfono para SMS, una URL para la API. Si pegas un
+  chat de Telegram con WhatsApp marcado, el editor te dice que cambies el canal.
+- **Reglas con expresiones regulares** sobre el remitente y el texto, con orden, **Ignorar
+  mayúsculas** y **Seguir evaluando**, y una pantalla para **probarlas** con un SMS de ejemplo antes
+  de que llegue uno real, que dice por qué canal saldría cada uno.
+- **Plantillas de texto** con `{mensaje}`, `{telefono}` y `{fecha}`.
+- **Contestar al remitente** por SMS, con `{telefono}` como destino.
+- **URL de API con marcadores** en la ruta o en la consulta, URL-codificados, nunca en el servidor.
+- **Nada se pierde**: cada SMS se guarda antes de intentar nada, cada reenvío se reintenta con
+  espera, y lo que se quede a medias se rescata solo.
+- **Un canal que falla no arrastra a los demás**: cada reenvío es una tarea independiente, y el
+  Panel dice qué canal tiene un problema.
+- **Protecciones**: un tope de reenvíos por minuto, el tope mensual de WhatsApp y una guarda
+  antibucle para el canal SMS.
+- **Historial y registro** filtrables por tipo y por canal.
+- **Copia de seguridad** de reglas y ajustes, que **importa también las copias de las cuatro
+  aplicaciones anteriores**.
+- **Interruptor general** de la recepción, y aviso de versión nueva desde GitHub.
 
 ---
 
 ## Arquitectura
 
 ```
-Presentation  →  Domain  →  Data
-   MVVM          Reglas      Room · Cloud API · DataStore · WorkManager
+SIM → SmsReceiver → SmsIngestionService → Room (outbox) → reglas → reenvío por canal
+    → WorkManager → transporte del canal ─┬─ WhatsApp  (Cloud API de Meta)
+                                          ├─ Telegram  (Bot API)
+                                          ├─ SMS       (SmsManager)
+                                          └─ API       (GET con plantilla)
 ```
 
-Clean Architecture con tres capas estrictas, inyección de dependencias con **Hilt** y
-reactividad completa mediante **Kotlin Flow**.
-
-El recorrido de cada SMS:
-
-```
-SIM → SmsReceiver → SmsIngestionService → Room (outbox)
-                                             ↓
-                                 tope por minuto y del mes
-                                             ↓
-                                      EvaluadorDeReglas
-                                             ↓
-                                  reenvíos (uno por número)
-                                             ↓
-                                       DispatchWorker
-                                             ↓
-                        WhatsAppSender → texto libre o plantilla
-```
-
-**El único punto de la cadena que sabe de WhatsApp es `WhatsAppSender`.** Todo lo que hay antes
-—recibir, persistir, evaluar reglas, encolar, reintentar, rescatar lo atascado— es agnóstico del
-medio, y es lo que ha permitido cambiar de medio **dos veces** —de SMS a Telegram, y de Telegram a
-la Cloud API— sin tocar la tubería ni una sola vez: `TransportModule` es la única clase que nombra
-una implementación concreta del transporte.
-
-Consulta [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) para la documentación técnica completa y
-los cuatro MASTERPLAN para la historia de la familia:
-[`MASTERPLAN-WHATSAPP.md`](MASTERPLAN-WHATSAPP.md) desde SMStoTelegram,
-[`MASTERPLAN-TELEGRAM.md`](MASTERPLAN-TELEGRAM.md) desde SMStoSMS,
-[`MASTERPLAN-SMS.md`](MASTERPLAN-SMS.md) desde SMSGateway y
-[`MASTERPLAN-GATEWAY.md`](MASTERPLAN-GATEWAY.md) para el origen de la tubería.
+Clean Architecture en tres capas, MVVM en presentación e inyección con Hilt. Todo lo que está por
+encima de los transportes es común a los cuatro canales; los transportes viven debajo de un único
+interfaz, `EnviadorDeMensajes`, y esperan la confirmación real de cada envío. El detalle está en
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) y en [`CLAUDE.md`](CLAUDE.md); la historia de cómo
+se llegó aquí, en los cinco `MASTERPLAN-*.md`.
 
 ---
 
@@ -206,15 +145,14 @@ los cuatro MASTERPLAN para la historia de la familia:
 | Inyección de dependencias | Hilt 2.60.1 |
 | Base de datos local | Room 2.8.5 + WAL mode |
 | Tareas en background | WorkManager 2.12.0 |
-| Entrega de mensajes | Cloud API de WhatsApp vía `HttpURLConnection` |
+| Entrega | `HttpURLConnection` (WhatsApp, Telegram, API) y `SmsManager` (SMS) |
 | Configuración | DataStore Preferences 1.3.0 |
 | Serialización | kotlinx.serialization 1.12.0 |
 | Concurrencia | Coroutines + Flow 1.11.0 |
 | UI | Material Design 3 + Navigation Component |
 
-La red se usa con `HttpURLConnection` y `kotlinx.serialization`, sin Retrofit ni OkHttp: toda la
-comunicación con Meta son dos peticiones —enviar un mensaje y consultar el número emisor— y una
-dependencia nueva para eso no se paga.
+Sin Retrofit ni OkHttp: cada llamada de red del proyecto es una docena de líneas de
+`HttpURLConnection`, y una dependencia nueva para eso no se paga.
 
 ---
 
@@ -223,39 +161,33 @@ dependencia nueva para eso no se paga.
 - Android Studio compatible con AGP 9.4 (2026.2.1 o superior)
 - **JDK 25** (Temurin 25) — `gradle/gradle-daemon-jvm.properties` lo exige
 - Android SDK con la plataforma 37
-- Dispositivo Android 8.0+ con SIM activa y conexión a internet
-- Una **cuenta de WhatsApp Business de Meta** con la Cloud API, un número dedicado y una
-  plantilla aprobada. Es el requisito largo, y no se puede resolver desde la aplicación:
-  [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md) lo monta paso a paso, y
-  [Lo que WhatsApp no te deja hacer](#lo-que-whatsapp-no-te-deja-hacer) explica por qué es así
+- Dispositivo Android 8.0+ con SIM activa; con conexión a internet si alguna regla sale por
+  WhatsApp, Telegram o una API fuera de la red local
+- Lo que pida cada canal que uses:
+  - **WhatsApp**: una cuenta de WhatsApp Business de Meta —
+    [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md)
+  - **Telegram**: un bot creado con @BotFather — [`docs/BOT-TELEGRAM.md`](docs/BOT-TELEGRAM.md)
+  - **SMS**: saldo o tarifa en la SIM
+  - **API**: un servidor que acepte un `GET`
 
 ---
 
 ## Instalar la versión publicada
 
-La vía corta si no vas a tocar el código:
-
 1. Descarga el APK de la
-   [última release](https://github.com/jbautistamartin/SMStoWhats/releases/latest).
+   [última release](https://github.com/jbautistamartin/SMSRelay/releases/latest).
 2. Pásalo al teléfono e instálalo, aceptando «instalar de orígenes desconocidos» cuando lo pida.
 3. **Abre la aplicación una vez** y concede los permisos que pide. Abrirla no es opcional: una
    aplicación recién instalada que nadie ha abierto todavía no recibe **ningún** broadcast de
-   Android, los SMS incluidos. Es la causa número uno de «la he instalado y no recibe nada».
-4. **Monta la cuenta de WhatsApp Business** siguiendo [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md): una app en
-   Meta for Developers con el producto WhatsApp, un número (el de prueba sirve para empezar), un
-   token de usuario de sistema con caducidad «Nunca» y el `Phone number ID`. Es lo más largo de
-   todo el montaje, y los pasos 5 y 6 de aquí no se pueden hacer sin él.
-5. **Ajustes → Cuenta de WhatsApp** → pega el token y el id del número, y pulsa **Comprobar las
-   credenciales**. Debe responder con el nombre verificado y el número.
-6. **Ajustes → Entrega** → copia el cuerpo de la plantilla, dale de alta esa plantilla en el
-   Business Manager y, cuando Meta la apruebe, escribe aquí su nombre y su idioma. Sin plantilla
-   solo se entrega dentro de la ventana de 24 horas.
-7. **Ajustes → Fiabilidad en segundo plano → Desactivar ahorro de batería.** Sin esto el modo
-   Doze puede retrasar las entregas horas con la pantalla apagada.
+   Android, los SMS incluidos.
+4. **Ajustes → Fiabilidad en segundo plano → Desactivar ahorro de batería**, y en Xiaomi, Huawei,
+   Oppo o Vivo, también el **inicio automático**. Sin esto el modo Doze puede retrasar las entregas
+   horas con la pantalla apagada.
+5. Configura **los canales que vayas a usar**, cada uno en su sección de Ajustes. La tarjeta
+   **Canales**, arriba, dice cuáles están listos.
 
-> El APK está firmado con la clave de Capicua. Las futuras actualizaciones se firman con la
-> misma: un APK de otra procedencia no se instalará encima, habrá que desinstalar primero y se
-> perderán las reglas. Haz antes una copia desde **Config → Copia de seguridad → Exportar**.
+> El APK está firmado con la clave de Capicua, la misma que las cuatro aplicaciones anteriores. Las
+> actualizaciones se firman con la misma: un APK de otra procedencia no se instalará encima.
 
 ---
 
@@ -264,150 +196,142 @@ La vía corta si no vas a tocar el código:
 ### 1. Compilar
 
 ```bash
-# Gradle exige el JDK 25; si JAVA_HOME apunta a otro
-export JAVA_HOME="/ruta/al/jdk-25"
-
-# Compilación debug
+# Gradle exige el JDK 25; si JAVA_HOME apunta a otro, Android Studio usa el suyo
 ./gradlew assembleDebug
 # APK → app/build/outputs/apk/debug/app-debug.apk
 
 # Compilación release (requiere claves de firma en local.properties; ver CLAUDE.md)
 ./gradlew assembleRelease
-# APK → app/build/outputs/apk/release/smstowhats-<versionName>.apk
+# APK → app/build/outputs/apk/release/smsrelay-<versionName>.apk
 ```
-
-Sin las claves de firma el build de release **no falla**: produce un APK sin firmar, que habrá
-que firmar aparte antes de instalarlo.
 
 ### 2. Instalar mediante ADB
 
-> Requiere [Android Platform Tools](https://developer.android.com/tools/releases/platform-tools)
-> y el dispositivo en modo depuración USB (**Ajustes → Opciones de desarrollador → Depuración USB**).
-
 ```bash
-# Instalar APK debug
 adb install app/build/outputs/apk/debug/app-debug.apk
-
 # Reemplazar una versión ya instalada conservando sus datos
 adb install -r app/build/outputs/apk/debug/app-debug.apk
-
-# Verificar que quedó instalada
-adb shell pm list packages | grep capicua
 ```
 
-Alternativamente, `./gradlew installDebug` compila e instala en un solo paso.
+La variante debug se instala como `com.capicua.smsrelay.debug` y convive con la de release.
 
 ### 3. Conceder permisos y configurar el dispositivo
 
 ```bash
-adb shell pm grant com.capicua.smstowhats android.permission.RECEIVE_SMS
-adb shell pm grant com.capicua.smstowhats android.permission.READ_SMS
-adb shell pm grant com.capicua.smstowhats android.permission.POST_NOTIFICATIONS
+adb shell pm grant com.capicua.smsrelay android.permission.RECEIVE_SMS
+adb shell pm grant com.capicua.smsrelay android.permission.READ_SMS
+adb shell pm grant com.capicua.smsrelay android.permission.POST_NOTIFICATIONS
+# Solo si alguna regla sale por SMS
+adb shell pm grant com.capicua.smsrelay android.permission.SEND_SMS
+# Solo para elegir con qué SIM enviar, en un teléfono con dos
+adb shell pm grant com.capicua.smsrelay android.permission.READ_PHONE_STATE
 
 # Excluir de la optimización de batería (obligatorio para una entrega fiable)
-adb shell dumpsys deviceidle whitelist +com.capicua.smstowhats
+adb shell dumpsys deviceidle whitelist +com.capicua.smsrelay
 ```
-
-Sin la exención de batería, el modo Doze de Android puede retrasar las entregas horas cuando la
-pantalla está apagada.
-
-Si no tienes el cable a mano, la propia app lo resuelve: **Ajustes** → **Fiabilidad en segundo
-plano** dice si la exención está concedida y el botón abre la pantalla del sistema que la
-concede. Los pasos manuales por fabricante están en [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
 ## Primeros pasos en la app
 
-0. **Antes de nada**, monta la cuenta de Meta siguiendo
-   [`docs/CUENTA-WHATSAPP-BUSINESS.md`](docs/CUENTA-WHATSAPP-BUSINESS.md). Sin eso no hay nada que hacer aquí.
-1. **Ajustes → Cuenta de WhatsApp**: pega el **token de acceso** y el **id del número**, y pulsa
-   **Comprobar las credenciales**. Debe contestar con el nombre y el número que esperas.
-2. **Ajustes → Entrega**: deja el modo en **Automático**, copia el cuerpo de la plantilla con
-   **Copiar el cuerpo**, dale de alta esa plantilla en el Business Manager y, cuando Meta la
-   apruebe, escribe aquí su nombre y su idioma.
-3. **Reglas** → **+** para crear la primera regla.
-4. Rellena el nombre y al menos un criterio. El destino es el número de WhatsApp de la persona,
-   **con prefijo internacional**: `+34600112233`. Deja los dos criterios vacíos solo si quieres
-   entregar *todos* los SMS.
-5. **Probar** → pega un SMS de ejemplo y comprueba que la regla casa y que el texto sale como
-   esperas, antes de que llegue uno real.
-6. Opcionalmente, **Enviar de prueba** entrega un mensaje real al primer número para confirmar el
-   circuito completo. Consume cuota como cualquier otro.
+1. **Prepara el canal**, en Ajustes:
+   - **WhatsApp** — *Cuenta de WhatsApp*: el token y el id del número, y **Comprobar las
+     credenciales**. *Entrega*: copia el cuerpo de la plantilla, dalo de alta en Meta y, cuando lo
+     aprueben, escribe su nombre y su idioma.
+   - **Telegram** — *Bot de Telegram*: el token de @BotFather y **Comprobar el token**. Quien vaya a
+     recibir los avisos tiene que mandar `/start` al bot.
+   - **SMS** — *SMS*: concede el permiso de enviar y, si el teléfono tiene dos SIM, elige cuál.
+   - **API** — *API*: nada, salvo que tu servidor use un certificado propio.
+2. **Reglas** → **+**. Elige el **canal** arriba: el destino, sus botones de ayuda y la plantilla
+   por defecto cambian con él. Rellena el nombre y al menos un criterio; deja los dos vacíos solo si
+   quieres reenviar *todos* los SMS.
+3. **Probar** → pega un SMS de ejemplo y comprueba que la regla casa, por qué canal saldría y que el
+   texto sale como esperas.
 
-Mientras no haya ninguna regla activa, la pantalla de Inicio lo advierte: los SMS se reciben y se
-marcan como «sin regla», pero no se entrega nada. Y si faltan las credenciales, o Meta las ha
-rechazado, el Panel lo dice en rojo por encima de todo lo demás.
+Mientras no haya ninguna regla activa, el Panel lo advierte: los SMS se reciben y se marcan como
+«sin regla», pero no se reenvía nada. Y si un canal usado por alguna regla no puede entregar —falta
+una credencial, Meta o Telegram la han rechazado, falta el permiso de SMS—, el Panel lo dice en rojo
+y **nombra el canal**.
 
 ### Las reglas, en detalle
 
-Una regla casa cuando se cumplen **sus dos criterios**. Un criterio vacío se considera cumplido.
-
 | Campo | Qué hace |
 |-------|----------|
+| Canal | Por dónde sale: WhatsApp, Telegram, SMS o API |
 | Expresión del remitente | Se aplica al número tal como llega, sin normalizar. Puede ser alfanumérico: `BANCO`, `AMAZON` |
 | Expresión del mensaje | Se aplica al texto completo del SMS |
-| Número de destino | Dónde se entrega: un número de WhatsApp con prefijo internacional, `+34600112233`. Siempre una persona, nunca un grupo. No admite marcadores |
+| Destino | Depende del canal: ver la tabla de abajo |
 | Plantilla | Qué texto se envía, con `{mensaje}`, `{telefono}` y `{fecha}` |
 | Ignorar mayúsculas | Aplica las dos expresiones sin distinguir mayúsculas de minúsculas |
 | Activa | Desactívala para que no se evalúe, sin borrarla |
 | Seguir evaluando | Tras casar, continúa con las reglas siguientes |
 
-La búsqueda es **parcial**: el patrón `codigo` casa con «Tu codigo es 4821». Para exigir el texto
-completo, ánclalo con `^…$`.
+| Canal | Destino |
+|---|---|
+| WhatsApp | Un número en formato internacional: `+34600112233`. **El `+` y el prefijo son obligatorios** |
+| Telegram | Un `chat_id` —negativo si es un grupo o un canal— o el `@usuario` de un canal público. **Elegir de los chats del bot** lo busca por ti |
+| SMS | Un teléfono tal como lo marcarías, o `{telefono}` para contestar a quien escribió |
+| API | Una URL `http://` o `https://` con `{mensaje}` en algún sitio; `{telefono}` y `{fecha}` también valen, pero **nunca en el nombre del servidor** |
 
-Las expresiones **distinguen mayúsculas** salvo que actives **Ignorar mayúsculas** en la regla,
-que las aplica sin distinguir a las dos a la vez. También puedes escribir `(?i)` dentro de una
-expresión concreta si solo quieres que afecte a esa; activar las dos cosas no da problemas.
+La búsqueda es **parcial**: el patrón `codigo` casa con «Tu codigo es 4821». Para exigir el texto
+completo, ánclalo con `^…$`. Las expresiones distinguen mayúsculas salvo que actives **Ignorar
+mayúsculas**, o escribas `(?i)` dentro de una.
 
 Ejemplos:
 
 ```
-# Solo los SMS del banco, a una persona
-Remitente: ^BANCO$          Mensaje: (vacío)       → +34600112233
+# Los SMS del banco, a una persona por WhatsApp
+Remitente: ^BANCO$          Mensaje: (vacío)        → WhatsApp · +34600112233
 
-# Cualquier mensaje con un código de verificación, al mismo número
-Remitente: (vacío)          Mensaje: (?i)codigo    → +34600112233
+# Los códigos de verificación, a un grupo de Telegram y además por SMS a otro móvil
+Remitente: (vacío)          Mensaje: (?i)codigo     → Telegram · -1001234567890   [seguir evaluando]
+Remitente: (vacío)          Mensaje: (?i)codigo     → SMS · 600112233
 
-# Todo lo que llegue de un número concreto, a dos personas
-Remitente: ^\+34700        Mensaje: (vacío)        → +34600112233     [seguir evaluando]
-Remitente: ^\+34700        Mensaje: (vacío)        → +34600445566
+# Las alertas de la alarma, a la API del sistema de tickets
+Remitente: (?i)alarma       Mensaje: (vacío)        → API · https://tickets.example.com/alta?de={telefono}&texto={mensaje}
 
-# Las alertas de la alarma, a quien esté de guardia
-Remitente: (?i)alarma       Mensaje: (vacío)        → +34600778899
+# Contestar a todo el que escriba
+Remitente: (vacío)          Mensaje: (vacío)        → SMS · {telefono}    plantilla: Recibido, gracias
 ```
 
-### El prefijo internacional es obligatorio
-
-El destino se escribe **siempre** con `+` y el prefijo del país: `+34600112233`. La Cloud API
-aceptaría el número sin el `+`, así que no es un requisito técnico — es lo que permite dar un
-error útil.
-
-`600112233` son nueve dígitos que podrían ser un móvil español escrito a pelo, al que le falta el
-prefijo y no sirve, o un número internacional completo de un país con prefijo corto. Mirándolo no
-hay forma de saberlo. Exigiendo el `+` la ambigüedad desaparece y la aplicación puede decirte lo
-que de verdad arregla el problema: *falta el prefijo internacional*. Es el error que comete todo
-el mundo.
-
-### El destinatario tiene que poder recibirte
-
-Dos condiciones que no dependen de la aplicación:
-
-- **Tiene que tener WhatsApp** en ese número. Si no, Meta contesta que no es un usuario válido y
-  el reenvío se cierra como fallido.
-- **Para recibir texto libre, tiene que haberte escrito en las últimas 24 horas.** Fuera de esa
-  ventana solo le llegan plantillas. Con el modo **Automático** la aplicación se encarga, pero si
-  no tienes plantilla configurada, esos SMS no se entregan y el motivo queda en el registro.
+Los números y chats de los ejemplos son inventados.
 
 ### Por qué conviene dejar `{telefono}` en la plantilla
 
-Por SMS, el reenvío llegaba como un SMS más y el teléfono ya enseñaba de quién venía. En WhatsApp
-**todos los avisos llegan del mismo número**: cuatro mensajes seguidos sin el remitente dentro son
-cuatro mensajes indistinguibles. La plantilla por defecto —`{telefono} · {fecha}` y el mensaje
-debajo— pone el contexto que el SMS daba gratis.
+Por WhatsApp y por Telegram **todos los avisos llegan del mismo emisor**, y por SMS del número de
+este teléfono: cuatro mensajes seguidos sin el remitente dentro son cuatro mensajes
+indistinguibles. La plantilla por defecto —`{telefono} · {fecha}` y el mensaje debajo— pone el
+contexto que el SMS original daba gratis. Para la API la plantilla por defecto es solo `{mensaje}`:
+el remitente y la fecha van en la URL, donde tu servidor los espere.
 
-Con una plantilla de Meta aprieta más todavía: el cuerpo aprobado es **idéntico** en todos los
-reenvíos, así que lo único que distingue un aviso de otro es lo que entre en la variable.
+---
+
+## Migrar desde las aplicaciones anteriores
+
+SMSRelay es **otra aplicación** —otro `applicationId`, otra base de datos—, así que no se instala
+encima de ninguna de las cuatro: se instala al lado. Lo que sí hace es **leer sus copias de
+seguridad**:
+
+1. En la aplicación vieja, **Ajustes → Copia de seguridad → Exportar**.
+2. En SMSRelay, **Ajustes → Copia de seguridad → Importar** ese fichero.
+3. Rellena las credenciales que falten: las copias no las llevan salvo que se pidiera al exportar.
+   Al terminar de importar, SMSRelay dice qué canales importados no pueden entregar todavía.
+4. **Apaga la recepción en la aplicación vieja** (Ajustes, arriba del todo), o desinstálala. Con
+   las dos activas, cada SMS se reenvía dos veces.
+
+| Copia de | Qué entra |
+|---|---|
+| SMStoWhats | Sus reglas, por WhatsApp, con su modo de entrega, su plantilla y su tope mensual |
+| SMStoTelegram | Sus reglas, por Telegram |
+| SMStoSMS (cualquier versión) | Sus reglas, por SMS, con su guarda antibucle |
+| SMSGateway | **Una regla** por la API, que casa con todo, con la URL de la pasarela como destino |
+
+Los reintentos, el plazo de envío, el tope por minuto y el interruptor de recepción se toman de la
+copia en todos los casos; **los ajustes de los demás canales no se tocan**. Importar nunca borra
+reglas: las añade al final.
+
+Una URL de SMSGateway con un marcador en el nombre del servidor (`https://{telefono}.ejemplo.com`)
+no entra: SMSRelay no deja que el texto de un SMS elija servidor.
 
 ---
 
@@ -417,7 +341,9 @@ reenvíos, así que lo único que distingue un aviso de otro es lo que entre en 
 |---------|----------|
 | `RECEIVE_SMS` | Recibir el broadcast de SMS entrantes |
 | `READ_SMS` | Leer el contenido de las PDU |
-| `INTERNET` | Entregar los mensajes a WhatsApp, y comprobar si hay versión nueva |
+| `SEND_SMS` | Reenviar por el canal SMS. **Solo se pide al elegir ese canal** |
+| `READ_PHONE_STATE` | Enumerar las SIM para elegir con cuál enviar. **Solo se pide al pulsar ese botón** |
+| `INTERNET` | Entregar por WhatsApp, Telegram y la API, y comprobar si hay versión nueva |
 | `POST_NOTIFICATIONS` | Notificación del servicio en primer plano (Android 13+) |
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | Mantener vivo el proceso durante la ingesta |
 | `RECEIVE_BOOT_COMPLETED` | Reactivar los workers tras reiniciar |
@@ -425,94 +351,70 @@ reenvíos, así que lo único que distingue un aviso de otro es lo que entre en 
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Solicitar la exención de Doze |
 | `REQUEST_INSTALL_PACKAGES` | Abrir el instalador del sistema con el APK de una versión nueva |
 
-**No se declara `SEND_SMS`.** Esta aplicación no envía ningún SMS: recibe por la radio y entrega
-por internet. Tampoco `READ_PHONE_STATE`, que en SMStoSMS servía para elegir con qué SIM enviar.
-
-`RECEIVE_SMS` y `READ_SMS` pertenecen a un grupo de permisos restringido por Google Play, cuya
-publicación exige una declaración aprobada. Para distribución por APK, como es el caso, no supone
-ningún problema.
+Quien no use el canal SMS no ve nunca el diálogo de `SEND_SMS` ni el de `READ_PHONE_STATE`, aunque
+los dos estén declarados.
 
 ---
 
 ## Estructura del proyecto
 
 ```
-app/src/main/java/com/capicua/smstowhats/
+app/src/main/java/com/capicua/smsrelay/
 ├── data/
-│   ├── config/          # AppConfig, ConfigDataStore, ConfigBackup
-│   ├── local/db/        # Room: entidades, DAOs, relaciones, SmsDatabase, Migraciones
-│   ├── repository/      # Sms, Regla, Reenvio y Log + sus implementaciones
-│   ├── rules/           # ReglasJson: formato de exportación
-│   ├── whatsapp/        # WhatsAppSender, MapeoDeRespuestas, PlantillaDeWhatsApp,
-│   │                    # DestinoDeWhatsApp, TokenDeAcceso, IdNumeroTelefono,
-│   │                    # ComprobadorDeCuenta, EstadoDeLaCuenta, ContadorDeMensajes
-│   └── update/          # Comprobación de versiones y descarga del APK
-├── di/                  # Módulos Hilt: Database, Config, Repository, Worker, Transport
+│   ├── api/          ← ApiSender y su mapeo de respuestas
+│   ├── config/       ← AppConfig, DataStore, ModoDeEntrega, ConfigBackup
+│   ├── local/db/     ← Room: entidades, DAOs, SmsDatabase, Migraciones
+│   ├── repository/   ← repositorios sobre Room
+│   ├── rules/        ← formato de copia (ReglasJson) e ImportacionDeCopia
+│   ├── sms/          ← SmsSender y ProveedorDeSims
+│   ├── telegram/     ← TelegramSender, el bot y sus chats
+│   ├── update/       ← comprobador de versión nueva y descarga del APK
+│   └── whatsapp/     ← WhatsAppSender, la plantilla, la cuenta y el contador del mes
+├── di/               ← módulos de Hilt; TransportModule une cada canal con su transporte
 ├── domain/
-│   ├── model/           # SmsMessage, Regla, Reenvio, estados
-│   ├── rules/           # EvaluadorDeReglas
-│   ├── transport/       # EnviadorDeMensajes y ResultadoEnvio: la juntura del medio
-│   └── usecase/         # ProcesarSmsEntranteUseCase, ObtenerListaSmsUseCase
-├── presentation/
-│   ├── home/            # Pestana, HomeFragment y el ViewPager2 de las cinco pestañas
-│   ├── common/          # NestedScrollableHost: reparte el gesto dentro del pager
-│   ├── dashboard/       # Inicio: SMS recibidos y qué se hizo con ellos
-│   ├── rules/           # Lista de reglas, editor y panel de prueba
-│   ├── logs/            # Registro con filtros y exportación
-│   ├── settings/        # Credenciales, entrega, recepción, topes y copia de seguridad
-│   └── about/           # Acerca de
-├── receiver/            # SmsReceiver, BootReceiver
-├── service/             # SmsIngestionService
-├── util/                # Constants, Extensions, OptimizacionBateria, InicioAutomatico,
-│                       # ControlRecepcion
-├── worker/              # DispatchWorker, ColaDeEnvios, OrphanRescue, HealthMonitor
-└── SmsToWhatsApplication.kt
-app/schemas/             # Esquemas Room exportados (versionados)
-docs/
-├── ARCHITECTURE.md             # Documentación técnica completa
-└── CUENTA-WHATSAPP-BUSINESS.md # Montar la cuenta de WhatsApp Business, paso a paso
+│   ├── model/        ← Regla, SmsMessage, Reenvio, LogEntry…
+│   ├── rules/        ← EvaluadorDeReglas, PlantillaDeUrl, NormalizadorTelefono
+│   ├── transport/    ← EnviadorDeMensajes, Canal, Transportes, ResultadoEnvio
+│   └── usecase/      ← ProcesarSmsEntranteUseCase y compañía
+├── presentation/     ← Panel, Reglas (lista, editor, prueba), Logs, Ajustes, Acerca de
+├── receiver/         ← SmsReceiver, BootReceiver
+├── service/          ← SmsIngestionService
+├── util/             ← Doze, inicio automático, interruptor de recepción
+└── worker/           ← DispatchWorker, OrphanRescueWorker, HealthMonitorWorker, ColaDeEnvios
 ```
 
 ---
 
 ## Base de datos
 
-SQLite vía Room, cuatro tablas:
-
-- **`sms`** — mensajes recibidos, con su estado de tramitación
-- **`reglas`** — reglas de reenvío, ordenadas por prioridad
-- **`reenvios`** — una entrega a un chat, con su propio estado, intentos y último error
-- **`log_entries`** — registro de auditoría de todos los eventos
-
-Los esquemas se exportan a `app/schemas/` y se versionan: son la referencia para escribir
-migraciones. No se usa `fallbackToDestructiveMigration`, porque perdería mensajes pendientes.
+Room, cuatro tablas —`sms`, `reglas`, `reenvios` y `log_entries`—, con el **canal** guardado en la
+regla, en cada reenvío y en el registro. Un reenvío lleva copiados su canal y el nombre de su
+regla, para poder entregarse aunque la regla se edite o se borre mientras espera. Los SMS atendidos
+y el registro se purgan a los 30 días.
 
 ---
 
 ## Tests
 
-```bash
-./gradlew test
-```
-
-Ciento treinta y tres tests sobre las piezas que se pueden probar sin red, sin cuenta de Meta y
-sin Android, que son también las que más importa que estén bien:
+234 tests unitarios en 14 clases, todos en Kotlin puro, sin Android, sin Robolectric y sin base de
+datos en memoria:
 
 | Suite | Qué fija |
 |-------|----------|
-| `EvaluadorDeReglasTest` | El motor de reglas, y que en el destino no se resuelve ningún marcador |
-| `MapeoDeRespuestasTest` | Qué respuesta de la Cloud API es transitoria y cuál permanente, por `error.code` |
-| `PlantillaDeWhatsAppTest` | El contrato de la plantilla y que ningún parámetro lleve lo que Meta prohíbe |
-| `ReglasJsonTest` | El formato de intercambio, y que las credenciales **no** aparecen en él |
-| `CredencialesTest` | La forma de las dos credenciales, sin apretarla hasta rechazar una legítima |
-| `DestinoDeWhatsAppTest` | Qué se acepta como número, y que «falta el prefijo» se distinga de «no es un teléfono» |
+| `EvaluadorDeReglasTest` | El motor de reglas, y qué marcadores se resuelven en el destino de cada canal |
+| `MapeoDeRespuestasTest` (×3) | Qué respuesta de Meta, de Telegram o de una API es transitoria y cuál permanente |
+| `PlantillaDeWhatsAppTest` | El contrato de la plantilla, y que ningún parámetro lleve lo que Meta prohíbe |
+| `PlantillaDeUrlTest` | Que la URL de una API se valide y se codifique bien, y que un SMS no pueda elegir servidor |
+| `ImportacionDeCopiaTest` | Que una copia real de cada una de las cinco aplicaciones entre con su canal |
+| `ReglasJsonTest` | El formato de copia, y que las credenciales y la SIM **no** aparezcan en él |
+| `NormalizadorTelefonoTest` | La comparación de números de la guarda antibucle |
+| `DestinoDeWhatsAppTest`, `DestinoDeTelegramTest` | Qué se acepta como destino en cada canal |
+| `CredencialesTest`, `TokenDeBotTest` | La forma de las credenciales, sin rechazar una legítima |
 | `VersionPublicadaTest` | La comparación de versiones como números y no como texto |
 
-Son Kotlin puro, sin Android, sin Robolectric y sin base de datos en memoria.
-
-Las reglas de la plantilla no se pueden comprobar de ninguna otra forma: un salto de línea dentro
-de un parámetro es un error de Meta que cierra el reenvío, y estos tests pillaron dos fallos reales
-en el aplanado que ninguna lectura del código habría encontrado.
+```bash
+./gradlew test
+```
 
 ---
 
@@ -528,7 +430,7 @@ en el aplanado que ninguna lectura del código habría encontrado.
 
 ## Apoyar el proyecto
 
-SMStoWhats es gratuito y de código abierto. Si te resulta útil, puedes invitarme a un café:
+SMSRelay es gratuito y de código abierto. Si te resulta útil, puedes invitarme a un café:
 
 [![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/jbautistamartin)
 
@@ -548,48 +450,53 @@ Consulta el fichero [`LICENSE`](LICENSE) para más detalles.
 
 Este software se proporciona **"tal cual"**, sin garantía de ningún tipo, expresa o implícita.
 
-Esta aplicación **entrega el contenido de mensajes SMS en WhatsApp**. Eso implica que datos
-personales —códigos de acceso, avisos bancarios, comunicaciones privadas— salen del dispositivo
-que los recibió, **viajan por internet y pasan por los servidores de Meta**, que es una empresa
-ajena a este proyecto, antes de quedar guardados en la conversación de destino.
+Esta aplicación **reenvía el contenido de mensajes SMS** fuera del dispositivo que los recibió.
+Datos personales —códigos de acceso, avisos bancarios, comunicaciones privadas— salen de ese
+teléfono por el canal que diga cada regla. Ni Capicua ni el autor reciben ninguno de esos mensajes.
 
-Ni Capicua ni el autor reciben ninguno de esos mensajes. Meta sí, y sus propias condiciones y su
-política de privacidad son las que rigen lo que hace con ellos.
-
-Y hay algo más que no había cuando el destino era un bot: **los reenvíos salen de una cuenta de
-empresa de WhatsApp registrada a tu nombre**. Ante Meta y ante quien los recibe, el emisor eres
-tú, no esta aplicación.
-
-Antes de desplegarla, considera:
+Antes de desplegarla, considera lo que es común a todos los canales:
 
 - El **remitente original no sabe** que su mensaje se está reenviando y no ha dado su
   consentimiento para ello.
-- El mensaje **queda en la conversación de destino** de forma indefinida, y en el teléfono de
-  quien lo recibe.
-- Fuera de la ventana de 24 horas, los mensajes se entregan **mediante plantillas aprobadas por
-  Meta**, que llegan a un número sin que esa persona haya escrito antes ni haya pedido nada. En
-  los términos de Meta eso es mensajería no solicitada: si quien recibe los bloquea o los
-  denuncia, **Meta puede limitar o bloquear tu número**.
-- Cada mensaje de plantilla **se factura**, y los de texto libre también pasados los mil primeros
-  del mes. El tope mensual de la aplicación corta antes, pero el importe es tuyo.
+- El mensaje **queda guardado donde se entrega**, de forma indefinida: en la conversación de
+  destino y en el teléfono de quien lo recibe, o en el servidor de la API.
 - El contenido de los SMS queda almacenado también en este dispositivo durante el periodo de
   retención configurado, y el registro de auditoría guarda los números implicados.
-- El **token de acceso es una credencial**: quien lo obtenga puede escribir en nombre de tu
-  número. No viaja en el fichero de copia de seguridad, pero sí está guardado en este
+- Las **credenciales** —el token de Meta, el token del bot— son permiso para escribir en tu nombre.
+  No viajan en la copia de seguridad salvo que lo pidas, pero sí están guardadas en este
   dispositivo.
+
+Y lo que es de cada canal:
+
+- **WhatsApp.** El contenido viaja por internet y **pasa por los servidores de Meta**, una empresa
+  ajena a este proyecto, cuyas condiciones rigen lo que hace con él. Los reenvíos salen de una
+  **cuenta de empresa de WhatsApp registrada a tu nombre**: ante Meta y ante quien los recibe, el
+  emisor eres tú. Fuera de la ventana de 24 horas, los mensajes se entregan **mediante plantillas
+  aprobadas por Meta**, que llegan a un número sin que esa persona haya escrito antes ni haya
+  pedido nada; en los términos de Meta eso es mensajería no solicitada, y si quien recibe los
+  bloquea o los denuncia, **Meta puede limitar o bloquear tu número**. Cada mensaje de plantilla
+  **se factura**, y los de texto libre pasados los mil primeros del mes. El tope mensual de la
+  aplicación corta antes, pero el importe es tuyo.
+- **Telegram.** El contenido pasa por los servidores de Telegram, otra empresa ajena, y queda en
+  el chat. En un grupo o un canal lo lee todo el que esté dentro, también quien entre después.
+- **SMS.** El mensaje sale desde tu SIM, lo cobra tu operador según tu tarifa, y quien lo recibe ve
+  tu número como remitente.
+- **API.** El contenido va dentro de la URL de una petición a un servidor que eliges tú, y queda en
+  sus registros y en los de cualquier intermediario. Si activas **aceptar certificados no
+  válidos**, la conexión deja de garantizar que el servidor sea el que dice ser.
 
 El autor no se hace responsable de:
 
-- Pérdida, alteración o interceptación de mensajes durante el tránsito o el almacenamiento, ni
-  del tratamiento que Meta haga de ellos.
-- El importe que Meta te facture por los mensajes entregados, ni de ninguna restricción,
-  limitación o bloqueo que Meta aplique a tu número o a tu cuenta.
+- Pérdida, alteración o interceptación de mensajes durante el tránsito o el almacenamiento, ni del
+  tratamiento que Meta, Telegram, tu operador o el servidor de la API hagan de ellos.
+- El importe que Meta te facture o que tu operador te cobre, ni de ninguna restricción, limitación
+  o bloqueo que Meta aplique a tu número o a tu cuenta, o Telegram a tu bot.
 - Uso indebido de la aplicación para capturar o redirigir comunicaciones sin el consentimiento de
   los remitentes.
 - Daños directos o indirectos derivados del uso, mal uso o imposibilidad de uso del software.
 - Incumplimientos normativos (RGPD, LOPD u otras regulaciones de privacidad) derivados de una
-  configuración o despliegue inadecuados, incluida la transferencia de datos personales a un
-  tercero que esta aplicación realiza por diseño.
+  configuración o despliegue inadecuados, incluida la transferencia de datos personales a
+  terceros que esta aplicación realiza por diseño.
 
 **El operador es el único responsable** de garantizar que el uso de esta aplicación cumple con la
 legislación vigente en su jurisdicción, incluyendo la obtención del consentimiento necesario para

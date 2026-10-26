@@ -31,7 +31,7 @@ ksp {
 }
 
 android {
-    namespace = "com.capicua.smstowhats"
+    namespace = "com.capicua.smsrelay"
     compileSdk = 37
 
     signingConfigs {
@@ -46,10 +46,10 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.capicua.smstowhats"
+        applicationId = "com.capicua.smsrelay"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
+        versionCode = 1
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -90,7 +90,7 @@ kotlin {
     }
 }
 
-// El APK de release se llama smstowhats-<versionName>.apk. AGP 9 retiró la API de
+// El APK de release se llama smsrelay-<versionName>.apk. AGP 9 retiró la API de
 // variantes antigua (applicationVariants) y la nueva no expone el nombre del fichero,
 // así que se recurre a VariantOutputImpl, que es interna: si una versión futura de
 // AGP la cambia, el síntoma es que el APK vuelve a llamarse app-release.apk.
@@ -98,7 +98,7 @@ androidComponents {
     onVariants(selector().withBuildType("release")) { variant ->
         variant.outputs.forEach { salida ->
             (salida as? com.android.build.api.variant.impl.VariantOutputImpl)
-                ?.outputFileName?.set("smstowhats-${salida.versionName.orNull}.apk")
+                ?.outputFileName?.set("smsrelay-${salida.versionName.orNull}.apk")
         }
     }
 }

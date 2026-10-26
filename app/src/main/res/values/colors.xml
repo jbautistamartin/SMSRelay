@@ -2,28 +2,25 @@
 <!--
     Paleta de la aplicación.
 
-    El primario pasó del verde azulado de SMStoSMS (#006874) al azul de SMStoTelegram, y de ahí
-    al verde, por el mismo motivo por el que cada una de estas aplicaciones ha cambiado de color:
-    pueden convivir en el mismo teléfono y hay que distinguirlas sin leer el nombre. Heredar el
-    azul de SMStoTelegram dejaba a SMStoWhats con el icono idéntico al de aquella. El verde las
-    separa y además dice a dónde entrega. Las cuatro quedan en un color cada una: verde azulado
-    SMStoSMS, azul SMStoTelegram, verde SMStoWhats y violeta SMSGateway, que entrega a una API.
+    El primario es **naranja**, y es el quinto color de la familia: violeta SMSGateway, turquesa
+    SMStoSMS, azul SMStoTelegram, verde SMStoWhats y naranja SMSRelay. Pueden convivir las cinco
+    en el mismo teléfono —durante la migración es lo normal— y hay que distinguirlas sin leer el
+    nombre. Las cuatro anteriores ocupaban la mitad fría del círculo; el naranja es el único hueco
+    que queda lejos de todas (ver `ic_launcher_background.xml`).
 
-    **El fondo del icono adaptativo se deriva del primario** (ver `ic_launcher_background.xml`).
-    Cambiar uno sin el otro deja el icono contradiciendo a la aplicación que abre.
+    **El fondo del icono adaptativo se deriva del primario.** Cambiar uno sin el otro deja el
+    icono contradiciendo a la aplicación que abre.
 
-    Los tonos son los de la paleta verde de Material 3 —primario en el tono 40, el contenedor en
-    el 90 y su contenido en el 10—, y no el hexadecimal de marca de ningún servicio: lo que hace
-    falta es una familia de color propia, no reproducir una identidad ajena. El verde de WhatsApp
-    (#25D366) es claro y saturado; este es el verde oscuro que corresponde a un primario. Y no se
-    confunde con el verde azulado de SMStoSMS, que está casi en el cian (ver
-    `ic_launcher_background.xml`).
+    Los tonos son los de una paleta tonal de Material 3 —primario en el tono 40, el contenedor en
+    el 90 y su contenido en el 10—, y no el color de marca de ningún servicio. Es un naranja
+    rojizo (~23°) y no un ámbar, porque el ámbar ya es «todavía no» en los colores de estado de
+    abajo.
 -->
 <resources>
-    <color name="md_theme_primary">#006E1C</color>
+    <color name="md_theme_primary">#A23F00</color>
     <color name="md_theme_on_primary">#FFFFFF</color>
-    <color name="md_theme_primary_container">#94F990</color>
-    <color name="md_theme_on_primary_container">#002204</color>
+    <color name="md_theme_primary_container">#FFDBCC</color>
+    <color name="md_theme_on_primary_container">#351000</color>
     <color name="md_theme_secondary">#535F70</color>
     <color name="md_theme_on_secondary">#FFFFFF</color>
     <color name="md_theme_background">#FDFCFF</color>
@@ -41,10 +38,10 @@
     <color name="status_dispatching">#0061A4</color>
 
     <!--
-        Indicadores de color por tipo de entrada del registro. El azul de «recibido» y de
-        «enviando» ya no es el primario —ahora el primario es verde—, y es a propósito: en verde
-        serían indistinguibles de «entregado» y «reenviado» (#186A2E), que es justo la diferencia
-        que el registro tiene que dejar ver. Azul es «en curso», verde es «hecho».
+        Indicadores de color por tipo de entrada del registro. No siguen al primario, y
+        es a propósito: azul es «en curso», verde es «hecho», ámbar es «no aplicaba» y rojo es
+        error, con cualquier color de marca. El naranja del primario se mantiene lejos del ámbar
+        de «sin regla» y del tope (#8A5000) para que un aviso no parezca un adorno.
     -->
     <color name="log_recibido">#0061A4</color>
     <color name="log_regla">#535F70</color>

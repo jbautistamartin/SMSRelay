@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Reglas de ProGuard / R8 específicas de SMStoWhats
+# Reglas de ProGuard / R8 específicas de SMSRelay
 #
 # Hilt, Room, Navigation, WorkManager y kotlinx.serialization distribuyen sus
 # propias reglas de consumidor dentro de sus artefactos, así que no hay que
@@ -26,10 +26,10 @@
 # Los enum que se persisten como texto (EstadoSms, EstadoReenvio, LogTipo) se
 # reconstruyen con valueOf(), que es reflexión: sin esto R8 puede renombrar sus
 # constantes y la lectura de la base de datos fallaría en release.
--keepclassmembers enum com.capicua.smstowhats.domain.model.** {
+-keepclassmembers enum com.capicua.smsrelay.domain.model.** {
     public static **[] values();
     public static ** valueOf(java.lang.String);
 }
 
 # Fragments instanciados por nombre desde el grafo de navegación.
--keep class com.capicua.smstowhats.presentation.** extends androidx.fragment.app.Fragment { <init>(); }
+-keep class com.capicua.smsrelay.presentation.** extends androidx.fragment.app.Fragment { <init>(); }

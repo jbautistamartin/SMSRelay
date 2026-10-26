@@ -1,0 +1,70 @@
+// SMSRelay para Android
+// Copyright © 2026 Capicua · José Luis Bautista Martín
+// Licencia: GNU Lesser General Public License v2.1
+// https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+package com.capicua.smsrelay.data.repository
+
+import com.capicua.smsrelay.data.local.db.dao.LogDao
+import com.capicua.smsrelay.data.local.db.entity.LogEntity
+import com.capicua.smsrelay.domain.transport.Canal
+import com.capicua.smsrelay.domain.model.LogEntry
+import com.capicua.smsrelay.domain.model.LogTipo
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class LogRepositoryImpl @Inject constructor(
+    private val logDao: LogDao
+) : LogRepository {
+
+    override suspend fun insertar(entry: LogEntry) {
+        logDao.insertar(entry.aEntidad())
+    }
+
+    override fun observarRecientes(limite: Int): Flow<List<LogEntry>> =
+        logDao.observarRecientes(limite).map { lista -> lista.map { it.aDominio() } }
+
+    override fun observarPorTipo(tipo: LogTipo, limite: Int): Flow<List<LogEntry>> =
+        logDao.observarPorTipo(tipo.name, limite).map { lista -> lista.map { it.aDominio() } }
+
+    override fun observarFiltrados(tipo: LogTipo?, canal: Canal?, limite: Int): Flow<List<LogEntry>> =
+        logDao.observarFiltrados(tipo?.name, canal?.name, limite)
+            .map { lista -> lista.map { it.aDominio() } }
+
+    override suspend fun obtenerTodosParaExportar(): List<LogEntry> =
+        logDao.obtenerTodosParaExportar().map { it.aDominio() }
+
+    override suspend fun eliminarAntiguos(antes: Instant) {
+        logDao.eliminarAnterioresA(antes.toEpochMilli())
+    }
+
+    override fun observarTotal(): Flow<Int> = logDao.observarTotal()
+
+    override suspend fun limpiarTodo() = logDao.limpiarTodo()
+
+    private fun LogEntry.aEntidad() = LogEntity(
+        id = id,
+        tipo = tipo.name,
+        smsId = smsId,
+        reenvioId = reenvioId,
+        destino = destino,
+        canal = canal?.name,
+        detalle = detalle,
+        timestamp = timestamp.toEpochMilli()
+    )
+
+    private fun LogEntity.aDominio() = LogEntry(
+        id = id,
+        tipo = LogTipo.valueOf(tipo),
+        smsId = smsId,
+        reenvioId = reenvioId,
+        destino = destino,
+        canal = Canal.de(canal),
+        detalle = detalle,
+        timestamp = Instant.ofEpochMilli(timestamp)
+    )
+}

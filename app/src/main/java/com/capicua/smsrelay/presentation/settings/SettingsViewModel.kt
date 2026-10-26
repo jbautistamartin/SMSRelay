@@ -1,0 +1,235 @@
+// SMSRelay para Android
+// Copyright © 2026 Capicua · José Luis Bautista Martín
+// Licencia: GNU Lesser General Public License v2.1
+// https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+package com.capicua.smsrelay.presentation.settings
+
+import android.app.Application
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.capicua.smsrelay.data.config.AppConfig
+import com.capicua.smsrelay.data.config.ConfigBackup
+import com.capicua.smsrelay.data.config.ConfigDataStore
+import com.capicua.smsrelay.data.config.ResultadoCopia
+import com.capicua.smsrelay.data.sms.ProveedorDeSims
+import com.capicua.smsrelay.data.sms.SimDisponible
+import com.capicua.smsrelay.data.repository.ReglaRepository
+import com.capicua.smsrelay.data.sms.SmsSender
+import com.capicua.smsrelay.domain.transport.Canal
+import com.capicua.smsrelay.domain.transport.Transportes
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import com.capicua.smsrelay.data.telegram.ComprobadorDelBot
+import com.capicua.smsrelay.data.telegram.EstadoDelBot
+import com.capicua.smsrelay.data.telegram.ResultadoDelBot
+import com.capicua.smsrelay.data.whatsapp.ComprobadorDeCuenta
+import com.capicua.smsrelay.data.whatsapp.EstadoDeLaCuenta
+import com.capicua.smsrelay.data.whatsapp.ResultadoDeCuenta
+import com.capicua.smsrelay.util.ControlRecepcion
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    application: Application,
+    private val configDataStore: ConfigDataStore,
+    private val configBackup: ConfigBackup,
+    private val estadoDeLaCuenta: EstadoDeLaCuenta,
+    private val comprobadorDeCuenta: ComprobadorDeCuenta,
+    private val estadoDelBot: EstadoDelBot,
+    private val comprobadorDelBot: ComprobadorDelBot,
+    private val proveedorDeSims: ProveedorDeSims,
+    private val smsSender: SmsSender,
+    private val transportes: Transportes,
+    reglaRepository: ReglaRepository
+) : AndroidViewModel(application) {
+
+    private val refrescos = MutableStateFlow(0)
+
+    /** Cómo está un canal: si está listo y cuántas reglas activas lo usan. */
+    data class EstadoCanal(
+        val canal: Canal,
+        /** Por qué no puede entregar, o null si está listo. */
+        val motivo: String?,
+        val reglasActivas: Int
+    )
+
+    /**
+     * El resumen de la sección «Canales».
+     *
+     * Se recalcula con la configuración, con el aviso de credencial rechazada de cada servicio
+     * y con las reglas, que son las tres cosas que pueden cambiarlo. El permiso de enviar SMS
+     * no emite nada al concederse, así que el fragment pide [refrescarCanales] al volver.
+     */
+    val estadoCanales: Flow<List<EstadoCanal>> = combine(
+        configDataStore.config,
+        estadoDeLaCuenta.credencialRechazada,
+        estadoDelBot.tokenRechazado,
+        reglaRepository.observarTodas(),
+        refrescos
+    ) { _, _, _, reglas, _ ->
+        Canal.entries.map { canal ->
+            EstadoCanal(
+                canal = canal,
+                motivo = transportes.de(canal)?.motivoNoDisponible()
+                    ?: transportes.motivoSinTransporte(canal).takeIf { transportes.de(canal) == null },
+                reglasActivas = reglas.count { it.activa && it.canal == canal }
+            )
+        }
+    }
+
+    fun refrescarCanales() {
+        refrescos.value += 1
+    }
+
+    /**
+     * SIM activas del dispositivo. Vacía sin `READ_PHONE_STATE`; de un elemento, nada que elegir.
+     * Se lee cada vez y no se guarda: una SIM se puede quitar o poner con la aplicación abierta.
+     */
+    val simsDisponibles: List<SimDisponible> get() = proveedorDeSims.simsDisponibles()
+
+    /** true si la aplicación puede enviar SMS, para la línea de estado de la sección SMS. */
+    val puedeEnviarSms: Boolean get() = smsSender.tienePermisoEnviar()
+
+    /** En qué punto está la comprobación de las credenciales. */
+    sealed interface EstadoComprobacion {
+        data object Inactivo : EstadoComprobacion
+        data object Comprobando : EstadoComprobacion
+        data class Terminada(val resultado: ResultadoDeCuenta) : EstadoComprobacion
+    }
+
+    private val _comprobacion = MutableStateFlow<EstadoComprobacion>(EstadoComprobacion.Inactivo)
+    val comprobacion: StateFlow<EstadoComprobacion> = _comprobacion.asStateFlow()
+
+    /**
+     * Pregunta a Meta por estas credenciales sin guardarlas.
+     *
+     * Se comprueba el texto que hay en los campos, no lo guardado: quien acaba de pegar unas
+     * credenciales quiere saber si sirven **antes** de comprometerse.
+     *
+     * Van las dos juntas porque la consulta ejercita las dos a la vez —el token en la cabecera,
+     * el id en la ruta— y porque comprobarlas por separado no es posible: sin id no hay URL a la
+     * que llamar, y sin token no hay permiso para llamarla.
+     */
+    fun comprobarCuenta(token: String, idNumero: String) {
+        if (_comprobacion.value == EstadoComprobacion.Comprobando) return
+        viewModelScope.launch {
+            _comprobacion.value = EstadoComprobacion.Comprobando
+            _comprobacion.value = EstadoComprobacion.Terminada(
+                comprobadorDeCuenta.comprobar(token, idNumero)
+            )
+        }
+    }
+
+    /** En qué punto está la comprobación del token del bot de Telegram. */
+    sealed interface EstadoComprobacionBot {
+        data object Inactivo : EstadoComprobacionBot
+        data object Comprobando : EstadoComprobacionBot
+        data class Terminada(val resultado: ResultadoDelBot) : EstadoComprobacionBot
+    }
+
+    private val _comprobacionBot =
+        MutableStateFlow<EstadoComprobacionBot>(EstadoComprobacionBot.Inactivo)
+    val comprobacionBot: StateFlow<EstadoComprobacionBot> = _comprobacionBot.asStateFlow()
+
+    /**
+     * Pregunta a Telegram por [token] sin guardarlo.
+     *
+     * Va aparte de [comprobarCuenta] y con su propio estado porque son dos servicios distintos:
+     * comprobar la cuenta de WhatsApp no dice nada del bot, y una comprobación en curso de uno no
+     * debe bloquear el botón del otro.
+     */
+    fun comprobarBot(token: String) {
+        if (_comprobacionBot.value == EstadoComprobacionBot.Comprobando) return
+        viewModelScope.launch {
+            _comprobacionBot.value = EstadoComprobacionBot.Comprobando
+            _comprobacionBot.value =
+                EstadoComprobacionBot.Terminada(comprobadorDelBot.comprobar(token))
+        }
+    }
+
+    /**
+     * Estado actual de la configuración.
+     *
+     * Emite null mientras DataStore no ha cargado su primer valor, para que el fragment no
+     * rellene los campos con los valores por defecto antes de que llegue lo realmente
+     * persistido y el operador vea cambiar las cifras delante de sus ojos.
+     */
+    val config: StateFlow<AppConfig?> = configDataStore.config
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
+
+    /** Resultado de la última exportación o importación, para contarlo una sola vez. */
+    private val _copias = MutableSharedFlow<ResultadoCopia>(extraBufferCapacity = 4)
+    val copias: SharedFlow<ResultadoCopia> = _copias.asSharedFlow()
+
+    /**
+     * Guarda la configuración editada.
+     *
+     * El interruptor de recepción no es un valor más: además de persistirlo hay que encender o
+     * apagar el receptor de SMS, que es lo que de verdad corta la entrada de mensajes.
+     */
+    fun guardar(config: AppConfig) {
+        viewModelScope.launch {
+            configDataStore.guardar(config)
+            // Guardar las credenciales es el gesto de quien viene a arreglar el aviso de
+            // «Meta las rechazó». Dejarlo puesto mandaría a arreglar lo ya arreglado; si las
+            // nuevas tampoco sirven, el siguiente envío lo pondrá otra vez.
+            estadoDeLaCuenta.olvidarCredencialRechazada()
+            estadoDelBot.olvidarTokenRechazado()
+            ControlRecepcion.aplicar(getApplication(), config.recepcionActiva)
+        }
+    }
+
+    /**
+     * Exporta la configuración al fichero elegido.
+     *
+     * @param incluirCredenciales lo decide la casilla de la pantalla, que está apagada cada vez
+     *   que se entra en Ajustes. **No se persiste a propósito:** no es un ajuste de la
+     *   aplicación, es una decisión sobre *esta* exportación concreta, y dejarla encendida de
+     *   una vez para otra acabaría escribiendo el token en un fichero que alguien creía inocuo.
+     */
+    fun exportar(destino: Uri, incluirCredenciales: Boolean) {
+        viewModelScope.launch {
+            _copias.emit(configBackup.exportar(destino, incluirCredenciales))
+        }
+    }
+
+    /**
+     * Importa una copia.
+     *
+     * Si el fichero traía el interruptor de recepción apagado, hay que aplicarlo al receptor:
+     * guardarlo en DataStore y no tocar el componente dejaría la aplicación diciendo una cosa
+     * y haciendo otra.
+     */
+    fun importar(origen: Uri) {
+        viewModelScope.launch {
+            val resultado = configBackup.importar(origen)
+            if (resultado is ResultadoCopia.Importada && resultado.conAjustes) {
+                ControlRecepcion.aplicar(
+                    getApplication(),
+                    configDataStore.config.first().recepcionActiva
+                )
+            }
+            _copias.emit(resultado)
+        }
+    }
+
+    /** Nombre sugerido para el fichero de copia. */
+    fun nombreFicheroCopia(): String = configBackup.nombreFichero()
+}
