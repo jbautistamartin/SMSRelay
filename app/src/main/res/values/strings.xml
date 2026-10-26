@@ -128,10 +128,10 @@
     <string name="settings_certificados_detalle">Solo para el canal API y solo para un servidor de tu red local con un certificado autofirmado. En Internet permite que alguien en medio se haga pasar por el servidor y lea los SMS.</string>
     <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
-    <string name="settings_max_reenvios_ayuda">Corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>
+    <string name="settings_max_reenvios_ayuda">Cuenta los reenvíos de todos los canales juntos y corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>
 
-    <string name="settings_max_mensajes_mes">Tope de mensajes al mes</string>
-    <string name="settings_max_mensajes_mes_ayuda">Meta regala los primeros 1.000 mensajes de servicio al mes y factura todos los de plantilla. Mil al mes son 33 al día. Pasado el tope, los SMS se descartan y queda en el registro. 0 lo desactiva. Recomendado: 900</string>
+    <string name="settings_max_mensajes_mes">Tope de mensajes de WhatsApp al mes</string>
+    <string name="settings_max_mensajes_mes_ayuda">Meta regala los primeros 1.000 mensajes de servicio al mes y factura todos los de plantilla. Mil al mes son 33 al día. Pasado el tope, los reenvíos por WhatsApp se omiten y queda en el registro; los demás canales siguen. 0 lo desactiva. Recomendado: 900</string>
 
     <string name="settings_seccion_envio">Envío y reintentos</string>
     <string name="settings_timeout_envio">Espera de confirmación</string>

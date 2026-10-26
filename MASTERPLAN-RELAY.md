@@ -461,7 +461,7 @@ aplicación vieja, importar en la nueva, rellenar credenciales.
 >   ajustes, y lo que devuelve es lo siguiente que hay que hacer, así que no puede irse solo.
 >   El Snackbar dice además de qué aplicación venía la copia.
 
-### Fase 8 — Límites por canal · `[ ]`
+### Fase 8 — Límites por canal · `[x]`
 
 - **El tope por minuto sigue siendo uno y global**, cortando ráfagas de SMS entrantes antes de
   saber por dónde van a salir. Cambia de significado por cuarta vez: ya no protege a un medio, los
@@ -470,6 +470,18 @@ aplicación vieja, importar en la nueva, rellenar credenciales.
   Telegram—, salvo lo que se decida en el punto 9, decisión B.
 - Telegram: el `retry_after` vuelve a dormir al worker (ver punto 4).
 - `LogTipo.LIMITE_ALCANZADO` dice qué tope y, si es por canal, cuál.
+
+> **Cómo se cerró (25 oct 2026).** 233 tests en verde; la fase no añade lógica pura. El tope
+> mensual salió de delante de la evaluación y pasó a detrás: ahora **omite los reenvíos de
+> WhatsApp, no el SMS**, y cada omisión queda como un `LIMITE_ALCANZADO` con su canal. Antes
+> agotar el mes de Meta dejaba de reenviar también por Telegram, por SMS y por la API. El SMS
+> solo se descarta si no le queda ningún reenvío que hacer. Cada `LIMITE_ALCANZADO` empieza
+> por *Tope por minuto*, *Tope mensual de WhatsApp* o *Guarda antibucle de SMS*.
+>
+> El tope por minuto se quedó global y con su 10 de siempre, que ya era el del medio más
+> estricto, así que no hubo defecto que recalcular. Y el `retry_after` de Telegram no fue
+> trabajo de esta fase: `DispatchWorker.esperarSiLoPiden()` nunca dejó de existir, y volvió a
+> dormir en cuanto la fase 3 trajo un transporte que manda la espera.
 
 ### Fase 9 — Documentación y privacidad · `[ ]`
 

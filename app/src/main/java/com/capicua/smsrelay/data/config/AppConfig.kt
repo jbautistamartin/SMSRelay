@@ -138,7 +138,7 @@ data class AppConfig(
     /**
      * Tope de reenvíos creados por minuto. El exceso se descarta y queda registrado en el log.
      *
-     * **Esta protección cambia de significado por tercera vez, y es la tercera vez que sobrevive
+     * **Esta protección cambia de significado por cuarta vez, y es la cuarta vez que sobrevive
      * por un motivo distinto del que la hizo nacer.**
      *
      * | Transporte | Para qué servía |
@@ -146,19 +146,26 @@ data class AppConfig(
      * | SMS | Cortafuegos económico: un bucle con reintentos detrás era una factura |
      * | Telegram | Los límites del Bot API: un mensaje por segundo y chat. Entregar era gratis |
      * | Cloud API | Las dos cosas a la vez, y la económica aprieta más que nunca |
+     * | Los cuatro, en SMSRelay | Todos a la vez: cuenta los reenvíos de todos los canales juntos |
      *
      * El caudal de la Cloud API es holgado —del orden de 80 mensajes por segundo— así que por
      * ahí no hay problema. Lo que existe es el error `131056`, demasiados mensajes al mismo
      * destinatario en poco tiempo, y sobre todo el coste: ver [maxMensajesPorMes].
      *
-     * Esto sigue siendo lo que corta una **avalancha**: una ráfaga de SMS en un minuto. El techo
-     * mensual es otra cosa y la vigila otro ajuste.
+     * Esto sigue siendo lo que corta una **avalancha**: una ráfaga de SMS en un minuto, y por eso
+     * es global y se mira antes de evaluar reglas: una ráfaga se ve sin saber por dónde va a
+     * salir cada SMS. El 10 de siempre ya era el valor del más estricto de los cuatro medios. El
+     * techo mensual es otra cosa y la vigila otro ajuste.
      */
     val maxReenviosPorMinuto: Int = 10,
 
     /**
-     * Tope de mensajes entregados en el mes natural. Pasado el tope, los SMS se descartan y
-     * queda registrado en el log.
+     * Tope de mensajes **de WhatsApp** entregados en el mes natural. Pasado el tope, los
+     * reenvíos por WhatsApp se omiten y queda registrado en el log; los de los demás canales
+     * siguen saliendo.
+     *
+     * Es solo de WhatsApp porque mide la factura de Meta: Telegram no factura, el SMS lo cobra
+     * el operador con sus propias tarifas y la API es de quien la configura.
      *
      * **Es el límite que de verdad importa ahora, y el primero de este proyecto que mide dinero
      * en lugar de tiempo.** Meta regala los primeros 1.000 mensajes de servicio al mes y por

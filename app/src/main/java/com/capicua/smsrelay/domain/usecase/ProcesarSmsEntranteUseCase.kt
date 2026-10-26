@@ -43,12 +43,20 @@ import javax.inject.Inject
  * ## Orden de las operaciones
  * ```
  * 1. INSERT del SMS en estado PENDIENTE        ← outbox: nada se pierde a partir de aquí
- * 2. Topes de frecuencia y de coste            ← si salta alguno: DESCARTADO y fin
+ * 2. Guarda antibucle y tope por minuto        ← globales: si salta alguno, DESCARTADO y fin
  * 3. Evaluar reglas
- * 4. INSERT de los reenvíos (lote atómico)
- * 5. Marcar el SMS como PROCESADO o SIN_REGLA
- * 6. Encolar un worker por reenvío
+ * 4. Guardas y topes de canal                  ← omiten reenvíos sueltos, no el SMS
+ * 5. INSERT de los reenvíos (lote atómico)
+ * 6. Marcar el SMS como PROCESADO o SIN_REGLA
+ * 7. Encolar un worker por reenvío
  * ```
+ *
+ * ## Los topes: cuáles son de todos y cuáles de un canal
+ * El **tope por minuto es global** y se mira antes de evaluar, porque corta una ráfaga de SMS
+ * entrantes, y eso se sabe sin saber por dónde va a salir cada uno. El **tope mensual es de
+ * WhatsApp** —mide los mensajes que Meta factura— y se mira después de evaluar, contra cada
+ * reenvío: que el mes de WhatsApp esté agotado no es motivo para dejar de reenviar por Telegram.
+ * Cada `LIMITE_ALCANZADO` empieza diciendo qué tope o qué guarda saltó.
  *
  * Si el proceso muere a mitad, el rescate de huérfanos retoma el trabajo. Para que eso no
  * genere envíos duplicados, [procesar] es **idempotente**: antes de crear reenvíos comprueba si
@@ -108,8 +116,8 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
             if (NormalizadorTelefono.estaEnLista(sms.telefono, destinos)) {
                 descartar(
                     sms,
-                    "el remitente ${sms.telefono} es el destino de una regla SMS: posible bucle " +
-                        "de reenvío"
+                    "$GUARDA_BUCLES: el remitente ${sms.telefono} es el destino de una regla " +
+                        "SMS, posible bucle de reenvío"
                 )
                 return
             }
@@ -117,43 +125,20 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
 
         // ── Protección: límite de reenvíos por minuto ─────────────────────────
         //
-        // Corta una avalancha: una ráfaga de SMS en un minuto.
+        // Corta una avalancha: una ráfaga de SMS en un minuto. Es de todos los canales a la vez
+        // —cuenta los reenvíos creados, salgan por donde salgan—, y es el cuarto significado de
+        // este número: protegió una factura de SMS, los límites de la Bot API y los de Meta, y
+        // ahora protege a los cuatro medios juntos. Su valor por defecto, 10, ya era el del más
+        // estricto de ellos.
         val desde = Instant.now().minus(1, ChronoUnit.MINUTES)
         val recientes = reenvioRepository.contarCreadosDesde(desde)
         if (recientes >= config.maxReenviosPorMinuto) {
             descartar(
                 sms,
-                "límite de ${config.maxReenviosPorMinuto} reenvíos por minuto alcanzado " +
-                    "($recientes en los últimos 60 s)"
+                "$TOPE_POR_MINUTO: ${config.maxReenviosPorMinuto} reenvíos por minuto entre " +
+                    "todos los canales ($recientes en los últimos 60 s)"
             )
             return
-        }
-
-        // ── Protección: tope de mensajes del mes ──────────────────────────────
-        //
-        // Es otra protección y no una variante de la anterior, porque mide otra cosa: aquella
-        // corta una ráfaga, esta corta un mes. Y es la primera de este proyecto que mide
-        // **dinero**: entregar por la Cloud API cuesta pasados los mil mensajes de servicio
-        // gratuitos, y pasarse no da ningún error, da una factura.
-        //
-        // Se comprueba aquí, al crear el reenvío, y no al entregarlo, por dos razones. Una es
-        // que así usa el mismo mecanismo que el tope por minuto —descartar el SMS y dejarlo en
-        // el registro— en lugar de inventar una tercera forma de fallar. La otra es que un
-        // reenvío cerrado como fallido al intentar entregarlo habría consumido ya su sitio en
-        // la cola y sus reintentos para nada.
-        //
-        // Un tope de 0 lo desactiva, para quien prefiera no tener techo.
-        if (config.maxMensajesPorMes > 0) {
-            val mes = contadorDeMensajes.leerMesEnCurso()
-            if (mes.total >= config.maxMensajesPorMes) {
-                descartar(
-                    sms,
-                    "tope de ${config.maxMensajesPorMes} mensajes del mes alcanzado " +
-                        "(${mes.servicio} de servicio y ${mes.plantilla} de plantilla " +
-                        "entregados en ${mes.mes})"
-                )
-                return
-            }
         }
 
         // ── Evaluación ────────────────────────────────────────────────────────
@@ -222,9 +207,9 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                     smsId = sms.id,
                     destino = coincidencia.destino,
                     canal = coincidencia.canal,
-                    detalle = "Regla «${coincidencia.nombreRegla}» reenviaría por SMS al propio " +
-                        "remitente ${sms.telefono}: omitida. Si la intención era contestarle, " +
-                        "pon {telefono} como destino de la regla",
+                    detalle = "$GUARDA_BUCLES: la regla «${coincidencia.nombreRegla}» " +
+                        "reenviaría por SMS al propio remitente ${sms.telefono}: omitida. Si la " +
+                        "intención era contestarle, pon {telefono} como destino de la regla",
                     timestamp = Instant.now()
                 )
             )
@@ -254,13 +239,62 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
             )
         }
 
-        if (enviables.isEmpty()) {
+        // ── Protección: tope de mensajes del mes, solo WhatsApp ───────────────
+        //
+        // Es otra protección y no una variante del tope por minuto, porque mide otra cosa:
+        // aquel corta una ráfaga, este corta un mes. Y mide **dinero**: entregar por la Cloud
+        // API cuesta pasados los mil mensajes de servicio gratuitos, y pasarse no da ningún
+        // error, da una factura. Por eso es solo de WhatsApp: en Telegram no hay factura, el SMS
+        // lo cobra el operador con sus propias tarifas y la API es de quien la configura.
+        //
+        // Se comprueba al crear el reenvío y no al entregarlo: un reenvío cerrado como fallido
+        // al intentar entregarlo habría consumido ya su sitio en la cola y sus reintentos para
+        // nada. Y omite los reenvíos de WhatsApp, no el SMS: el resto de canales sigue.
+        //
+        // Un tope de 0 lo desactiva, para quien prefiera no tener techo.
+        val mesAgotado = enviables.any { it.canal == Canal.WHATSAPP } &&
+            config.maxMensajesPorMes > 0 &&
+            contadorDeMensajes.leerMesEnCurso().let { mes ->
+                (mes.total >= config.maxMensajesPorMes).also { agotado ->
+                    if (agotado) {
+                        Timber.i(
+                            "Procesar[${sms.id}]: mes de WhatsApp agotado " +
+                                "(${mes.servicio} de servicio, ${mes.plantilla} de plantilla)"
+                        )
+                    }
+                }
+            }
+        val (entregables, sobreTope) = if (mesAgotado) {
+            enviables.partition { it.canal != Canal.WHATSAPP }
+        } else {
+            enviables to emptyList()
+        }
+
+        sobreTope.forEach { coincidencia ->
+            logRepository.insertar(
+                LogEntry(
+                    tipo = LogTipo.LIMITE_ALCANZADO,
+                    smsId = sms.id,
+                    destino = coincidencia.destino,
+                    canal = coincidencia.canal,
+                    detalle = "$TOPE_MENSUAL: ${config.maxMensajesPorMes} mensajes de WhatsApp " +
+                        "este mes. La regla «${coincidencia.nombreRegla}» no se reenvía",
+                    timestamp = Instant.now()
+                )
+            )
+        }
+
+        if (entregables.isEmpty()) {
             descartar(
                 sms,
-                if (circulares.isNotEmpty()) {
-                    "todas las reglas que casaron reenviaban por SMS al propio remitente"
-                } else {
-                    "las reglas que casaron contestaban a «${sms.telefono}», " +
+                when {
+                    sobreTope.isNotEmpty() ->
+                        "$TOPE_MENSUAL: las reglas que casaron salían por WhatsApp, y el mes " +
+                            "ya ha llegado a ${config.maxMensajesPorMes} mensajes"
+                    circulares.isNotEmpty() ->
+                        "$GUARDA_BUCLES: todas las reglas que casaron reenviaban por SMS al " +
+                            "propio remitente"
+                    else -> "las reglas que casaron contestaban a «${sms.telefono}», " +
                         "que no es un número al que se pueda enviar"
                 }
             )
@@ -269,7 +303,7 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
 
         // ── Creación de los reenvíos ──────────────────────────────────────────
         val ahora = Instant.now()
-        val reenvios = enviables.map { coincidencia ->
+        val reenvios = entregables.map { coincidencia ->
             Reenvio(
                 id = UUID.randomUUID().toString(),
                 smsId = sms.id,
@@ -316,5 +350,12 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
             )
         )
         Timber.w("Procesar[${sms.id}]: descartado — $motivo")
+    }
+
+    private companion object {
+        // Con qué empieza cada LIMITE_ALCANZADO, para que el registro diga qué lo disparó.
+        const val TOPE_POR_MINUTO = "Tope por minuto"
+        const val TOPE_MENSUAL = "Tope mensual de WhatsApp"
+        const val GUARDA_BUCLES = "Guarda antibucle de SMS"
     }
 }
