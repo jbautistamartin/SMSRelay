@@ -147,13 +147,15 @@
     <string name="settings_backup_credenciales">Incluir las credenciales</string>
     <string name="settings_backup_credenciales_aviso">El fichero llevará el token de acceso y el id del número en texto plano. Quien lo abra podrá enviar mensajes de WhatsApp en tu nombre y con cargo a tu cuenta. Guárdalo como guardarías una contraseña: cifrado o en un sitio del que respondas, nunca en una carpeta compartida ni en el correo.</string>
     <string name="settings_copia_exportada_credenciales">Copia guardada con credenciales · %1$d regla(s) · custodia el fichero</string>
-    <string name="settings_copia_importada_credenciales">Copia restaurada · %1$d regla(s) añadidas · se han sustituido las credenciales</string>
+    <string name="settings_copia_importada_credenciales">Copia de %1$s restaurada · %2$d regla(s) añadidas · se han sustituido las credenciales</string>
     <string name="settings_exportar">Exportar</string>
     <string name="settings_importar">Importar</string>
     <string name="settings_importar_confirmar">Los ajustes del fichero sustituyen a los actuales. Las reglas se añaden a las que ya hay, sin borrar ninguna.</string>
     <string name="settings_copia_exportada">Copia guardada · %1$d regla(s)</string>
-    <string name="settings_copia_importada">Copia restaurada · %1$d regla(s) añadidas</string>
-    <string name="settings_copia_importada_con_rechazos">Copia restaurada · %1$d regla(s) añadidas · %2$d rechazadas por datos no válidos</string>
+    <string name="settings_copia_importada">Copia de %1$s restaurada · %2$d regla(s) añadidas</string>
+    <string name="settings_copia_importada_con_rechazos">Copia de %1$s restaurada · %2$d regla(s) añadidas · %3$d rechazadas por datos no válidos</string>
+    <string name="settings_copia_avisos_titulo">Hay canales sin preparar</string>
+    <string name="settings_copia_avisos">Las reglas de la copia de %1$s ya están dentro, pero algunas no pueden entregar todavía:\n\n%2$s\n\nCompleta los ajustes de esos canales, más arriba en esta pantalla.</string>
     <string name="settings_copia_fallo">No se pudo completar: %1$s</string>
 
     <string name="settings_error_rango">Debe estar entre %1$d y %2$d</string>

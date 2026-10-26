@@ -8,12 +8,13 @@ package com.capicua.smsrelay.data.config
 import android.content.Context
 import android.net.Uri
 import com.capicua.smsrelay.data.repository.ReglaRepository
-import com.capicua.smsrelay.data.rules.ReglaJson
+import com.capicua.smsrelay.data.rules.CopiaInterpretada
+import com.capicua.smsrelay.data.rules.ImportacionDeCopia
 import com.capicua.smsrelay.data.rules.ReglasExportadas
-import com.capicua.smsrelay.data.rules.aDominio
 import com.capicua.smsrelay.data.rules.aJson
-import com.capicua.smsrelay.data.whatsapp.DestinoDeWhatsApp
+import com.capicua.smsrelay.domain.model.Regla
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
+import com.capicua.smsrelay.domain.transport.Transportes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -27,16 +28,22 @@ import javax.inject.Singleton
 /** Cómo acabó una copia de seguridad. Lo traduce a texto la pantalla que la pidió. */
 sealed interface ResultadoCopia {
     /**
-     * @param conCredenciales si el fichero escrito lleva dentro el token y el id del número.
+     * @param conCredenciales si el fichero escrito lleva dentro credenciales de algún canal.
      *   La pantalla lo usa para cambiar el mensaje de confirmación: una copia con credenciales
      *   es un fichero que hay que custodiar, y eso se dice al terminar y no solo antes.
      */
     data class Exportada(val reglas: Int, val conCredenciales: Boolean) : ResultadoCopia
+    /**
+     * @param origen aplicación que escribió el fichero: SMSRelay o una de las cuatro anteriores.
+     * @param avisos una línea por canal de las reglas importadas que hoy no puede entregar.
+     */
     data class Importada(
+        val origen: String,
         val aceptadas: Int,
         val rechazadas: Int,
         val conAjustes: Boolean,
-        val conCredenciales: Boolean
+        val conCredenciales: Boolean,
+        val avisos: List<String> = emptyList()
     ) : ResultadoCopia
     data class Fallo(val motivo: String) : ResultadoCopia
 }
@@ -54,7 +61,9 @@ sealed interface ResultadoCopia {
  *
  * Al importar, los dos bloques se tratan distinto y no por capricho:
  *
- * - **Los ajustes se sustituyen.** Son un juego de valores único: mezclarlos no significa nada.
+ * - **Los ajustes se sustituyen, pero solo los del canal del fichero** y los comunes. Una copia
+ *   de SMStoTelegram no sabe nada de WhatsApp, y no puede dejar a cero lo que no conoce. Ver
+ *   `ConfiguracionJson.aplicarSobre`.
  * - **Las reglas se añaden** al final de las que ya hubiera. Importar no borra: una
  *   importación equivocada que vaciara la lista dejaría al teléfono sin reenviar nada y sin
  *   forma de recuperarlo. Si lo que se quiere es sustituirlas, se borran a mano antes.
@@ -64,7 +73,8 @@ class ConfigBackup @Inject constructor(
     @ApplicationContext private val context: Context,
     private val configDataStore: ConfigDataStore,
     private val reglaRepository: ReglaRepository,
-    private val evaluador: EvaluadorDeReglas
+    private val evaluador: EvaluadorDeReglas,
+    private val transportes: Transportes
 ) {
 
     private val json = Json {
@@ -82,7 +92,8 @@ class ConfigBackup @Inject constructor(
     /**
      * Escribe los ajustes y el juego de reglas completo en el fichero elegido.
      *
-     * @param incluirCredenciales si el token y el id del número viajan dentro. **Falso por
+     * @param incluirCredenciales si las credenciales de WhatsApp y el token del bot viajan
+     *   dentro. **Falso por
      *   defecto**, y el valor por defecto importa: quien llame sin pensarlo escribe el fichero
      *   seguro. Activarlo es una decisión consciente de quien exporta, tomada en una casilla
      *   que explica lo que implica.
@@ -115,12 +126,16 @@ class ConfigBackup @Inject constructor(
     }
 
     /**
-     * Lee un fichero de copia y aplica lo que traiga.
+     * Lee un fichero de copia —de esta aplicación o de cualquiera de las cuatro anteriores— y
+     * aplica lo que traiga.
      *
-     * Cada regla se valida antes de escribirla —expresiones que compilen y un destino con forma
-     * de teléfono— y las que no pasan se cuentan aparte: una regla con una regex rota o un
-     * número sin prefijo que entrase en silencio no reenviaría nunca y sería muy difícil de
-     * diagnosticar.
+     * Qué entra y qué no lo decide `ImportacionDeCopia`, que es puro y tiene tests con un fichero
+     * de cada aplicación; aquí solo se lee el fichero y se escribe el resultado.
+     *
+     * Al terminar se mira además si los canales de las reglas que entraron **pueden entregar**:
+     * importar la copia de SMStoTelegram en un teléfono sin token deja reglas correctas que no
+     * salen por ningún sitio, y eso hay que decirlo en el momento y no cuando llegue el primer
+     * SMS.
      */
     suspend fun importar(origen: Uri): ResultadoCopia = try {
         val contenido = withContext(Dispatchers.IO) {
@@ -129,61 +144,26 @@ class ConfigBackup @Inject constructor(
                 ?: error("no se pudo abrir el fichero para leer")
         }
 
-        val fichero = json.decodeFromString(ReglasExportadas.serializer(), contenido)
+        val actual = configDataStore.config.first()
+        when (val copia = ImportacionDeCopia.interpretar(contenido, actual, evaluador::validarPatron)) {
+            is CopiaInterpretada.Rechazada -> ResultadoCopia.Fallo(copia.motivo)
+            is CopiaInterpretada.Correcta -> {
+                copia.config?.let { configDataStore.guardar(it) }
+                copia.reglas.forEach { regla ->
+                    // crear() reasigna el orden al final de la lista; el del fichero solo
+                    // mantiene el orden relativo.
+                    reglaRepository.crear(regla)
+                }
 
-        if (fichero.version > ReglasExportadas.VERSION_ACTUAL) {
-            ResultadoCopia.Fallo(
-                "el fichero usa el formato ${fichero.version} y esta versión " +
-                    "entiende hasta el ${ReglasExportadas.VERSION_ACTUAL}"
-            )
-        } else if (fichero.version < ReglasExportadas.MINIMA_ACEPTADA) {
-            // Un fichero de SMStoTelegram tiene la misma forma que uno de aquí, pero sus
-            // destinos son chats. Entraría sin un error de parseo y dejaría un juego de reglas
-            // que falla cuando llegue un SMS, sin que nada apunte al fichero importado.
-            ResultadoCopia.Fallo(
-                "el fichero usa el formato ${fichero.version}, de una versión en la que un " +
-                    "destino era otra cosa: un chat de Telegram en el 4, un teléfono sin " +
-                    "prefijo internacional en el 3 y anteriores. Aquí un destino es un " +
-                    "teléfono con prefijo, así que esas reglas no servirían: hay que crearlas " +
-                    "de nuevo"
-            )
-        } else {
-            // Los ajustes se reemplazan, así que hay que pasarle las credenciales que ya
-            // tenía este teléfono: si el fichero no las trae —el caso normal— son las que se
-            // conservan, y sin ellas la importación las borraría. Si el fichero sí las trae,
-            // aDominio() se queda con las del fichero.
-            val traeCredenciales = fichero.configuracion?.let {
-                !it.tokenAcceso.isNullOrBlank() || !it.idNumeroTelefono.isNullOrBlank()
-            } ?: false
-
-            fichero.configuracion?.let { importados ->
-                val actual = configDataStore.config.first()
-                // El formato 5 no tiene ni el token del bot, ni la SIM, ni la guarda antibucle,
-                // ni los certificados del canal API, así que se conservan los de este teléfono.
-                // El formato 6 trae los que viajan.
-                configDataStore.guardar(
-                    importados.aDominio(actual.tokenAcceso, actual.idNumeroTelefono).copy(
-                        tokenBot = actual.tokenBot,
-                        subscriptionId = actual.subscriptionId,
-                        protegerBucles = actual.protegerBucles,
-                        aceptarCertificadosInvalidos = actual.aceptarCertificadosInvalidos
-                    )
+                ResultadoCopia.Importada(
+                    origen = copia.origen,
+                    aceptadas = copia.reglas.size,
+                    rechazadas = copia.rechazadas,
+                    conAjustes = copia.config != null,
+                    conCredenciales = copia.conCredenciales,
+                    avisos = avisosDeCanales(copia.reglas)
                 )
             }
-
-            val (validas, invalidas) = fichero.reglas.partition { esValida(it) }
-            validas.forEachIndexed { indice, regla ->
-                // crear() reasigna el orden al final de la lista; el índice solo mantiene el
-                // orden relativo del fichero.
-                reglaRepository.crear(regla.aDominio(orden = indice))
-            }
-
-            ResultadoCopia.Importada(
-                aceptadas = validas.size,
-                rechazadas = invalidas.size,
-                conAjustes = fichero.configuracion != null,
-                conCredenciales = traeCredenciales
-            )
         }
     } catch (e: Exception) {
         Timber.e(e, "Error importando la configuración")
@@ -191,21 +171,15 @@ class ConfigBackup @Inject constructor(
     }
 
     /**
-     * Una regla que entra tiene que poder entregar.
+     * Una línea por canal de las reglas importadas que hoy no puede entregar, con su motivo.
      *
-     * El destino se valida por **forma**, no solo por no estar vacío, y eso es nuevo de la
-     * versión 5. Antes bastaba con que hubiera algo escrito: un `chat_id` no se puede comprobar
-     * sin preguntarle a Telegram, así que validar la forma no habría atrapado nada que importara.
-     * Un teléfono sí se puede comprobar, y el fallo que atrapa es real: un fichero editado a
-     * mano, o uno del formato 5 generado por otra versión, con un número sin prefijo.
-     *
-     * Es el mismo criterio que ya se aplicaba a las expresiones regulares, por el mismo motivo:
-     * una regla que entra en silencio y no entrega nunca es mucho más difícil de diagnosticar
-     * que una que se rechaza al importar y se cuenta aparte.
+     * Se pregunta **después** de guardar los ajustes, porque una copia con credenciales es
+     * justo lo que deja un canal listo.
      */
-    private fun esValida(regla: ReglaJson): Boolean =
-        regla.nombre.isNotBlank() &&
-            DestinoDeWhatsApp.pareceValido(regla.destino) &&
-            evaluador.validarPatron(regla.regexTelefono) == null &&
-            evaluador.validarPatron(regla.regexMensaje) == null
+    private suspend fun avisosDeCanales(reglas: List<Regla>): List<String> =
+        reglas.groupBy { it.canal }.mapNotNull { (canal, deCanal) ->
+            val motivo = transportes.de(canal)?.motivoNoDisponible()
+                ?: if (transportes.de(canal) == null) transportes.motivoSinTransporte(canal) else null
+            motivo?.let { "${deCanal.size} regla(s) por ${canal.etiqueta}: $it" }
+        }
 }

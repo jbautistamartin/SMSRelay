@@ -6,7 +6,9 @@
 package com.capicua.smsrelay.data.rules
 
 import com.capicua.smsrelay.data.config.AppConfig
+import com.capicua.smsrelay.data.config.ModoDeEntrega
 import com.capicua.smsrelay.domain.model.Regla
+import com.capicua.smsrelay.domain.transport.Canal
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,11 +17,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Tests del formato de intercambio de reglas.
+ * Tests del formato de intercambio, el 6.
  *
  * Lo que se verifica no es que kotlinx.serialization funcione, sino las decisiones propias del
- * formato: que los ids locales no viajen, que el token del bot tampoco, que el orden relativo
- * se conserve y que un fichero escrito por otra versión no reviente el parseo.
+ * formato: que los ids locales no viajen, que las credenciales tampoco salvo que se pidan, que
+ * cada regla lleve su canal y que importar los ajustes de un canal no toque los de los demás.
+ * Leer los ficheros de las aplicaciones anteriores es cosa de `ImportacionDeCopiaTest`.
  */
 class ReglasJsonTest {
 
@@ -39,6 +42,7 @@ class ReglasJsonTest {
         regexTelefono: String? = "^BANCO$",
         regexMensaje: String? = "codigo",
         ignorarMayusculas: Boolean = false,
+        canal: Canal = Canal.WHATSAPP,
         destino: String = "+34600112233",
         plantilla: String = "De {telefono}: {mensaje}",
         activa: Boolean = true,
@@ -52,359 +56,183 @@ class ReglasJsonTest {
         regexTelefono = regexTelefono,
         regexMensaje = regexMensaje,
         ignorarMayusculas = ignorarMayusculas,
+        canal = canal,
         destino = destino,
         plantilla = plantilla,
         activa = activa,
         continuar = continuar
     )
 
+    private val configCompleta = AppConfig(
+        tokenAcceso = "EAAG-token",
+        idNumeroTelefono = "123456789012345",
+        tokenBot = "123456:ABC-bot",
+        subscriptionId = 7,
+        protegerBucles = false,
+        aceptarCertificadosInvalidos = true,
+        modoDeEntrega = ModoDeEntrega.SOLO_PLANTILLA,
+        plantillaNombre = "reenvio_sms",
+        plantillaIdioma = "en",
+        maxReintentos = 4,
+        intervaloReintentoSegundos = 90,
+        timeoutEnvioSegundos = 20,
+        maxReenviosPorMinuto = 3,
+        maxMensajesPorMes = 500,
+        recepcionActiva = false
+    )
+
     // ── Ida y vuelta ──────────────────────────────────────────────────────────
 
     @Test
-    fun `una regla sobrevive al viaje de ida y vuelta`() {
-        val original = regla()
+    fun `una regla sobrevive al viaje de ida y vuelta, canal incluido`() {
+        val original = regla(canal = Canal.TELEGRAM, destino = "-1001234567890")
 
-        val recuperada = original.aJson().aDominio(orden = 0)
+        val recuperada = original.aJson().aDominio(orden = 0, canal = Canal.TELEGRAM)
 
-        assertEquals(original.nombre, recuperada.nombre)
-        assertEquals(original.regexTelefono, recuperada.regexTelefono)
-        assertEquals(original.regexMensaje, recuperada.regexMensaje)
-        assertEquals(original.destino, recuperada.destino)
-        assertEquals(original.plantilla, recuperada.plantilla)
-        assertEquals(original.activa, recuperada.activa)
-        assertEquals(original.continuar, recuperada.continuar)
+        assertEquals("TELEGRAM", original.aJson().canal)
+        assertEquals(original.copy(id = 0, orden = 0), recuperada)
     }
 
     @Test
     fun `el id local no viaja en el fichero`() {
-        val serializado = json.encodeToString(ReglaJson.serializer(), regla(id = 42).aJson())
+        val texto = json.encodeToString(ReglaJson.serializer(), regla(id = 42).aJson())
 
-        assertFalse("el id no debe aparecer en el JSON", serializado.contains("\"id\""))
-        assertFalse("el orden tampoco: lo decide quien importa", serializado.contains("\"orden\""))
+        assertFalse(texto.contains("\"id\""))
     }
 
     @Test
     fun `al importar el id queda a cero para que Room asigne uno nuevo`() {
-        val importada = regla(id = 42).aJson().aDominio(orden = 7)
+        val recuperada = regla(id = 42).aJson().aDominio(orden = 5, canal = Canal.WHATSAPP)
 
-        assertEquals(0L, importada.id)
-        assertEquals(7, importada.orden)
-    }
-
-    // ── Conjunto completo ─────────────────────────────────────────────────────
-
-    @Test
-    fun `el orden relativo del fichero se conserva al importar`() {
-        val reglas = listOf(
-            regla(nombre = "Primera", destino = "+34600000001"),
-            regla(nombre = "Segunda", destino = "+34600000002"),
-            regla(nombre = "Tercera", destino = "+34600000003")
-        )
-
-        val fichero = ReglasExportadas(
-            exportado = "2026-10-07T19:30:00Z",
-            reglas = reglas.map { it.aJson() }
-        )
-        val recuperado = json.decodeFromString(
-            ReglasExportadas.serializer(),
-            json.encodeToString(ReglasExportadas.serializer(), fichero)
-        )
-
-        val importadas = recuperado.reglas.mapIndexed { indice, r -> r.aDominio(indice) }
-
-        assertEquals(listOf("Primera", "Segunda", "Tercera"), importadas.map { it.nombre })
-        assertEquals(listOf(0, 1, 2), importadas.map { it.orden })
+        assertEquals(0L, recuperada.id)
+        assertEquals(5, recuperada.orden)
     }
 
     @Test
-    fun `el fichero declara la version del formato`() {
-        val serializado = json.encodeToString(
-            ReglasExportadas.serializer(),
-            ReglasExportadas(exportado = "2026-10-07T19:30:00Z", reglas = emptyList())
-        )
+    fun `una plantilla ausente toma la del canal`() {
+        val sinPlantilla = ReglaJson(nombre = "x", destino = "https://h/?t={mensaje}")
 
-        assertTrue(serializado.contains("\"version\""))
-        assertEquals(5, ReglasExportadas.VERSION_ACTUAL)
-    }
-
-    /**
-     * La versión mínima aceptada no es 1, y es la segunda vez que se rompe la compatibilidad
-     * hacia atrás a propósito.
-     *
-     * El test existe para que bajarla sea un acto deliberado y no un descuido: un fichero del
-     * formato 4 tiene exactamente la misma forma que uno del 5 —ningún campo cambió de nombre
-     * ni de tipo— y entraría sin un solo error de parseo dejando un juego de reglas cuyos
-     * destinos son chats de Telegram que aquí no existen.
-     */
-    @Test
-    fun `no se aceptan ficheros anteriores al formato 5`() {
-        assertEquals(5, ReglasExportadas.MINIMA_ACEPTADA)
-    }
-
-    // ── La configuración viaja con las reglas ─────────────────────────────────
-
-    @Test
-    fun `los ajustes sobreviven a la ida y vuelta`() {
-        val original = AppConfig(
-            tokenAcceso = "EAAno-deberia-viajar",
-            idNumeroTelefono = "111111111111111",
-            maxReintentos = 7,
-            intervaloReintentoSegundos = 45,
-            timeoutEnvioSegundos = 90,
-            maxReenviosPorMinuto = 3,
-            recepcionActiva = false
-        )
-
-        val recuperado = json.decodeFromString(
-            ReglasExportadas.serializer(),
-            json.encodeToString(
-                ReglasExportadas.serializer(),
-                ReglasExportadas(
-                    exportado = "2026-10-10T22:00:00Z",
-                    configuracion = original.aJson(),
-                    reglas = emptyList()
-                )
-            )
-        )
-
-        // Las credenciales no viajan en el fichero y al importar se conservan las que tenga
-        // el dispositivo de destino. Son dos, y olvidar cualquiera de las dos deja la
-        // aplicacion callada.
-        val importado = recuperado.configuracion!!.aDominio(
-            tokenActual = "EAAconservado",
-            idActual = "222222222222222"
-        )
-
-        assertEquals(
-            original.copy(
-                tokenAcceso = "EAAconservado",
-                idNumeroTelefono = "222222222222222"
-            ),
-            importado
-        )
-    }
-
-    private val credenciales = AppConfig(
-        tokenAcceso = "EAAhBOweik6ad9rQXZ2Ql3n1xWcCOPvj8sAAAAAAAAAAAA",
-        idNumeroTelefono = "123456789012345"
-    )
-
-    private fun exportar(config: AppConfig, incluirCredenciales: Boolean = false) =
-        json.encodeToString(
-            ReglasExportadas.serializer(),
-            ReglasExportadas(
-                exportado = "2026-10-12T20:00:00Z",
-                configuracion = config.aJson(incluirCredenciales),
-                reglas = listOf(regla().aJson())
-            )
-        )
-
-    /**
-     * Este fichero es JSON en claro que se guarda donde el operador diga y se lleva a otro
-     * teléfono. Que las credenciales no viajen **por defecto** no es una preferencia: es lo que
-     * impide que una copia de seguridad hecha sin pensar reparta permiso para escribir en
-     * nombre del número.
-     *
-     * El valor por defecto del parámetro es parte de lo que se comprueba aquí: quien llame a
-     * `aJson()` sin argumentos tiene que obtener el fichero seguro.
-     */
-    @Test
-    fun `por defecto las credenciales no aparecen en el fichero exportado`() {
-        val serializado = exportar(credenciales)
-
-        assertFalse("el token no debe aparecer", serializado.contains("EAAhBOweik"))
-        assertFalse("ni el id del numero", serializado.contains("123456789012345"))
-        // Los campos sí salen, con valor null: el fichero dice explícitamente que no lleva
-        // secretos en vez de callárselo, que es más fácil de auditar de un vistazo.
-        assertTrue("el campo debe estar, a null", serializado.contains("\"token_acceso\": null"))
-    }
-
-    /**
-     * El caso contrario, que es la razón de que exista el parámetro: quien lo pide a sabiendas
-     * se lleva las credenciales dentro, porque si no una copia no sirve para restaurar un
-     * teléfono entero.
-     */
-    @Test
-    fun `si se piden, las credenciales viajan en el fichero`() {
-        val serializado = exportar(credenciales, incluirCredenciales = true)
-
-        assertTrue("el token debe aparecer", serializado.contains("EAAhBOweik"))
-        assertTrue("y el id del numero", serializado.contains("123456789012345"))
-    }
-
-    /**
-     * Un fichero sin credenciales no puede dejar mudo al teléfono que lo importa.
-     *
-     * Es el modo de fallo que justifica los dos parámetros de [aDominio]: los ajustes se
-     * *reemplazan* al importar, así que sin respaldo una copia normal borraría el token.
-     */
-    @Test
-    fun `importar sin credenciales conserva las del telefono`() {
-        val recuperado = json.decodeFromString(
-            ReglasExportadas.serializer(),
-            exportar(credenciales)
-        )
-
-        val importado = recuperado.configuracion!!.aDominio("EAAya-configurado", "999888777666555")
-
-        assertEquals("EAAya-configurado", importado.tokenAcceso)
-        assertEquals("999888777666555", importado.idNumeroTelefono)
-    }
-
-    /** Y si el fichero las trae, ganan: es exactamente lo que se pidió al exportarlas. */
-    @Test
-    fun `importar con credenciales sustituye las del telefono`() {
-        val recuperado = json.decodeFromString(
-            ReglasExportadas.serializer(),
-            exportar(credenciales, incluirCredenciales = true)
-        )
-
-        val importado = recuperado.configuracion!!.aDominio("EAAya-configurado", "999888777666555")
-
-        assertEquals(credenciales.tokenAcceso, importado.tokenAcceso)
-        assertEquals("123456789012345", importado.idNumeroTelefono)
-    }
-
-    /**
-     * Una credencial en blanco en el fichero cuenta como ausente.
-     *
-     * Sustituir una credencial que funciona por una cadena vacía es el peor de los dos
-     * resultados posibles: deja la aplicación muda y sin rastro de por qué. Pasa con un fichero
-     * exportado desde un teléfono a medio configurar, que es un caso corriente.
-     */
-    @Test
-    fun `una credencial vacia en el fichero no pisa la que ya habia`() {
-        val aMedias = AppConfig(tokenAcceso = "", idNumeroTelefono = "123456789012345")
-
-        val recuperado = json.decodeFromString(
-            ReglasExportadas.serializer(),
-            exportar(aMedias, incluirCredenciales = true)
-        )
-
-        val importado = recuperado.configuracion!!.aDominio("EAAya-configurado", "999888777666555")
-
-        assertEquals("el token vacío no debe pisar", "EAAya-configurado", importado.tokenAcceso)
-        assertEquals("el id sí viene en el fichero", "123456789012345", importado.idNumeroTelefono)
-    }
-
-    /**
-     * Los ficheros de los formatos 1 y 2 solo llevaban reglas. Tienen que seguir entrando, y
-     * dejar los ajustes del dispositivo como estén en lugar de pisarlos con valores por
-     * defecto.
-     */
-    @Test
-    fun `un fichero sin bloque de configuracion se sigue importando`() {
-        val soloReglas = """
-            {
-              "version": 2,
-              "exportado": "2026-10-07T19:30:00Z",
-              "reglas": [ { "nombre": "Simple", "destino": "+34600112233" } ]
-            }
-        """.trimIndent()
-
-        val fichero = json.decodeFromString(ReglasExportadas.serializer(), soloReglas)
-
-        assertNull(fichero.configuracion)
-        assertEquals(1, fichero.reglas.size)
-    }
-
-    // ── Tolerancia ────────────────────────────────────────────────────────────
-
-    @Test
-    fun `un fichero minimo se acepta y los campos opcionales toman su valor por defecto`() {
-        val minimo = """
-            {
-              "exportado": "2026-10-07T19:30:00Z",
-              "reglas": [ { "nombre": "Simple", "destino": "+34600112233" } ]
-            }
-        """.trimIndent()
-
-        val fichero = json.decodeFromString(ReglasExportadas.serializer(), minimo)
-        val regla = fichero.reglas.single().aDominio(orden = 0)
-
-        assertEquals(ReglasExportadas.VERSION_ACTUAL, fichero.version)
-        assertEquals("Simple", regla.nombre)
-        assertEquals(Regla.PLANTILLA_POR_DEFECTO, regla.plantilla)
-        assertTrue(regla.activa)
-        assertFalse(regla.continuar)
-        assertNull(regla.regexTelefono)
-        assertNull(regla.regexMensaje)
-        assertFalse(regla.ignorarMayusculas)
-    }
-
-    @Test
-    fun `un fichero del formato 1 se importa y la regla distingue mayusculas`() {
-        // Compatibilidad hacia atrás: los ficheros exportados antes de que existiera la
-        // opción no la traen, y la regla tiene que entrar con el comportamiento que tenía.
-        val formato1 = """
-            {
-              "version": 1,
-              "exportado": "2026-10-07T19:30:00Z",
-              "reglas": [
-                { "nombre": "Banco", "regex_mensaje": "codigo", "destino": "+34600112233" }
-              ]
-            }
-        """.trimIndent()
-
-        val regla = json.decodeFromString(ReglasExportadas.serializer(), formato1)
-            .reglas.single().aDominio(orden = 0)
-
-        assertFalse(regla.ignorarMayusculas)
-    }
-
-    @Test
-    fun `ignorar_mayusculas sobrevive a exportar e importar`() {
-        val original = Regla(
-            orden = 0,
-            nombre = "Sin cajas",
-            regexMensaje = "hola",
-            ignorarMayusculas = true,
-            destino = "+34600112233"
-        )
-
-        val recuperada = json.decodeFromString(
-            ReglasExportadas.serializer(),
-            json.encodeToString(
-                ReglasExportadas.serializer(),
-                ReglasExportadas(exportado = "2026-10-08T20:00:00Z", reglas = listOf(original.aJson()))
-            )
-        ).reglas.single().aDominio(orden = 0)
-
-        assertTrue(recuperada.ignorarMayusculas)
-    }
-
-    @Test
-    fun `se ignoran los campos desconocidos de una version futura`() {
-        val conExtras = """
-            {
-              "version": 1,
-              "exportado": "2026-10-07T19:30:00Z",
-              "inventado": "algo",
-              "reglas": [
-                { "nombre": "Simple", "destino": "+34600112233", "otro_campo": 123 }
-              ]
-            }
-        """.trimIndent()
-
-        val fichero = json.decodeFromString(ReglasExportadas.serializer(), conExtras)
-
-        assertEquals(1, fichero.reglas.size)
+        assertEquals(Regla.PLANTILLA_POR_DEFECTO_API, sinPlantilla.aDominio(0, Canal.API).plantilla)
+        assertEquals(Regla.PLANTILLA_POR_DEFECTO, sinPlantilla.aDominio(0, Canal.SMS).plantilla)
     }
 
     @Test
     fun `los patrones en blanco se normalizan a null al importar`() {
-        val conBlancos = ReglaJson(
-            nombre = "Blancos",
-            regexTelefono = "   ",
-            regexMensaje = "",
-            destino = "+34600112233",
-            plantilla = "  "
+        val importada = ReglaJson(nombre = "x", regexTelefono = "  ", regexMensaje = "", destino = "+34600112233")
+            .aDominio(0, Canal.WHATSAPP)
+
+        assertNull(importada.regexTelefono)
+        assertNull(importada.regexMensaje)
+    }
+
+    @Test
+    fun `el fichero declara la version 6`() {
+        val texto = json.encodeToString(
+            ReglasExportadas.serializer(),
+            ReglasExportadas(exportado = "2026-10-25T10:00:00Z", reglas = emptyList())
         )
 
-        val regla = conBlancos.aDominio(orden = 0)
+        assertEquals(6, ReglasExportadas.VERSION_ACTUAL)
+        assertEquals(1, ReglasExportadas.MINIMA_ACEPTADA)
+        assertTrue(texto.contains("\"version\": 6"))
+    }
 
-        assertNull(regla.regexTelefono)
-        assertNull(regla.regexMensaje)
-        assertEquals(Regla.PLANTILLA_POR_DEFECTO, regla.plantilla)
+    // ── Ajustes: qué viaja ────────────────────────────────────────────────────
+
+    @Test
+    fun `por defecto ninguna credencial aparece en el fichero`() {
+        val exportada = configCompleta.aJson()
+
+        assertNull(exportada.tokenAcceso)
+        assertNull(exportada.idNumeroTelefono)
+        assertNull(exportada.tokenBot)
+        assertFalse(exportada.traeCredenciales)
+    }
+
+    @Test
+    fun `si se piden, las credenciales de los dos canales viajan`() {
+        val exportada = configCompleta.aJson(incluirCredenciales = true)
+
+        assertEquals("EAAG-token", exportada.tokenAcceso)
+        assertEquals("123456789012345", exportada.idNumeroTelefono)
+        assertEquals("123456:ABC-bot", exportada.tokenBot)
+        assertTrue(exportada.traeCredenciales)
+    }
+
+    @Test
+    fun `la SIM de envio no viaja nunca`() {
+        val texto = json.encodeToString(
+            ConfiguracionJson.serializer(), configCompleta.aJson(incluirCredenciales = true)
+        )
+
+        assertFalse(texto.contains("subscription"))
+        assertFalse(texto.contains("sim"))
+    }
+
+    @Test
+    fun `los ajustes de los cuatro canales sobreviven a la ida y vuelta`() {
+        val recuperada = configCompleta.aJson(incluirCredenciales = true)
+            .aplicarSobre(AppConfig(), Canal.entries.toSet())
+
+        // La SIM es lo único que no viaja: se queda la del teléfono de destino.
+        assertEquals(configCompleta.copy(subscriptionId = AppConfig.SIM_POR_DEFECTO), recuperada)
+    }
+
+    // ── Ajustes: qué se aplica ────────────────────────────────────────────────
+
+    @Test
+    fun `aplicar los ajustes de un canal no toca los de los demas`() {
+        val delFichero = AppConfig(
+            tokenBot = "999:otro",
+            protegerBucles = true,
+            aceptarCertificadosInvalidos = false,
+            modoDeEntrega = ModoDeEntrega.SOLO_TEXTO_LIBRE,
+            plantillaNombre = "otra",
+            maxMensajesPorMes = 50,
+            maxReintentos = 2
+        ).aJson(incluirCredenciales = true)
+
+        val resultado = delFichero.aplicarSobre(configCompleta, setOf(Canal.TELEGRAM))
+
+        assertEquals("999:otro", resultado.tokenBot)
+        assertEquals(2, resultado.maxReintentos)
+        // WhatsApp, SMS y API, como estaban.
+        assertEquals(ModoDeEntrega.SOLO_PLANTILLA, resultado.modoDeEntrega)
+        assertEquals("reenvio_sms", resultado.plantillaNombre)
+        assertEquals(500, resultado.maxMensajesPorMes)
+        assertFalse(resultado.protegerBucles)
+        assertTrue(resultado.aceptarCertificadosInvalidos)
+        assertEquals("EAAG-token", resultado.tokenAcceso)
+        assertEquals(7, resultado.subscriptionId)
+    }
+
+    @Test
+    fun `importar sin credenciales conserva las del telefono`() {
+        val resultado = AppConfig().aJson().aplicarSobre(configCompleta, Canal.entries.toSet())
+
+        assertEquals("EAAG-token", resultado.tokenAcceso)
+        assertEquals("123456789012345", resultado.idNumeroTelefono)
+        assertEquals("123456:ABC-bot", resultado.tokenBot)
+    }
+
+    @Test
+    fun `una credencial en blanco en el fichero no pisa la que ya habia`() {
+        val delFichero = AppConfig().aJson().copy(tokenAcceso = "  ", tokenBot = "")
+
+        val resultado = delFichero.aplicarSobre(configCompleta, Canal.entries.toSet())
+
+        assertEquals("EAAG-token", resultado.tokenAcceso)
+        assertEquals("123456:ABC-bot", resultado.tokenBot)
+    }
+
+    @Test
+    fun `un ajuste de canal ausente en el fichero deja el del telefono`() {
+        // Así llega un fichero del formato 5 leído con el modelo del 6: sin los campos nuevos.
+        val delFichero = AppConfig().aJson().copy(protegerBucles = null, aceptarCertificadosInvalidos = null)
+
+        val resultado = delFichero.aplicarSobre(configCompleta, Canal.entries.toSet())
+
+        assertFalse(resultado.protegerBucles)
+        assertTrue(resultado.aceptarCertificadosInvalidos)
     }
 }

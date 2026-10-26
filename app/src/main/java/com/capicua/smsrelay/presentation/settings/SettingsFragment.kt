@@ -562,14 +562,15 @@ class SettingsFragment : Fragment() {
                         is ResultadoCopia.Importada -> when {
                             resultado.rechazadas > 0 -> getString(
                                 R.string.settings_copia_importada_con_rechazos,
-                                resultado.aceptadas, resultado.rechazadas
+                                resultado.origen, resultado.aceptadas, resultado.rechazadas
                             )
                             resultado.conCredenciales -> getString(
                                 R.string.settings_copia_importada_credenciales,
-                                resultado.aceptadas
+                                resultado.origen, resultado.aceptadas
                             )
                             else -> getString(
-                                R.string.settings_copia_importada, resultado.aceptadas
+                                R.string.settings_copia_importada,
+                                resultado.origen, resultado.aceptadas
                             )
                         }
 
@@ -577,6 +578,22 @@ class SettingsFragment : Fragment() {
                             getString(R.string.settings_copia_fallo, resultado.motivo)
                     }
                     Snackbar.make(binding.root, mensaje, Snackbar.LENGTH_LONG).show()
+
+                    // Que un canal importado no pueda entregar no cabe en un Snackbar que se va
+                    // solo: es lo que hay que arreglar a continuación, y se queda en pantalla.
+                    if (resultado is ResultadoCopia.Importada && resultado.avisos.isNotEmpty()) {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(R.string.settings_copia_avisos_titulo)
+                            .setMessage(
+                                getString(
+                                    R.string.settings_copia_avisos,
+                                    resultado.origen,
+                                    resultado.avisos.joinToString("\n") { "• $it" }
+                                )
+                            )
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                    }
 
                     // Los campos en pantalla son los de antes de importar: hay que repintarlos
                     // con lo que acaba de entrar, o el siguiente «Guardar» desharía la copia.

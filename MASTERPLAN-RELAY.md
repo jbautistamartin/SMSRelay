@@ -411,7 +411,7 @@ De SMSGateway, que es la más lejana: no tiene reglas, no tiene juntura y manda 
 >   regla API se enseña sin query.
 > - El contador del mes del Panel se esconde si ninguna regla activa usa WhatsApp.
 
-### Fase 7 — Copia de seguridad: formato 6 y la migración desde las cuatro · `[ ]`
+### Fase 7 — Copia de seguridad: formato 6 y la migración desde las cuatro · `[x]`
 
 El formato 6 añade `canal` a cada regla. Importar acepta:
 
@@ -438,6 +438,28 @@ El formato 6 añade `canal` a cada regla. Importar acepta:
 
 Esto es lo que convierte «instalar SMSRelay» en una migración de verdad: exportar en la
 aplicación vieja, importar en la nueva, rellenar credenciales.
+
+> **Cómo se cerró (25 oct 2026).** 233 tests en verde. La decisión de qué entra salió de
+> `ConfigBackup` a `data/rules/ImportacionDeCopia.kt`, Kotlin puro, para poder probarla con un
+> fichero de cada aplicación: `ImportacionDeCopiaTest` (17) lleva uno de SMSRelay, SMStoWhats,
+> SMStoTelegram, SMStoSMS 1 y 3 y SMSGateway con la forma exacta que escribía cada una, y
+> `ReglasJsonTest` se reescribió (14) para el formato 6 y `ConfiguracionJson.aplicarSobre`, que
+> sustituye a `aDominio(token, id)` y aplica los comunes más los del canal del fichero.
+> `MINIMA_ACEPTADA` baja a 1.
+>
+> Tres cosas se apartaron de lo escrito arriba:
+>
+> - **Los formatos 1 y 2 de SMStoSMS se aceptan.** El Git de SMStoSMS dice que tienen la forma
+>   del 3, el 1 sin `ignorar_mayusculas` y los dos sin ajustes, y que sus destinos son números
+>   nacionales. Lo que obligó a SMStoWhats a rechazar el 3 era que sus números no valían para
+>   WhatsApp; aquí son reglas del canal SMS, y para marcar desde la SIM un número nacional es
+>   justo lo correcto. El argumento de rechazo no aplica.
+> - **Una credencial en blanco no pisa la del teléfono, y el formato 6 sí puede traer el token del
+>   bot** si quien exporta marca la casilla, igual que las dos de WhatsApp. La SIM sigue sin viajar.
+> - **El aviso de canales sin preparar es un diálogo, no un Snackbar**: `ConfigBackup` pregunta
+>   a cada transporte de las reglas importadas su `motivoNoDisponible()` *después* de guardar los
+>   ajustes, y lo que devuelve es lo siguiente que hay que hacer, así que no puede irse solo.
+>   El Snackbar dice además de qué aplicación venía la copia.
 
 ### Fase 8 — Límites por canal · `[ ]`
 
