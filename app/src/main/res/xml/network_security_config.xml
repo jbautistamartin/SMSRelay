@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Política de red de SMSRelay.
+
+    El canal API admite URLs http:// —una API en la red local rara vez tiene TLS—, y con
+    targetSdk 35 Android bloquea el tráfico sin cifrar salvo que se permita aquí. Sin esto el
+    editor aceptaba la URL y cada reenvío fallaba con «CLEARTEXT communication not permitted»
+    hasta agotar los reintentos. Es lo que hacía SMSGateway, y se perdió al traer su transporte
+    en la fase 5; lo encontró la fase 10.
+
+    Los otros tres canales y el comprobador de versiones usan https:// fijo en el código, así que
+    permitir http no les cambia nada. Solo se confía en las CA del sistema: para una API con un
+    certificado propio está el ajuste «Aceptar certificados no válidos» del canal API.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

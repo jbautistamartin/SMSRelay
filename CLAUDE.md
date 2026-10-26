@@ -88,7 +88,19 @@ adb logcat -s "SmsReceiver" "SmsIngestionService" "DispatchWorker" "WhatsAppSend
 
 # Simular un SMS entrante en un emulador (no hace falta SIM)
 adb emu sms send +34600112233 "Tu codigo es 4821"
+
+# Servidor de pruebas del canal API (ASP.NET, .NET 10; heredado de SMSGateway)
+# Página en http://localhost:5000 con lo que va llegando, en vivo. Con el teléfono por USB:
+dotnet run --project test-server/TestServer.csproj
+adb reverse tcp:5000 tcp:5000
+# y como destino de una regla API:
+#   http://127.0.0.1:5000/sms?mensaje={mensaje}&telefono={telefono}&fecha={fecha}
 ```
+
+> **El canal API admite `http://` gracias a `res/xml/network_security_config.xml`.** Con
+> `targetSdk 35` Android bloquea el tráfico sin cifrar si el manifiesto no lo permite; SMSGateway
+> lo permitía y la fase 5 no lo trajo, así que el editor aceptaba la URL y cada reenvío fallaba
+> hasta agotar los reintentos. Lo encontró la fase 10, en el teléfono.
 
 ## Publicar una versión
 

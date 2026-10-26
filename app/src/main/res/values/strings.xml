@@ -139,7 +139,7 @@
 
     <string name="settings_seccion_envio">Envío y reintentos</string>
     <string name="settings_timeout_envio">Espera de confirmación</string>
-    <string name="settings_timeout_envio_ayuda">Tiempo que se espera la respuesta de Meta antes de reintentar. Entre 10 y 300 s. Recomendado: 60</string>
+    <string name="settings_timeout_envio_ayuda">Tiempo que se espera la confirmación de cada canal —la respuesta de Meta, de Telegram o de la API, o el envío del SMS— antes de reintentar. Entre 10 y 300 s. Recomendado: 60</string>
     <string name="settings_max_reintentos">Máximo de reintentos</string>
     <string name="settings_max_reintentos_ayuda">Entre 1 y 100. Recomendado: 10</string>
     <string name="settings_intervalo">Intervalo inicial de reintento</string>
@@ -154,7 +154,7 @@
     <string name="settings_copia_importada_credenciales">Copia de %1$s restaurada · %2$d regla(s) añadidas · se han sustituido las credenciales</string>
     <string name="settings_exportar">Exportar</string>
     <string name="settings_importar">Importar</string>
-    <string name="settings_importar_confirmar">Los ajustes del fichero sustituyen a los actuales. Las reglas se añaden a las que ya hay, sin borrar ninguna.</string>
+    <string name="settings_importar_confirmar">Se aplican los ajustes comunes del fichero y los de sus canales; los de los demás canales no se tocan, y una credencial que el fichero no traiga no borra la de este teléfono. Las reglas se añaden a las que ya hay, sin borrar ninguna. Vale la copia de SMSRelay y la de cualquiera de las cuatro aplicaciones anteriores.</string>
     <string name="settings_copia_exportada">Copia guardada · %1$d regla(s)</string>
     <string name="settings_copia_importada">Copia de %1$s restaurada · %2$d regla(s) añadidas</string>
     <string name="settings_copia_importada_con_rechazos">Copia de %1$s restaurada · %2$d regla(s) añadidas · %3$d rechazadas por datos no válidos</string>
