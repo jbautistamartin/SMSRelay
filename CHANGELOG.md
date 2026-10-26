@@ -49,6 +49,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 - **El canal API no podía llamar a URLs `http://`**: Android bloqueaba el tráfico sin cifrar y cada
   reenvío fallaba hasta agotar los reintentos. Se permite como en SMSGateway.
+- **«Comprobar las credenciales» de WhatsApp daba por buenas unas credenciales con las que no se
+  puede enviar**: un número sin registrar o una cuenta sin método de pago pasaban la consulta y
+  fallaban en cada envío con un error que no explica nada. Ahora se lee también el
+  `health_status` del número, y Ajustes enseña en rojo cada motivo por el que Meta lo bloquea.
 - **Textos de Ajustes que seguían siendo de SMStoWhats**: la confirmación de importar decía que los
   ajustes del fichero sustituyen a los actuales, y la ayuda del tiempo de espera hablaba solo de
   Meta.

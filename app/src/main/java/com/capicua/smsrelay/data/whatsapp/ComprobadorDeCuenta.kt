@@ -27,11 +27,14 @@ sealed interface ResultadoDeCuenta {
      * @param nombre nombre verificado del negocio, tal como lo ve quien recibe el mensaje.
      * @param telefono el número en formato legible, como lo enseña la consola.
      * @param calidad `GREEN`, `YELLOW`, `RED` o `UNKNOWN`. Ver el KDoc de la clase.
+     * @param bloqueos por qué Meta no deja enviar desde este número aunque las credenciales
+     *   sirvan; vacía si puede. Ver [SaludDelNumero].
      */
     data class Correcto(
         val nombre: String,
         val telefono: String,
-        val calidad: String
+        val calidad: String,
+        val bloqueos: List<String> = emptyList()
     ) : ResultadoDeCuenta
 
     /** Meta dice que las credenciales no valen. No es un problema de red. */
@@ -71,6 +74,11 @@ sealed interface ResultadoDeCuenta {
  * que el destinatario no ha pedido, y es el único de los riesgos de este proyecto que avisa
  * antes de materializarse. Por eso se trae aquí y se pinta en Ajustes: ver un `YELLOW` a tiempo
  * es poder hacer algo; descubrir el bloqueo es no poder.
+ *
+ * ## Que sirvan no es que se pueda enviar
+ * Se pide también el `health_status` del número. Unas credenciales válidas de un número sin
+ * registrar, o de una cuenta sin método de pago, pasan la consulta y fallan en cada envío con un
+ * error que no explica nada. [SaludDelNumero] saca los motivos, y Ajustes los enseña.
  *
  * ## Por qué acepta credenciales candidatas
  * Se comprueban **antes** de guardar. Quien acaba de pegar un token quiere saber si sirve antes
@@ -180,7 +188,8 @@ class ComprobadorDeCuenta @Inject constructor(
         return ResultadoDeCuenta.Correcto(
             nombre = respuesta.nombre?.takeIf { it.isNotBlank() } ?: "sin nombre verificado",
             telefono = respuesta.telefono,
-            calidad = respuesta.calidad?.takeIf { it.isNotBlank() } ?: "UNKNOWN"
+            calidad = respuesta.calidad?.takeIf { it.isNotBlank() } ?: "UNKNOWN",
+            bloqueos = SaludDelNumero.bloqueos(cuerpo)
         )
     }
 
@@ -198,7 +207,7 @@ class ComprobadorDeCuenta @Inject constructor(
     )
 
     private companion object {
-        const val CAMPOS = "verified_name,display_phone_number,quality_rating"
+        const val CAMPOS = "verified_name,display_phone_number,quality_rating,health_status"
         const val TIMEOUT_MS = 15_000
 
         val json = Json { ignoreUnknownKeys = true }

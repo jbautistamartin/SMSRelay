@@ -71,6 +71,7 @@
     <string name="settings_validar_cuenta">Comprobar las credenciales</string>
     <string name="settings_cuenta_comprobando">Preguntando a Meta…</string>
     <string name="settings_cuenta_correcto">✓ Las credenciales sirven · %1$s · %2$s</string>
+    <string name="settings_cuenta_bloqueada">✗ Las credenciales sirven, pero Meta no deja enviar desde %1$s · %2$s. Se resuelve en el Business Manager, no en esta aplicación:</string>
     <string name="settings_cuenta_calidad">Calidad del número según Meta: %1$s</string>
     <string name="settings_cuenta_rechazado">✗ Meta no acepta estas credenciales: %1$s</string>
     <string name="settings_cuenta_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>

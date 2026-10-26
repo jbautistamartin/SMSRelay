@@ -447,6 +447,23 @@ class SettingsFragment : Fragment() {
                 // a «¿sirven?»: sirven igual con la calidad en amarillo. Es un aviso de que Meta
                 // está a punto de limitar el número, y es el único de los riesgos de este
                 // proyecto que avisa antes de materializarse.
+                //
+                // Que sirvan no quiere decir que se pueda enviar: si Meta bloquea el número, eso
+                // va en lugar de todo lo demás y en rojo, con los motivos que da.
+                if (resultado.bloqueos.isNotEmpty()) {
+                    vista.text = buildString {
+                        append(
+                            getString(
+                                R.string.settings_cuenta_bloqueada,
+                                resultado.nombre,
+                                resultado.telefono
+                            )
+                        )
+                        resultado.bloqueos.forEach { appendLine(); append("• ").append(it) }
+                    }
+                    vista.setTextColor(resources.getColor(R.color.status_failed, null))
+                    return
+                }
                 vista.text = buildString {
                     append(
                         getString(
