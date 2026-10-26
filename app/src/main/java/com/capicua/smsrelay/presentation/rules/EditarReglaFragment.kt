@@ -162,6 +162,7 @@ class EditarReglaFragment : Fragment() {
                         binding.buttonDestinoRemitente.visibility =
                             if (canal == Canal.SMS) View.VISIBLE else View.GONE
                         if (canal == Canal.SMS) pedirPermisoSmsSiFalta()
+                        cambiarPlantillaPorDefecto(canal)
                     }
                 }
                 launch {
@@ -169,6 +170,23 @@ class EditarReglaFragment : Fragment() {
                 }
             }
         }
+    }
+
+    /**
+     * Pone la plantilla por defecto del canal, pero solo si la que hay es la por defecto de otro.
+     *
+     * El canal API arranca con `{mensaje}` a secas, porque el remitente y la fecha tienen sus
+     * huecos en la URL; los demás, con remitente, fecha y cuerpo. Una plantilla que alguien ha
+     * escrito no se toca nunca: cambiar de canal no debe borrar trabajo. Y solo en una regla
+     * nueva: en una existente, `{mensaje}` a secas puede ser lo que alguien eligió.
+     */
+    private fun cambiarPlantillaPorDefecto(canal: Canal) {
+        if (args.reglaId != EditarReglaViewModel.NUEVA) return
+        val actual = binding.editTextPlantilla.text?.toString().orEmpty()
+        val porDefecto = Regla.plantillaPorDefecto(canal)
+        val esDeOtroCanal = actual != porDefecto &&
+            (actual == Regla.PLANTILLA_POR_DEFECTO || actual == Regla.PLANTILLA_POR_DEFECTO_API)
+        if (esDeOtroCanal) binding.editTextPlantilla.setText(porDefecto)
     }
 
     // ── Canal SMS ─────────────────────────────────────────────────────────────

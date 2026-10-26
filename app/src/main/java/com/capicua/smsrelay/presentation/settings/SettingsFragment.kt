@@ -562,6 +562,7 @@ class SettingsFragment : Fragment() {
         binding.editTextIdNumero.setText(config.idNumeroTelefono)
         binding.editTextTokenBot.setText(config.tokenBot)
         binding.switchProtegerBucles.isChecked = config.protegerBucles
+        binding.switchCertificados.isChecked = config.aceptarCertificadosInvalidos
         simElegida = config.subscriptionId
         pintarSimElegida()
         binding.editTextPlantillaNombre.setText(config.plantillaNombre)
@@ -618,6 +619,7 @@ class SettingsFragment : Fragment() {
                     tokenBot = tokenBot,
                     subscriptionId = simElegida,
                     protegerBucles = binding.switchProtegerBucles.isChecked,
+                    aceptarCertificadosInvalidos = binding.switchCertificados.isChecked,
                     modoDeEntrega = modo,
                     plantillaNombre = plantillaNombre,
                     plantillaIdioma = plantillaIdioma,

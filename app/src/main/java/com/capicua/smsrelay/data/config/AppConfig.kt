@@ -76,6 +76,20 @@ data class AppConfig(
     val protegerBucles: Boolean = true,
 
     /**
+     * Si el canal API acepta certificados TLS que no se pueden verificar: autofirmados,
+     * caducados o de otro nombre.
+     *
+     * Existe para un servidor de la red local con un certificado hecho a mano, que es el caso que
+     * SMSGateway tenía en mente. En Internet es una mala idea, porque cualquiera en medio puede
+     * hacerse pasar por el servidor y leer los SMS, y Ajustes lo dice. Solo afecta al canal API:
+     * Telegram y WhatsApp verifican siempre.
+     *
+     * Sí viaja en la copia de seguridad, porque describe cómo hablar con el servidor de las
+     * reglas, que también viajan.
+     */
+    val aceptarCertificadosInvalidos: Boolean = false,
+
+    /**
      * Cómo sale cada reenvío: texto libre, plantilla, o lo que haga falta.
      *
      * Ver [ModoDeEntrega]. El valor por defecto entrega siempre sin gastar más de lo necesario,

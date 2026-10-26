@@ -45,7 +45,8 @@ import javax.inject.Singleton
  * - **SMS:** `{telefono}` como destino es contestar a quien escribió, la función de SMStoSMS.
  *   La coincidencia lo marca con [Coincidencia.respondeAlRemitente] para que la guarda
  *   antibucle sepa que esa circularidad es intencionada.
- * - **API:** los huecos de la URL, en la fase 5 del masterplan.
+ * - **API:** los huecos de la URL, con [PlantillaDeUrl]: solo después del servidor y cada valor
+ *   codificado. `{mensaje}` ahí es el texto ya compuesto por la plantilla de la regla.
  *
  * Ninguno de los dos deja que **el cuerpo del SMS** influya en a dónde se envía nada, que es la
  * propiedad que importa: `{mensaje}` no se sustituye nunca en el destino de un SMS, y en la URL
@@ -63,12 +64,15 @@ class EvaluadorDeReglas @Inject constructor() {
      *                 quien llama, de modo que el evaluador permanece determinista: no depende
      *                 de la zona horaria ni del idioma del dispositivo.
      * @param reglas   lista completa de reglas; el orden de entrada es irrelevante.
+     * @param fechaIso fecha de recepción en ISO-8601 UTC, para `{fecha}` en la URL del canal API,
+     *                 que la lee una máquina. Por defecto, [fecha].
      */
     fun evaluar(
         telefono: String,
         mensaje: String,
         fecha: String,
-        reglas: List<Regla>
+        reglas: List<Regla>,
+        fechaIso: String = fecha
     ): ResultadoEvaluacion {
         val coincidencias = mutableListOf<Coincidencia>()
         val invalidas = mutableListOf<ReglaInvalida>()
@@ -100,12 +104,18 @@ class EvaluadorDeReglas @Inject constructor() {
             if (!patronMensaje.casaCon(mensaje)) continue
 
             val contesta = regla.canal == Canal.SMS && respondeAlRemitente(regla.destino)
+            val textoFinal = resolverPlantilla(regla.plantilla, telefono, mensaje, fecha)
             coincidencias += Coincidencia(
                 reglaId = regla.id,
                 nombreRegla = regla.nombre,
                 canal = regla.canal,
-                destino = if (contesta) resolverDestino(regla.destino, telefono) else regla.destino.trim(),
-                textoFinal = resolverPlantilla(regla.plantilla, telefono, mensaje, fecha),
+                destino = when {
+                    contesta -> resolverDestino(regla.destino, telefono)
+                    regla.canal == Canal.API ->
+                        PlantillaDeUrl.resolver(regla.destino, textoFinal, telefono, fechaIso)
+                    else -> regla.destino.trim()
+                },
+                textoFinal = textoFinal,
                 respondeAlRemitente = contesta
             )
 

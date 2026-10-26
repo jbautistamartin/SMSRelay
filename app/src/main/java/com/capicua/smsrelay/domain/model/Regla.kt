@@ -115,5 +115,16 @@ data class Regla(
          * en la variable.
          */
         const val PLANTILLA_POR_DEFECTO = "{telefono} · {fecha}\n{mensaje}"
+
+        /**
+         * La plantilla con la que arranca una regla del canal API: el cuerpo del SMS y nada
+         * más, que es lo que SMSGateway metía en `{mensaje}`. El remitente y la fecha tienen
+         * sus propios huecos en la URL, y meterlos también en el texto los duplicaría.
+         */
+        const val PLANTILLA_POR_DEFECTO_API = "{mensaje}"
+
+        /** La plantilla con la que arranca una regla nueva de [canal]. */
+        fun plantillaPorDefecto(canal: Canal): String =
+            if (canal == Canal.API) PLANTILLA_POR_DEFECTO_API else PLANTILLA_POR_DEFECTO
     }
 }

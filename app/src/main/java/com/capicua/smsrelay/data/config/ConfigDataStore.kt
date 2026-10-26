@@ -36,6 +36,7 @@ class ConfigDataStore @Inject constructor(
             tokenBot                   = prefs[Keys.TOKEN_BOT]            ?: porDefecto.tokenBot,
             subscriptionId             = prefs[Keys.SUBSCRIPTION_ID]       ?: porDefecto.subscriptionId,
             protegerBucles             = prefs[Keys.PROTEGER_BUCLES]       ?: porDefecto.protegerBucles,
+            aceptarCertificadosInvalidos = prefs[Keys.ACEPTAR_CERTIFICADOS] ?: porDefecto.aceptarCertificadosInvalidos,
             modoDeEntrega              = ModoDeEntrega.de(prefs[Keys.MODO_ENTREGA]),
             plantillaNombre            = prefs[Keys.PLANTILLA_NOMBRE]     ?: porDefecto.plantillaNombre,
             plantillaIdioma            = prefs[Keys.PLANTILLA_IDIOMA]     ?: porDefecto.plantillaIdioma,
@@ -56,6 +57,7 @@ class ConfigDataStore @Inject constructor(
             prefs[Keys.TOKEN_BOT]           = config.tokenBot
             prefs[Keys.SUBSCRIPTION_ID]     = config.subscriptionId
             prefs[Keys.PROTEGER_BUCLES]     = config.protegerBucles
+            prefs[Keys.ACEPTAR_CERTIFICADOS] = config.aceptarCertificadosInvalidos
             prefs[Keys.MODO_ENTREGA]        = config.modoDeEntrega.name
             prefs[Keys.PLANTILLA_NOMBRE]    = config.plantillaNombre
             prefs[Keys.PLANTILLA_IDIOMA]    = config.plantillaIdioma
@@ -74,6 +76,7 @@ class ConfigDataStore @Inject constructor(
         val TOKEN_BOT           = stringPreferencesKey("token_bot")
         val SUBSCRIPTION_ID     = intPreferencesKey("subscription_id")
         val PROTEGER_BUCLES     = booleanPreferencesKey("proteger_bucles")
+        val ACEPTAR_CERTIFICADOS = booleanPreferencesKey("aceptar_certificados_invalidos")
         val MODO_ENTREGA        = stringPreferencesKey("modo_entrega")
         val PLANTILLA_NOMBRE    = stringPreferencesKey("plantilla_nombre")
         val PLANTILLA_IDIOMA    = stringPreferencesKey("plantilla_idioma")

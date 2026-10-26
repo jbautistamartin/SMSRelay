@@ -162,7 +162,8 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
             telefono = sms.telefono,
             mensaje = sms.mensaje,
             fecha = sms.fechaRecepcion.toDisplayString(),
-            reglas = reglas
+            reglas = reglas,
+            fechaIso = sms.fechaRecepcion.toString()
         )
 
         // Las reglas con una expresión regular rota no paran la evaluación, pero el operador

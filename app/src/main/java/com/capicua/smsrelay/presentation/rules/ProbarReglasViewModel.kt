@@ -84,13 +84,15 @@ class ProbarReglasViewModel @Inject constructor(
     fun probar(telefono: String, mensaje: String) {
         viewModelScope.launch {
             val reglas = reglaRepository.obtenerActivas()
-            val fecha = Instant.now().toDisplayString()
+            val ahora = Instant.now()
+            val fecha = ahora.toDisplayString()
 
             val resultado = evaluador.evaluar(
                 telefono = telefono,
                 mensaje = mensaje,
                 fecha = fecha,
-                reglas = reglas
+                reglas = reglas,
+                fechaIso = ahora.toString()
             )
 
             _prueba.value = PruebaReglas(
@@ -175,6 +177,21 @@ class ProbarReglasViewModel @Inject constructor(
                 }
             // Con `{telefono}` el destino ya viene resuelto al remitente de la prueba, así que esto
             // también avisa de contestar a un remitente alfanumérico, que no recibe SMS.
+            // La URL ya viene rellena, sin marcadores, así que validarla entera mira esquema y
+            // servidor. Que falte {mensaje} ya no se ve aquí: lo atrapa el editor al guardar.
+            resultado.coincidencias
+                .filter { it.canal == Canal.API }
+                .forEach { coincidencia ->
+                    val url = coincidencia.destino
+                    val valida = (url.startsWith("http://", true) || url.startsWith("https://", true)) &&
+                        runCatching { java.net.URI(url).host }.getOrNull()?.isNotBlank() == true
+                    if (!valida) {
+                        add(
+                            "La regla «${coincidencia.nombreRegla}» llamaría a una URL que no es " +
+                                "válida: ese reenvío fallará"
+                        )
+                    }
+                }
             resultado.coincidencias
                 .filter { it.canal == Canal.SMS }
                 .filterNot { NormalizadorTelefono.esDestinoEnviable(it.destino) }

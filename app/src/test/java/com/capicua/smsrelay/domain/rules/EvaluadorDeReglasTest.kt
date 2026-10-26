@@ -518,7 +518,8 @@ class EvaluadorDeReglasTest {
 
     @Test
     fun `fuera del canal SMS el marcador de telefono en el destino no se sustituye`() {
-        listOf(Canal.WHATSAPP, Canal.TELEGRAM, Canal.API).forEach { canal ->
+        // El canal API sí rellena {telefono}, pero en la URL y con PlantillaDeUrl: tiene su test.
+        listOf(Canal.WHATSAPP, Canal.TELEGRAM).forEach { canal ->
             val coincidencia = evaluar(
                 listOf(regla(canal = canal, destino = "{telefono}")),
                 telefono = "+34611111111"
@@ -553,7 +554,9 @@ class EvaluadorDeReglasTest {
     fun `el cuerpo del SMS no puede influir en el destino`() {
         // Si {mensaje} se resolviera aquí, un tercero decidiría a dónde se entrega su propio
         // mensaje escribiendo un destino en el texto del SMS. Ni siquiera el canal SMS lo hace.
-        Canal.entries.forEach { canal ->
+        // El canal API queda fuera: allí {mensaje} rellena un hueco de la URL, codificado y
+        // después del servidor, y eso lo prueba PlantillaDeUrlTest.
+        (Canal.entries - Canal.API).forEach { canal ->
             val coincidencia = evaluar(
                 listOf(regla(canal = canal, destino = "{mensaje}")),
                 mensaje = "+34699999999"
@@ -582,6 +585,30 @@ class EvaluadorDeReglasTest {
         assertTrue(evaluador.respondeAlRemitente("{telefono}"))
         assertFalse(evaluador.respondeAlRemitente("+34600000001"))
         assertFalse(evaluador.respondeAlRemitente(null))
+    }
+
+    @Test
+    fun `en el canal API el destino es la URL rellena con el texto ya compuesto`() {
+        val coincidencia = evaluador.evaluar(
+            telefono = "+34611111111",
+            mensaje = "Tu codigo es 4821",
+            fecha = fecha,
+            reglas = listOf(
+                regla(
+                    canal = Canal.API,
+                    destino = "https://e.com/sms?de={telefono}&t={mensaje}&f={fecha}",
+                    plantilla = "[{telefono}] {mensaje}"
+                )
+            ),
+            fechaIso = "2026-10-07T17:30:00Z"
+        ).coincidencias.single()
+
+        assertEquals("[+34611111111] Tu codigo es 4821", coincidencia.textoFinal)
+        assertEquals(
+            "https://e.com/sms?de=%2B34611111111&t=%5B%2B34611111111%5D%20Tu%20codigo%20es%204821" +
+                "&f=2026-10-07T17%3A30%3A00Z",
+            coincidencia.destino
+        )
     }
 
     @Test

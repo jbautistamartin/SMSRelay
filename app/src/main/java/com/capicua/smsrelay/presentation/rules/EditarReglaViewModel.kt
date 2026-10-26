@@ -11,6 +11,7 @@ import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.domain.model.Regla
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
 import com.capicua.smsrelay.domain.rules.NormalizadorTelefono
+import com.capicua.smsrelay.domain.rules.PlantillaDeUrl
 import com.capicua.smsrelay.data.telegram.DescubridorDeChats
 import com.capicua.smsrelay.data.telegram.DestinoDeTelegram
 import com.capicua.smsrelay.data.telegram.ResultadoDescubrimiento
@@ -205,6 +206,9 @@ class EditarReglaViewModel @Inject constructor(
         canal == Canal.TELEGRAM -> validarDestinoTelegram(destino)
 
         canal == Canal.SMS -> validarDestinoSms(destino)
+
+        // La validación entera, la de seguridad incluida, es la de PlantillaDeUrl.
+        canal == Canal.API -> PlantillaDeUrl.validar(destino)
 
         else -> null
     }

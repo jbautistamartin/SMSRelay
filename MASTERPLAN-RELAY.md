@@ -331,7 +331,7 @@ enviaba en línea.
 >   nuevo, para que los campos que una pantalla no enseña no vuelvan a su valor por defecto.
 > - Importar el formato 5 conserva la SIM y la guarda antibucle del teléfono hasta el formato 6.
 
-### Fase 5 — Vuelve la API REST · `[ ]`
+### Fase 5 — Vuelve la API REST · `[x]`
 
 De SMSGateway, que es la más lejana: no tiene reglas, no tiene juntura y manda **todos** los SMS a
 **una** URL. En SMSRelay eso es una regla que casa con todo y tiene canal API.
@@ -359,6 +359,26 @@ De SMSGateway, que es la más lejana: no tiene reglas, no tiene juntura y manda 
   puro y con tests.
 - **`PlantillaDeUrl`**, puro: sustituir, codificar y validar que no haya marcadores antes de la
   ruta. Con tests: es la pieza de seguridad de esta fase.
+
+> **Cómo se cerró (25 oct 2026).** 220 tests en verde: 14 de `PlantillaDeUrlTest`, 7 del
+> `MapeoDeRespuestasTest` de `data/api/` y uno nuevo en `EvaluadorDeReglasTest`.
+>
+> - **`PlantillaDeUrl` vive en `domain/rules/` y no en `data/api/`**, porque la usa el
+>   evaluador: la URL se rellena al evaluar, igual que `{telefono}` en el canal SMS, ya que el
+>   transporte solo recibe destino y texto. `ApiSender` hace un `GET` a lo que le llega. Los
+>   valores se codifican con `URLEncoder` y los espacios como `%20`, porque un marcador puede
+>   estar en la ruta y allí `+` no es un espacio.
+> - **La validación rechaza también un marcador en el usuario o en el puerto**, no solo en el
+>   host: todo lo que hay entre `://` y el primer `/`, `?` o `#`.
+> - **El `reenvio.destino` guarda la URL ya rellena**, con el mensaje dentro. Es lo que hace
+>   idempotente el reintento —se llama exactamente a la misma URL—, pero significa que la URL
+>   entera, clave incluida si la lleva, queda en la base de datos como el resto del reenvío. Los
+>   `Timber` del transporte registran solo la parte sin query.
+> - **Un `3xx` es permanente**, que SMSGateway no distinguía: no se siguen redirecciones,
+>   porque la de `https` a `http` no debe seguirse, y el motivo pide escribir la URL final.
+> - `{fecha}` en ISO-8601 UTC entra como parámetro `fechaIso` de `evaluar()`.
+> - La plantilla de una regla nueva cambia a `{mensaje}` al elegir el canal API, y vuelve a la
+>   de siempre al salir, pero solo si nadie la ha tocado.
 
 ### Fase 6 — Ajustes, Panel y prueba de reglas por canal · `[ ]`
 

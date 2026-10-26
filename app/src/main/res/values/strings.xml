@@ -116,6 +116,9 @@
     <string name="settings_sim_detectar_ayuda">Para saber qué tarjetas hay puestas, Android pide el permiso de leer el estado del teléfono. Solo hace falta en un teléfono con dos SIM.</string>
     <string name="settings_proteger_bucles">Evitar bucles de reenvío</string>
     <string name="settings_proteger_bucles_detalle">Solo para el canal SMS: descarta los SMS cuyo remitente sea el destino de una regla SMS, y salta las reglas SMS que reenviarían al propio remitente. Desactívalo solo en pruebas controladas.</string>
+    <string name="settings_seccion_api">API</string>
+    <string name="settings_certificados">Aceptar certificados no verificables</string>
+    <string name="settings_certificados_detalle">Solo para el canal API y solo para un servidor de tu red local con un certificado autofirmado. En Internet permite que alguien en medio se haga pasar por el servidor y lea los SMS.</string>
     <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
     <string name="settings_max_reenvios_ayuda">Corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>

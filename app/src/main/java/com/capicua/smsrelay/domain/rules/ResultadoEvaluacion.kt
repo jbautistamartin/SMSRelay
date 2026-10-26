@@ -35,7 +35,7 @@ data class Coincidencia(
 
     /**
      * Destino final, en el formato de [canal]: el de la regla tal cual, salvo en el canal SMS
-     * con `{telefono}`, donde es el remitente.
+     * con `{telefono}`, donde es el remitente, y en el canal API, donde es la URL ya rellena.
      */
     val destino: String,
 

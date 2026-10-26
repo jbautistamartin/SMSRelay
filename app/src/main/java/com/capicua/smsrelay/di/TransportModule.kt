@@ -5,6 +5,7 @@
 
 package com.capicua.smsrelay.di
 
+import com.capicua.smsrelay.data.api.ApiSender
 import com.capicua.smsrelay.data.sms.SmsSender
 import com.capicua.smsrelay.data.telegram.TelegramSender
 import com.capicua.smsrelay.data.whatsapp.WhatsAppSender
@@ -40,6 +41,11 @@ annotation class ClaveCanal(val value: Canal)
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class TransportModule {
+
+    @Binds
+    @IntoMap
+    @ClaveCanal(Canal.API)
+    abstract fun bindApi(impl: ApiSender): EnviadorDeMensajes
 
     @Binds
     @IntoMap
