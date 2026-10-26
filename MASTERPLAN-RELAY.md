@@ -5,8 +5,9 @@
 > sustituyeron un transporte por otro sin tocar la tubería. Esta deja de sustituir: SMSRelay
 > entrega por **los cuatro** —API REST, SMS, Telegram y WhatsApp— y cada regla elige por cuál.
 >
-> Escrito el 25 oct 2026, **pendiente de revisión**. Ninguna fase está empezada. Las decisiones
-> que todavía puede cambiar quien revisa están juntas en el punto 9.
+> Escrito el 25 oct 2026 y revisado el mismo día. **Las fases 1 a 9 están cerradas** (25 oct
+> 2026, un commit por fase, 234 tests); queda la 10, en el dispositivo real. Las decisiones
+> tomadas en la revisión están en el punto 9.
 
 ---
 
@@ -598,3 +599,8 @@ que alguien confirme antes de empezar, con la recomendada primero:
 | **D** | Qué pasa con las cuatro | **Una última versión de cada una** cuya tarjeta de actualizaciones diga que la aplicación sigue en SMSRelay, y después archivar los repositorios | Mantenerlas en paralelo (vuelve el problema de los cuatro sitios) o archivarlas sin aviso (las copias instaladas no se enterarían nunca: el comprobador solo mira su propio repositorio) |
 | **E** | Formato 1 y 2 de SMStoSMS al importar | **Decidir en la fase 7** tras mirar qué eran | — |
 | **F** | Crear `github.com/jbautistamartin/SMSRelay` | **Al cerrar la fase 1**, para que el comprobador de versiones apunte a algo real | Al publicar la 1.0.0 |
+
+> **Cómo se decidió (25 oct 2026).** A, B, C y D, con la opción recomendada; D sigue sin hacer,
+> porque es trabajo de los otros cuatro repositorios. E se resolvió en la fase 7: los formatos 1,
+> 2 y 3 de SMStoSMS se aceptan, como reglas del canal SMS. F se aplazó: el repositorio **no** se
+> crea todavía, y mientras no exista el comprobador de versiones recibe un 404 y no avisa de nada.
