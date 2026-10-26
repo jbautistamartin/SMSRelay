@@ -31,6 +31,7 @@ import com.capicua.smsrelay.domain.transport.Canal
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /**
@@ -112,6 +113,7 @@ class EditarReglaFragment : Fragment() {
         configurarBotonGuardar()
         observarRegla()
         observarCanal()
+        observarCanalesDesactivados()
         observarDescubrimiento()
         observarErrores()
         observarGuardado()
@@ -125,6 +127,9 @@ class EditarReglaFragment : Fragment() {
      * Habilita los chips de los canales que esta compilación entrega y avisa al ViewModel de cada
      * cambio. Los demás quedan a la vista pero deshabilitados: es más honrado que esconderlos, y
      * una regla importada con uno de esos canales se sigue pudiendo abrir y leer.
+     *
+     * Un canal **apagado en Ajustes** sí se esconde, porque eso lo decidió quien opera; ver
+     * [observarCanalesDesactivados].
      */
     private fun configurarSelectorDeCanal() {
         val disponibles = viewModel.canalesDisponibles
@@ -139,6 +144,29 @@ class EditarReglaFragment : Fragment() {
         }
     }
 
+    /**
+     * Esconde los chips de los canales apagados en Ajustes, menos el del canal con el que se
+     * guardó la regla: una regla de Telegram con Telegram apagado se tiene que poder abrir, leer
+     * y pasar a otro canal.
+     */
+    private fun observarCanalesDesactivados() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                // Con la regla también: su canal original llega después que los ajustes.
+                combine(viewModel.canalesDesactivados, viewModel.regla) { desactivados, _ ->
+                    desactivados
+                }.collect { desactivados ->
+                    PresentacionDeCanal.entries.forEach { presentacion ->
+                        binding.chipGroupCanal.findViewById<View>(presentacion.chip).visibility =
+                            if (presentacion.canal !in desactivados ||
+                                presentacion.canal == viewModel.canalOriginal
+                            ) View.VISIBLE else View.GONE
+                    }
+                }
+            }
+        }
+    }
+
     /** Repinta lo que depende del canal: el chip, la explicación, el destino y la previsualización. */
     private fun observarCanal() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -150,8 +178,11 @@ class EditarReglaFragment : Fragment() {
                             binding.chipGroupCanal.check(presentacion.chip)
                         }
                         binding.textViewCanalAyuda.text = getString(
-                            if (canal in viewModel.canalesDisponibles) presentacion.ayudaCanal
-                            else R.string.canal_no_disponible
+                            when {
+                                canal !in viewModel.canalesDisponibles -> R.string.canal_no_disponible
+                                canal in viewModel.canalesDesactivados.value -> R.string.canal_desactivado
+                                else -> presentacion.ayudaCanal
+                            }
                         )
                         binding.tilDestino.hint = getString(presentacion.etiquetaDestino)
                         binding.tilDestino.helperText = getString(presentacion.ayudaDestino)

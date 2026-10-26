@@ -33,6 +33,14 @@ class ReglasAdapter(
     private val alAbrirMenu: (Regla, View) -> Unit
 ) : ListAdapter<Regla, ReglasAdapter.ReglaViewHolder>(DiffCallback) {
 
+    /** Canales apagados en Ajustes. Sus reglas se pintan atenuadas, como las inactivas. */
+    var canalesDesactivados: Set<Canal> = emptySet()
+        set(valor) {
+            if (field == valor) return
+            field = valor
+            notifyItemRangeChanged(0, itemCount)
+        }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ReglaViewHolder {
         val binding = ItemReglaBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return ReglaViewHolder(binding)
@@ -54,14 +62,17 @@ class ReglasAdapter(
             // El canal va delante del destino: con cuatro canales, «→ 600112233» no dice si sale
             // por SMS o por WhatsApp. Una URL se enseña sin query, que es donde suele ir la clave.
             val destino = if (regla.canal == Canal.API) PlantillaDeUrl.sinQuery(regla.destino) else regla.destino
+            val canalApagado = regla.canal in canalesDesactivados
+            val porCanal = ctx.getString(R.string.destino_por_canal, regla.canal.etiqueta, destino)
             binding.textViewDestino.text = ctx.getString(
                 if (regla.continuar) R.string.reglas_destino_continua else R.string.reglas_destino,
-                ctx.getString(R.string.destino_por_canal, regla.canal.etiqueta, destino)
+                if (canalApagado) ctx.getString(R.string.reglas_canal_desactivado, porCanal) else porCanal
             )
 
             // Una regla desactivada se atenúa entera: así se distingue de un vistazo sin tener
-            // que buscar la posición del interruptor.
-            val opacidad = if (regla.activa) 1f else 0.45f
+            // que buscar la posición del interruptor. Una de un canal apagado, también: tampoco
+            // reenvía, aunque su interruptor siga encendido.
+            val opacidad = if (regla.activa && !canalApagado) 1f else 0.45f
             binding.layoutCuerpo.alpha = opacidad
 
             // setOnCheckedChangeListener se limpia antes de fijar el estado para que el reciclado

@@ -174,12 +174,21 @@ class ConfigBackup @Inject constructor(
      * Una línea por canal de las reglas importadas que hoy no puede entregar, con su motivo.
      *
      * Se pregunta **después** de guardar los ajustes, porque una copia con credenciales es
-     * justo lo que deja un canal listo.
+     * justo lo que deja un canal listo, y una del formato 6 puede encender o apagar canales. Lo
+     * normal al importar la copia de una aplicación vieja en un teléfono que tenía su canal
+     * apagado es que las reglas entren y no hagan nada, y eso también hay que decirlo.
      */
-    private suspend fun avisosDeCanales(reglas: List<Regla>): List<String> =
-        reglas.groupBy { it.canal }.mapNotNull { (canal, deCanal) ->
-            val motivo = transportes.de(canal)?.motivoNoDisponible()
+    private suspend fun avisosDeCanales(reglas: List<Regla>): List<String> {
+        val config = configDataStore.config.first()
+        return reglas.groupBy { it.canal }.mapNotNull { (canal, deCanal) ->
+            val motivo = if (!config.estaActivo(canal)) MOTIVO_CANAL_DESACTIVADO
+                else transportes.de(canal)?.motivoNoDisponible()
                 ?: if (transportes.de(canal) == null) transportes.motivoSinTransporte(canal) else null
             motivo?.let { "${deCanal.size} regla(s) por ${canal.etiqueta}: $it" }
         }
+    }
+
+    private companion object {
+        const val MOTIVO_CANAL_DESACTIVADO = "el canal está desactivado en Ajustes"
+    }
 }

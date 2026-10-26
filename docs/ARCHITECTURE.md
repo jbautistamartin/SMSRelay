@@ -541,7 +541,7 @@ de cabeceras alfanuméricas (`BANCO`, `AMAZON`) y no de un número.
 ### Orden de evaluación
 
 ```
-reglas activas, ordenadas por `orden` ascendente
+reglas activas de canales encendidos, ordenadas por `orden` ascendente
   │
   ├─ regla con regex inválida  → se descarta, se anota en el log, sigue la evaluación
   ├─ regla que no casa         → sigue la evaluación
@@ -1053,8 +1053,31 @@ y aquí conviven los cuatro.
 
 Si después de las omisiones no queda ningún reenvío, el SMS se descarta con el motivo de lo que
 saltó. Todo queda como `LogTipo.LIMITE_ALCANZADO`, con el canal cuando es por reenvío, y el detalle
-**empieza por el nombre** de lo que saltó: *Tope por minuto*, *Tope mensual de WhatsApp* o
-*Guarda antibucle de SMS*.
+**empieza por el nombre** de lo que saltó: *Tope por minuto*, *Tope mensual de WhatsApp*,
+*Guarda antibucle de SMS* o *Canal desactivado* (ver más abajo).
+
+### Canales desactivados
+
+La tarjeta *Canales* de Ajustes lleva un interruptor por canal, para quien no va a usar alguno
+(`AppConfig.canalesDesactivados`; se guardan los apagados para que un canal futuro llegue
+encendido). Un canal apagado:
+
+- **conserva sus reglas**, que se ven atenuadas en la lista y con «canal desactivado», y se
+  **apartan antes de evaluar**, como si estuvieran inactivas: no consumen la primera coincidencia.
+  Se evalúan aparte solo para el registro: cada una que habría casado deja un `LIMITE_ALCANZADO`
+  que empieza por *Canal desactivado*, y si no queda nada más que reenviar el SMS se descarta con
+  ese motivo. *Probar reglas* lo dice igual;
+- **entrega lo que ya estaba encolado**, como el interruptor de la recepción: corta lo nuevo, no lo
+  que estaba en camino;
+- **esconde su sección de Ajustes y su chip del editor** —salvo el de la regla que se edita, que
+  se tiene que poder abrir y cambiar de canal—, y el Panel deja de avisar de él. La validación de
+  «Guardar» no mira los campos de un canal apagado, porque no se ven;
+- con el SMS apagado, la guarda antibucle del remitente no se aplica: no sale ningún SMS.
+
+El interruptor se aplica al momento (`ConfigDataStore.cambiarCanal`, que escribe una sola clave) y
+no deja apagar el último canal encendido: para dejar de reenviar está el de la recepción. Los
+canales apagados viajan en la copia del formato 6; un fichero anterior no enciende ni apaga nada, y
+si una importación trae reglas de un canal apagado el diálogo de avisos lo dice.
 
 ### Las guardas antibucle, que volvieron solo para el SMS
 
@@ -1450,6 +1473,8 @@ cortó:
   reenviaría al propio remitente. Si la intención era contestarle, el destino tiene que ser
   `{telefono}`. Si se trata de otra pasarela que de verdad debe recibir y devolver, se puede apagar
   *Proteger de bucles* en Ajustes → SMS, sabiendo lo que se arriesga.
+- ***Canal desactivado*** — la regla casaría, pero su canal está apagado en Ajustes → Canales. Si no
+  era la intención, enciéndelo; la regla no hay que tocarla.
 
 Una regla que contesta por SMS a un remitente alfanumérico se omite como **Error**, no como
 descarte: a `BANCO` no se le puede mandar un SMS.

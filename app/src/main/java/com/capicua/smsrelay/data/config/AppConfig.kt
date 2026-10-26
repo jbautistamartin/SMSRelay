@@ -5,6 +5,8 @@
 
 package com.capicua.smsrelay.data.config
 
+import com.capicua.smsrelay.domain.transport.Canal
+
 /**
  * Ajustes generales de la aplicación, editables en la pantalla de Configuración y
  * persistidos en DataStore<Preferences>.
@@ -194,8 +196,26 @@ data class AppConfig(
      * siquiera despierta a la aplicación. Lo que ya estuviera encolado se termina de enviar;
      * esto corta la entrada, no la salida.
      */
-    val recepcionActiva: Boolean = true
+    val recepcionActiva: Boolean = true,
+
+    /**
+     * Canales apagados en la tarjeta *Canales* de Ajustes, para quien no va a usar alguno.
+     *
+     * Se guardan los **desactivados** y no los activos para que un canal que se añada en el
+     * futuro llegue encendido, como llegaron los cuatro.
+     *
+     * Un canal desactivado se comporta como si sus reglas estuvieran inactivas, pero sin tocar
+     * las reglas: se conservan, se ven atenuadas en la lista y se saltan al evaluar, y al volver
+     * a activarlo funcionan sin hacer nada más. El registro deja constancia de cada regla que
+     * habría casado. **Lo que ya estaba encolado por ese canal se entrega**, igual que con
+     * [recepcionActiva]: esto corta lo nuevo, no lo que ya estaba en camino. Su sección de
+     * Ajustes y su chip del editor se esconden, y el Panel deja de avisar de él.
+     */
+    val canalesDesactivados: Set<Canal> = emptySet()
 ) {
+    /** true si [canal] no está apagado en Ajustes. */
+    fun estaActivo(canal: Canal): Boolean = canal !in canalesDesactivados
+
     companion object {
         /** Valor de [subscriptionId] que deja elegir la SIM al sistema. */
         const val SIM_POR_DEFECTO = -1

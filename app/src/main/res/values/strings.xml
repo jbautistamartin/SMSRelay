@@ -53,11 +53,15 @@
     <string name="settings_bot_sin_token">Escribe primero un token para poder comprobarlo</string>
     <string name="settings_token_bot_invalido">El token no tiene la forma que entrega @BotFather (números, dos puntos y una cadena larga)</string>
     <string name="settings_seccion_canales">Canales</string>
-    <string name="settings_canales_ayuda">Por dónde puede salir cada reenvío. Cada regla elige su canal; solo hace falta configurar los que usen tus reglas.</string>
+    <string name="settings_canales_ayuda">Por dónde puede salir cada reenvío. Cada regla elige su canal; solo hace falta configurar los que usen tus reglas. Apaga los que no vayas a usar: sus reglas se conservan pero no reenvían, y su sección desaparece de esta pantalla.</string>
     <string name="settings_canal_listo">%1$s · listo · %2$d regla(s) activa(s)</string>
     <string name="settings_canal_sin_uso">%1$s · sin reglas que lo usen</string>
     <string name="settings_canal_falta">%1$s · ⚠ %2$d regla(s) activa(s), pero %3$s</string>
     <string name="settings_canal_falta_sin_uso">%1$s · sin reglas · %2$s</string>
+    <string name="settings_canal_desactivado">%1$s · desactivado</string>
+    <string name="settings_canal_desactivado_con_reglas">%1$s · desactivado · %2$d regla(s) activa(s) no reenvían</string>
+    <string name="settings_canal_interruptor">Activar el canal %1$s</string>
+    <string name="settings_canal_ultimo">Tiene que quedar al menos un canal activado. Para dejar de reenviar del todo, apaga la recepción.</string>
     <string name="logs_filtro_todos_canales">Todos los canales</string>
     <string name="settings_seccion_cuenta">Cuenta de WhatsApp</string>
     <string name="settings_token_acceso">Token de acceso</string>
@@ -223,6 +227,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="reglas_criterio_todo">Sin filtros: casa con todos los SMS</string>
     <string name="reglas_destino">→ %1$s</string>
     <string name="destino_por_canal">%1$s · %2$s</string>
+    <string name="reglas_canal_desactivado">%1$s · canal desactivado</string>
     <string name="reglas_destino_continua">→ %1$s · sigue evaluando</string>
 
     <!-- Reglas: editor -->
@@ -258,6 +263,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="canal_ayuda_sms">Como un SMS más, desde la SIM de este teléfono. Cada parte cuesta lo que cueste un SMS.</string>
     <string name="canal_ayuda_api">Una petición GET a tu servidor, con el mensaje en la URL.</string>
     <string name="canal_no_disponible">Esta versión todavía no entrega por este canal.</string>
+    <string name="canal_desactivado">Este canal está desactivado en Ajustes: la regla se guarda, pero no reenvía nada hasta que lo actives.</string>
     <string name="regla_destino_whatsapp">Número de WhatsApp</string>
     <string name="regla_destino_ayuda_whatsapp">El número de WhatsApp de la persona, en formato internacional: «+», el prefijo del país y el número. Por ejemplo +34600112233. Tiene que tener WhatsApp y haber escrito al número emisor en las últimas 24 horas, o hará falta una plantilla.</string>
     <string name="regla_destino_telegram">Chat de Telegram</string>

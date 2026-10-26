@@ -25,18 +25,16 @@ enum class LogTipo {
     SIN_REGLA,
 
     /**
-     * SMS descartado por un tope configurado: el de reenvíos por minuto o el de mensajes al mes.
+     * Un SMS o un reenvío que no sale porque un ajuste dijo que no. El detalle empieza siempre
+     * por lo que lo dijo: *Tope por minuto*, *Tope mensual de WhatsApp*, *Guarda antibucle de SMS*
+     * o *Canal desactivado*.
      *
-     * Se llamaba `BUCLE_EVITADO` mientras existían las protecciones antibucle, que comparaban el
-     * destino de una regla con el remitente del SMS. Aquel nombre murió cuando el destino pasó a
-     * ser un chat y la comparación dejó de significar nada.
-     *
-     * **El nombre que quedó ha envejecido mejor que su motivo original.** Hoy el destino vuelve a
-     * ser un teléfono, así que la comparación volvería a ser posible —y sigue sin servir de nada,
-     * porque un mensaje de WhatsApp no vuelve nunca como SMS—. Y en cambio los descartes han
-     * pasado de uno a dos: al límite de frecuencia se le ha unido el tope de mensajes del mes, que
-     * es el primero de este proyecto que mide dinero. El tipo se sigue llamando por lo que de
-     * verdad registra, que es «un tope dijo que no».
+     * Se llamaba `BUCLE_EVITADO` mientras existían las protecciones antibucle de SMStoSMS.
+     * SMStoTelegram lo renombró cuando el destino pasó a ser un chat y la comparación dejó de
+     * significar nada, y el nombre que quedó envejeció mejor que su motivo: en SMSRelay las
+     * guardas antibucle volvieron, solo para el canal SMS, y caben aquí con los topes y los
+     * canales apagados. El tipo se llama por lo que de verdad registra, que es «un límite
+     * configurado dijo que no».
      */
     LIMITE_ALCANZADO,
 

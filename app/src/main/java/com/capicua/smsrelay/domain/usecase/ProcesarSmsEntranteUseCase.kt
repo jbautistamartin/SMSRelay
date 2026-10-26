@@ -44,7 +44,7 @@ import javax.inject.Inject
  * ```
  * 1. INSERT del SMS en estado PENDIENTE        ← outbox: nada se pierde a partir de aquí
  * 2. Guarda antibucle y tope por minuto        ← globales: si salta alguno, DESCARTADO y fin
- * 3. Evaluar reglas
+ * 3. Evaluar reglas                           ← sin las de canales desactivados
  * 4. Guardas y topes de canal                  ← omiten reenvíos sueltos, no el SMS
  * 5. INSERT de los reenvíos (lote atómico)
  * 6. Marcar el SMS como PROCESADO o SIN_REGLA
@@ -57,6 +57,12 @@ import javax.inject.Inject
  * WhatsApp** —mide los mensajes que Meta factura— y se mira después de evaluar, contra cada
  * reenvío: que el mes de WhatsApp esté agotado no es motivo para dejar de reenviar por Telegram.
  * Cada `LIMITE_ALCANZADO` empieza diciendo qué tope o qué guarda saltó.
+ *
+ * ## Los canales desactivados
+ * Sus reglas se apartan antes de evaluar, como si estuvieran inactivas: no consumen la primera
+ * coincidencia y no impiden que case la siguiente. Se evalúan aparte solo para dejar constancia,
+ * con un `LIMITE_ALCANZADO` que empieza por *Canal desactivado*, de cada una que habría casado;
+ * quien apagó un canal y no ve llegar nada tiene que poder leer por qué.
  *
  * Si el proceso muere a mitad, el rescate de huérfanos retoma el trabajo. Para que eso no
  * genere envíos duplicados, [procesar] es **idempotente**: antes de crear reenvíos comprueba si
@@ -111,7 +117,8 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
         // cierra el círculo y, con los reintentos detrás, convierte un error de configuración
         // en una factura. Solo se miran los destinos del canal SMS: un chat de Telegram, un
         // número de WhatsApp o una URL no pueden volver nunca como SMS.
-        if (config.protegerBucles) {
+        // Con el canal SMS apagado no sale ningún SMS, así que no hay círculo que cerrar.
+        if (config.protegerBucles && config.estaActivo(Canal.SMS)) {
             val destinos = reglaRepository.obtenerDestinosSmsActivos()
             if (NormalizadorTelefono.estaEnLista(sms.telefono, destinos)) {
                 descartar(
@@ -142,7 +149,8 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
         }
 
         // ── Evaluación ────────────────────────────────────────────────────────
-        val reglas = reglaRepository.obtenerActivas()
+        val (reglas, deCanalApagado) = reglaRepository.obtenerActivas()
+            .partition { config.estaActivo(it.canal) }
         val resultado = evaluador.evaluar(
             telefono = sms.telefono,
             mensaje = sms.mensaje,
@@ -150,6 +158,31 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
             reglas = reglas,
             fechaIso = sms.fechaRecepcion.toString()
         )
+
+        // Las de canales apagados se evalúan aparte y solo para el registro. Sus expresiones
+        // rotas no se avisan: se avisarán cuando el canal vuelva a estar en uso.
+        val apagadas = if (deCanalApagado.isEmpty()) emptyList() else evaluador.evaluar(
+            telefono = sms.telefono,
+            mensaje = sms.mensaje,
+            fecha = sms.fechaRecepcion.toDisplayString(),
+            reglas = deCanalApagado,
+            fechaIso = sms.fechaRecepcion.toString()
+        ).coincidencias
+
+        apagadas.forEach { coincidencia ->
+            logRepository.insertar(
+                LogEntry(
+                    tipo = LogTipo.LIMITE_ALCANZADO,
+                    smsId = sms.id,
+                    destino = coincidencia.destino,
+                    canal = coincidencia.canal,
+                    detalle = "$CANAL_DESACTIVADO: la regla «${coincidencia.nombreRegla}» " +
+                        "saldría por ${coincidencia.canal.etiqueta}, que está desactivado en " +
+                        "Ajustes: no se reenvía",
+                    timestamp = Instant.now()
+                )
+            )
+        }
 
         // Las reglas con una expresión regular rota no paran la evaluación, pero el operador
         // tiene que poder enterarse: de lo contrario la regla «no funciona» sin explicación.
@@ -164,6 +197,16 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
                     timestamp = Instant.now()
                 )
             )
+        }
+
+        if (!resultado.hayCoincidencias && apagadas.isNotEmpty()) {
+            descartar(
+                sms,
+                "$CANAL_DESACTIVADO: las reglas que casaron salen por " +
+                    apagadas.map { it.canal.etiqueta }.distinct().joinToString(", ") +
+                    ", desactivado en Ajustes"
+            )
+            return
         }
 
         if (!resultado.hayCoincidencias) {
@@ -357,5 +400,6 @@ class ProcesarSmsEntranteUseCase @Inject constructor(
         const val TOPE_POR_MINUTO = "Tope por minuto"
         const val TOPE_MENSUAL = "Tope mensual de WhatsApp"
         const val GUARDA_BUCLES = "Guarda antibucle de SMS"
+        const val CANAL_DESACTIVADO = "Canal desactivado"
     }
 }

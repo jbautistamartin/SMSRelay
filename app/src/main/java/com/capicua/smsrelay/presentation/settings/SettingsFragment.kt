@@ -32,6 +32,7 @@ import com.capicua.smsrelay.data.whatsapp.PlantillaDeWhatsApp
 import com.capicua.smsrelay.data.whatsapp.ResultadoDeCuenta
 import com.capicua.smsrelay.data.whatsapp.TokenDeAcceso
 import com.capicua.smsrelay.databinding.FragmentSettingsBinding
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.util.InicioAutomatico
 import com.capicua.smsrelay.util.OptimizacionBateria
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -222,20 +223,51 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Una línea por canal. Verde si está listo, ámbar si tiene reglas activas y no puede
-     * entregar —eso es un aviso, no un detalle—, y en el color tenue de siempre si no lo usa
-     * nadie, esté como esté: un canal sin configurar que no usa ninguna regla no es un problema.
+     * Una línea por canal, con su interruptor. Verde si está listo, ámbar si tiene reglas activas
+     * y no puede entregar —eso es un aviso, no un detalle—, y en el color tenue de siempre si no
+     * lo usa nadie, esté como esté: un canal sin configurar que no usa ninguna regla no es un
+     * problema. Un canal apagado dice cuántas reglas suyas se están saltando.
+     *
+     * De paso esconde la sección de cada canal apagado: sus ajustes no hacen nada mientras lo
+     * esté, y una pantalla con cuatro secciones es larga para quien usa uno.
      */
     private fun pintarCanales(estados: List<SettingsViewModel.EstadoCanal>) {
         val contenedor = binding.layoutEstadoCanales
         contenedor.removeAllViews()
+        val encendidos = estados.count { it.activo }
         estados.forEach { estado ->
+            val fila = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
             val linea = android.widget.TextView(requireContext()).apply {
                 setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
                 setPadding(0, 4, 0, 4)
             }
+            val interruptor = com.google.android.material.materialswitch.MaterialSwitch(requireContext()).apply {
+                isChecked = estado.activo
+                contentDescription = getString(R.string.settings_canal_interruptor, estado.canal.etiqueta)
+                setOnCheckedChangeListener { vista, marcado ->
+                    // Sin ningún canal la aplicación recibe SMS y no puede reenviar nada: para
+                    // eso ya está el interruptor de la recepción, que lo dice con todas las letras.
+                    if (!marcado && estado.activo && encendidos <= 1) {
+                        vista.isChecked = true
+                        Snackbar.make(binding.root, R.string.settings_canal_ultimo, Snackbar.LENGTH_LONG).show()
+                    } else if (marcado != estado.activo) {
+                        viewModel.cambiarCanal(estado.canal, marcado)
+                    }
+                }
+            }
             val etiqueta = estado.canal.etiqueta
             when {
+                !estado.activo -> {
+                    linea.text = if (estado.reglasActivas > 0) {
+                        getString(R.string.settings_canal_desactivado_con_reglas, etiqueta, estado.reglasActivas)
+                    } else {
+                        getString(R.string.settings_canal_desactivado, etiqueta)
+                    }
+                    linea.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
+                }
                 estado.motivo == null && estado.reglasActivas > 0 -> {
                     linea.text = getString(R.string.settings_canal_listo, etiqueta, estado.reglasActivas)
                     linea.setTextColor(resources.getColor(R.color.status_delivered, null))
@@ -255,8 +287,21 @@ class SettingsFragment : Fragment() {
                     linea.setTextColor(colorDe(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 }
             }
-            contenedor.addView(linea)
+            fila.addView(
+                linea,
+                android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            )
+            fila.addView(interruptor)
+            contenedor.addView(fila)
         }
+
+        val activo = { canal: Canal -> estados.firstOrNull { it.canal == canal }?.activo != false }
+        binding.layoutSeccionWhatsapp.isVisible = activo(Canal.WHATSAPP)
+        binding.layoutSeccionTelegram.isVisible = activo(Canal.TELEGRAM)
+        binding.layoutSeccionSms.isVisible = activo(Canal.SMS)
+        binding.layoutSeccionApi.isVisible = activo(Canal.API)
+        // El tope mensual vive en «Protecciones», pero es de WhatsApp.
+        binding.tilMaxMensajesMes.isVisible = activo(Canal.WHATSAPP)
     }
 
     // ── SMS ───────────────────────────────────────────────────────────────────
@@ -734,11 +779,15 @@ class SettingsFragment : Fragment() {
         intervalo: Int
     ): Boolean {
         var valido = true
+        // Los campos de un canal apagado están escondidos, y un error en un campo que no se ve
+        // dejaría «Guardar» sin hacer nada y sin explicación. Se guardan tal como estaban.
+        val whatsapp = configCargada?.estaActivo(Canal.WHATSAPP) != false
+        val telegram = configCargada?.estaActivo(Canal.TELEGRAM) != false
 
         // Solo la forma. Si las credenciales sirven de verdad únicamente lo sabe Meta, y eso es
         // lo que comprueba el botón de comprobación; esto atrapa el fallo más común, que es
         // pegar algo que no es una credencial.
-        if (TokenDeAcceso.pareceValido(token)) {
+        if (!whatsapp || TokenDeAcceso.pareceValido(token)) {
             binding.tilTokenAcceso.error = null
         } else {
             binding.tilTokenAcceso.error = getString(R.string.settings_token_acceso_invalido)
@@ -748,7 +797,7 @@ class SettingsFragment : Fragment() {
         // El id tiene un error propio para el caso más probable de todos: pegar el número de
         // teléfono, que la consola de Meta enseña justo al lado. Decir «no tiene forma de id»
         // sería verdad y no resolvería nada.
-        if (IdNumeroTelefono.pareceValido(idNumero)) {
+        if (!whatsapp || IdNumeroTelefono.pareceValido(idNumero)) {
             binding.tilIdNumero.error = null
         } else {
             binding.tilIdNumero.error = getString(
@@ -763,7 +812,7 @@ class SettingsFragment : Fragment() {
 
         // Lo mismo para el bot: solo la forma, que atrapa pegar media línea del mensaje de
         // @BotFather. Si sirve lo dice el botón de comprobación.
-        if (TokenDeBot.pareceValido(tokenBot)) {
+        if (!telegram || TokenDeBot.pareceValido(tokenBot)) {
             binding.tilTokenBot.error = null
         } else {
             binding.tilTokenBot.error = getString(R.string.settings_token_bot_invalido)
@@ -773,7 +822,7 @@ class SettingsFragment : Fragment() {
         // La plantilla puede no estar configurada: eso significa «solo entrego dentro de la
         // ventana de 24 h», que es un estado legítimo. Lo que no es legítimo es pedir el modo
         // «solo plantilla» sin tenerla, porque entonces no se entrega nada nunca.
-        if (plantillaNombre.isEmpty() || NOMBRE_PLANTILLA.matches(plantillaNombre)) {
+        if (!whatsapp || plantillaNombre.isEmpty() || NOMBRE_PLANTILLA.matches(plantillaNombre)) {
             binding.tilPlantillaNombre.error = null
         } else {
             binding.tilPlantillaNombre.error =
@@ -781,12 +830,12 @@ class SettingsFragment : Fragment() {
             valido = false
         }
 
-        if (modo == ModoDeEntrega.SOLO_PLANTILLA && plantillaNombre.isEmpty()) {
+        if (whatsapp && modo == ModoDeEntrega.SOLO_PLANTILLA && plantillaNombre.isEmpty()) {
             binding.tilPlantillaNombre.error = getString(R.string.settings_plantilla_falta)
             valido = false
         }
 
-        if (IDIOMA_PLANTILLA.matches(plantillaIdioma)) {
+        if (!whatsapp || IDIOMA_PLANTILLA.matches(plantillaIdioma)) {
             binding.tilPlantillaIdioma.error = null
         } else {
             binding.tilPlantillaIdioma.error =

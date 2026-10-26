@@ -36,6 +36,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
   SMStoSMS (cualquier versión) y SMSGateway, cada regla con el canal que le corresponde. Al
   terminar, la pantalla dice de qué aplicación venía la copia y qué canales faltan por preparar.
 - **Guía del bot de Telegram** en `docs/BOT-TELEGRAM.md`.
+- **Cada canal se puede desactivar** desde la tarjeta *Canales* de Ajustes. Sus reglas se
+  conservan pero no reenvían —el registro dice cuáles habrían casado—, lo ya encolado se entrega,
+  y su sección de Ajustes y su opción en el editor de reglas desaparecen.
 - **Icono y paleta propios.** Naranja, el único hueco que quedaba lejos de los cuatro colores
   de la familia, y un bocadillo con un punto y tres puntas caladas: un mensaje que sale hacia
   varios sitios.

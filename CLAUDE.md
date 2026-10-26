@@ -109,7 +109,8 @@ instale sobre la anterior sin perder nada.
 
 ## El estado
 
-**Las fases 1 a 9 de `MASTERPLAN-RELAY.md` están cerradas (25 oct 2026)**, con 234 tests en verde.
+**Las fases 1 a 9 de `MASTERPLAN-RELAY.md` están cerradas (25 oct 2026)**, con 234 tests en verde. Después
+se añadió el **interruptor por canal** (237 tests).
 Queda la **fase 10**: ver salir un SMS real por cada canal real, la batería de pruebas de esa fase
 y publicar la 1.0.0. Hasta entonces la aplicación está en `1.0.0`/`versionCode 1` sin publicar.
 
@@ -478,7 +479,7 @@ si hay alguna regla activa por WhatsApp**; sin ninguna, la cifra no significa na
 
 Todo lo que dispara un tope o una guarda queda como `LogTipo.LIMITE_ALCANZADO`, con su canal cuando
 es por reenvío, y el detalle **empieza por el nombre** de lo que saltó: *Tope por minuto*, *Tope
-mensual de WhatsApp* o *Guarda antibucle de SMS*.
+mensual de WhatsApp*, *Guarda antibucle de SMS* o *Canal desactivado*.
 
 ### Ajustes, Panel, Logs y Probar reglas
 
@@ -486,6 +487,12 @@ mensual de WhatsApp* o *Guarda antibucle de SMS*.
   *SMS*, *API*— y, por encima, la tarjeta **Canales**, que enseña los cuatro con su estado
   (`motivoNoDisponible()`) y cuántas reglas activas usa cada uno (`SettingsViewModel.estadoCanales`).
   Se refresca al volver a la pantalla, porque los permisos y las credenciales cambian fuera.
+- **Cada canal se puede apagar** con su interruptor en esa tarjeta (`AppConfig.canalesDesactivados`).
+  Sus reglas se conservan y se apartan antes de evaluar —como si estuvieran inactivas—, y cada una
+  que habría casado deja un `LIMITE_ALCANZADO` que empieza por *Canal desactivado*. Lo encolado
+  se entrega. Se esconden su sección de Ajustes y su chip del editor (menos el de la regla que se
+  edita), el Panel deja de avisar de él y «Guardar» no valida sus campos. Se aplica al momento,
+  escribiendo una sola clave, y no deja apagar el último. Viaja en la copia del formato 6.
 - **Guardar parte de `configCargada.copy(...)`, no de `AppConfig()`.** Con cuatro secciones, un
   ajuste que la pantalla no pinta se perdería en cada «Guardar».
 - **El Panel** avisa en rojo de los canales usados por reglas activas que no pueden entregar,
@@ -805,10 +812,10 @@ batería → **No optimizar**.
   `androidComponents.onVariants` y `VariantOutputImpl`, que es interna: si AGP la cambia, el APK
   vuelve a llamarse `app-release.apk`. Y R8 en modo completo estricto: un `-keep class X` ya no
   conserva el constructor, así que `proguard-rules.pro` lo pide con `{ <init>(); }`.
-- **Catorce conjuntos de tests unitarios, 234 tests**, todos en Kotlin puro y sin dependencias de
+- **Catorce conjuntos de tests unitarios, 237 tests**, todos en Kotlin puro y sin dependencias de
   Android: `EvaluadorDeReglasTest` (51), `MapeoDeRespuestasTest` de WhatsApp (24),
   `PlantillaDeWhatsAppTest` (20), `MapeoDeRespuestasTest` de Telegram (18),
-  `NormalizadorTelefonoTest` (18), `ImportacionDeCopiaTest` (17), `ReglasJsonTest` (14),
+  `NormalizadorTelefonoTest` (18), `ImportacionDeCopiaTest` (17), `ReglasJsonTest` (17),
   `PlantillaDeUrlTest` (14), `DestinoDeTelegramTest` (12), `CredencialesTest` (12),
   `DestinoDeWhatsAppTest` (11), `VersionPublicadaTest` (10), `MapeoDeRespuestasTest` de la API (7) y
   `TokenDeBotTest` (6). No hay tests de instrumentación. **Los mapeos de respuestas, las plantillas

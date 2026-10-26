@@ -99,6 +99,12 @@ data class ConfiguracionJson(
     @SerialName("timeout_envio_segundos") val timeoutEnvioSegundos: Int,
     @SerialName("max_reenvios_por_minuto") val maxReenviosPorMinuto: Int,
     @SerialName("recepcion_activa") val recepcionActiva: Boolean = true,
+    /**
+     * Los canales apagados en Ajustes, por su nombre. Null en los ficheros anteriores al formato
+     * 6, que no lo traen: importarlos no enciende ni apaga nada. Un nombre que no sea de ningún
+     * canal se ignora.
+     */
+    @SerialName("canales_desactivados") val canalesDesactivados: List<String>? = null,
 
     // ── WhatsApp (formatos 5 y 6) ──
     /**
@@ -147,6 +153,7 @@ fun AppConfig.aJson(incluirCredenciales: Boolean = false) = ConfiguracionJson(
     timeoutEnvioSegundos = timeoutEnvioSegundos,
     maxReenviosPorMinuto = maxReenviosPorMinuto,
     recepcionActiva = recepcionActiva,
+    canalesDesactivados = canalesDesactivados.sortedBy { it.ordinal }.map { it.name },
     modoEntrega = modoDeEntrega.name,
     plantillaNombre = plantillaNombre,
     plantillaIdioma = plantillaIdioma,
@@ -180,7 +187,9 @@ fun ConfiguracionJson.aplicarSobre(actual: AppConfig, canales: Set<Canal>): AppC
         intervaloReintentoSegundos = intervaloReintentoSegundos,
         timeoutEnvioSegundos = timeoutEnvioSegundos,
         maxReenviosPorMinuto = maxReenviosPorMinuto,
-        recepcionActiva = recepcionActiva
+        recepcionActiva = recepcionActiva,
+        canalesDesactivados = canalesDesactivados?.mapNotNull { Canal.de(it) }?.toSet()
+            ?: actual.canalesDesactivados
     )
     if (Canal.WHATSAPP in canales) {
         config = config.copy(

@@ -58,9 +58,11 @@ class SettingsViewModel @Inject constructor(
 
     private val refrescos = MutableStateFlow(0)
 
-    /** Cómo está un canal: si está listo y cuántas reglas activas lo usan. */
+    /** Cómo está un canal: si está encendido, si está listo y cuántas reglas activas lo usan. */
     data class EstadoCanal(
         val canal: Canal,
+        /** false si está apagado en esta misma tarjeta. */
+        val activo: Boolean,
         /** Por qué no puede entregar, o null si está listo. */
         val motivo: String?,
         val reglasActivas: Int
@@ -79,10 +81,11 @@ class SettingsViewModel @Inject constructor(
         estadoDelBot.tokenRechazado,
         reglaRepository.observarTodas(),
         refrescos
-    ) { _, _, _, reglas, _ ->
+    ) { config, _, _, reglas, _ ->
         Canal.entries.map { canal ->
             EstadoCanal(
                 canal = canal,
+                activo = config.estaActivo(canal),
                 motivo = transportes.de(canal)?.motivoNoDisponible()
                     ?: transportes.motivoSinTransporte(canal).takeIf { transportes.de(canal) == null },
                 reglasActivas = reglas.count { it.activa && it.canal == canal }
@@ -92,6 +95,11 @@ class SettingsViewModel @Inject constructor(
 
     fun refrescarCanales() {
         refrescos.value += 1
+    }
+
+    /** Enciende o apaga [canal] al momento: ver `ConfigDataStore.cambiarCanal`. */
+    fun cambiarCanal(canal: Canal, activo: Boolean) {
+        viewModelScope.launch { configDataStore.cambiarCanal(canal, activo) }
     }
 
     /**

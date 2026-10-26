@@ -235,4 +235,37 @@ class ReglasJsonTest {
         assertFalse(resultado.protegerBucles)
         assertTrue(resultado.aceptarCertificadosInvalidos)
     }
+
+    @Test
+    fun `los canales desactivados viajan en el fichero`() {
+        val conCanalesApagados = AppConfig(canalesDesactivados = setOf(Canal.SMS, Canal.API))
+
+        val fichero = json.encodeToString(ConfiguracionJson.serializer(), conCanalesApagados.aJson())
+        val resultado = json.decodeFromString(ConfiguracionJson.serializer(), fichero)
+            .aplicarSobre(AppConfig(), Canal.entries.toSet())
+
+        assertEquals(setOf(Canal.SMS, Canal.API), resultado.canalesDesactivados)
+    }
+
+    @Test
+    fun `un fichero sin canales desactivados no enciende ni apaga nada`() {
+        // Así llega cualquier fichero anterior al formato 6.
+        val delFichero = AppConfig().aJson().copy(canalesDesactivados = null)
+        val actual = AppConfig(canalesDesactivados = setOf(Canal.TELEGRAM))
+
+        val resultado = delFichero.aplicarSobre(actual, setOf(Canal.WHATSAPP))
+
+        assertEquals(setOf(Canal.TELEGRAM), resultado.canalesDesactivados)
+    }
+
+    @Test
+    fun `un canal desconocido en el fichero se ignora`() {
+        val delFichero = AppConfig().aJson().copy(canalesDesactivados = listOf("FAX", "SMS"))
+
+        val resultado = delFichero.aplicarSobre(AppConfig(), Canal.entries.toSet())
+
+        assertEquals(setOf(Canal.SMS), resultado.canalesDesactivados)
+        assertFalse(resultado.estaActivo(Canal.SMS))
+        assertTrue(resultado.estaActivo(Canal.WHATSAPP))
+    }
 }

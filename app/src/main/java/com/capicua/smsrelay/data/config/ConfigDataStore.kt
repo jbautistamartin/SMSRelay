@@ -11,6 +11,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.capicua.smsrelay.domain.transport.Canal
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -45,7 +47,11 @@ class ConfigDataStore @Inject constructor(
             timeoutEnvioSegundos       = prefs[Keys.TIMEOUT_ENVIO]         ?: porDefecto.timeoutEnvioSegundos,
             maxReenviosPorMinuto       = prefs[Keys.MAX_REENVIOS_MINUTO]   ?: porDefecto.maxReenviosPorMinuto,
             maxMensajesPorMes          = prefs[Keys.MAX_MENSAJES_MES]      ?: porDefecto.maxMensajesPorMes,
-            recepcionActiva            = prefs[Keys.RECEPCION_ACTIVA]      ?: porDefecto.recepcionActiva
+            recepcionActiva            = prefs[Keys.RECEPCION_ACTIVA]      ?: porDefecto.recepcionActiva,
+            // Un nombre que ya no sea de ningún canal se ignora: no hay nada que desactivar.
+            canalesDesactivados        = prefs[Keys.CANALES_DESACTIVADOS]
+                ?.mapNotNull { Canal.de(it) }?.toSet()
+                ?: porDefecto.canalesDesactivados
         )
     }
 
@@ -67,6 +73,22 @@ class ConfigDataStore @Inject constructor(
             prefs[Keys.MAX_REENVIOS_MINUTO] = config.maxReenviosPorMinuto
             prefs[Keys.MAX_MENSAJES_MES]    = config.maxMensajesPorMes
             prefs[Keys.RECEPCION_ACTIVA]    = config.recepcionActiva
+            prefs[Keys.CANALES_DESACTIVADOS] = config.canalesDesactivados.map { it.name }.toSet()
+        }
+    }
+
+    /**
+     * Enciende o apaga un canal, y solo eso.
+     *
+     * El interruptor de la tarjeta *Canales* se aplica al momento, sin pasar por «Guardar»,
+     * porque de él depende qué secciones enseña la pantalla. Por eso escribe una sola clave: los
+     * campos a medio editar de la pantalla no se guardan por haber tocado un interruptor.
+     */
+    suspend fun cambiarCanal(canal: Canal, activo: Boolean) {
+        dataStore.edit { prefs ->
+            val actuales = prefs[Keys.CANALES_DESACTIVADOS].orEmpty()
+            prefs[Keys.CANALES_DESACTIVADOS] =
+                if (activo) actuales - canal.name else actuales + canal.name
         }
     }
 
@@ -86,5 +108,6 @@ class ConfigDataStore @Inject constructor(
         val MAX_REENVIOS_MINUTO = intPreferencesKey("max_reenvios_por_minuto")
         val MAX_MENSAJES_MES    = intPreferencesKey("max_mensajes_por_mes")
         val RECEPCION_ACTIVA    = booleanPreferencesKey("recepcion_activa")
+        val CANALES_DESACTIVADOS = stringSetPreferencesKey("canales_desactivados")
     }
 }

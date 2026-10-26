@@ -83,7 +83,11 @@ class ProbarReglasViewModel @Inject constructor(
     /** Evalúa las reglas activas contra el ejemplo. No toca la radio ni la base de datos. */
     fun probar(telefono: String, mensaje: String) {
         viewModelScope.launch {
-            val reglas = reglaRepository.obtenerActivas()
+            val config = configDataStore.config.first()
+            // Igual que al recibir un SMS: las reglas de un canal apagado no se evalúan con las
+            // demás, y aparte solo para decir que habrían casado.
+            val (reglas, deCanalApagado) = reglaRepository.obtenerActivas()
+                .partition { config.estaActivo(it.canal) }
             val ahora = Instant.now()
             val fecha = ahora.toDisplayString()
 
@@ -94,6 +98,13 @@ class ProbarReglasViewModel @Inject constructor(
                 reglas = reglas,
                 fechaIso = ahora.toString()
             )
+            val apagadas = if (deCanalApagado.isEmpty()) emptyList() else evaluador.evaluar(
+                telefono = telefono,
+                mensaje = mensaje,
+                fecha = fecha,
+                reglas = deCanalApagado,
+                fechaIso = ahora.toString()
+            ).coincidencias
 
             _prueba.value = PruebaReglas(
                 reglasActivas = reglas.size,
@@ -107,7 +118,10 @@ class ProbarReglasViewModel @Inject constructor(
                         limiteCaracteres = transportes.de(coincidencia.canal)?.limiteCaracteres()
                     )
                 },
-                avisos = construirAvisos(resultado)
+                avisos = apagadas.map { coincidencia ->
+                    "La regla «${coincidencia.nombreRegla}» casaría, pero sale por " +
+                        "${coincidencia.canal.etiqueta}, que está desactivado en Ajustes: no se reenvía"
+                } + construirAvisos(resultado)
             )
             _envio.value = EstadoEnvioPrueba.Inactivo
         }

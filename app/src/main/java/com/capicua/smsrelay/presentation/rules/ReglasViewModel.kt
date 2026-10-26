@@ -7,13 +7,16 @@ package com.capicua.smsrelay.presentation.rules
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.repository.ReglaRepository
+import com.capicua.smsrelay.domain.transport.Canal
 import com.capicua.smsrelay.domain.model.Regla
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -32,11 +35,15 @@ sealed interface AvisoReglas {
  */
 @HiltViewModel
 class ReglasViewModel @Inject constructor(
-    private val reglaRepository: ReglaRepository
+    private val reglaRepository: ReglaRepository,
+    configDataStore: ConfigDataStore
 ) : ViewModel() {
 
     /** Lista reactiva de reglas, ya ordenada por prioridad. */
     val reglas: Flow<List<Regla>> = reglaRepository.observarTodas()
+
+    /** Canales apagados en Ajustes, para atenuar sus reglas. */
+    val canalesDesactivados: Flow<Set<Canal>> = configDataStore.config.map { it.canalesDesactivados }
 
     private val _avisos = MutableSharedFlow<AvisoReglas>(extraBufferCapacity = 4)
     val avisos: SharedFlow<AvisoReglas> = _avisos.asSharedFlow()

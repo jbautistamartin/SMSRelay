@@ -96,6 +96,11 @@ class ReglasFragment : Fragment() {
     private fun observarReglas() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.canalesDesactivados.collect { adapter.canalesDesactivados = it }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.reglas.collect { reglas ->
                     reglasEnPantalla = reglas
                     adapter.submitList(reglas)

@@ -80,7 +80,9 @@ class DashboardViewModel @Inject constructor(
     ) { mes, config, reglas ->
         // Null sin ninguna regla activa por WhatsApp: los mensajes que cuentan dinero son los de
         // la Cloud API, y a quien solo reenvía por Telegram esa cifra no le dice nada.
-        if (reglas.none { it.activa && it.canal == Canal.WHATSAPP }) null
+        if (!config.estaActivo(Canal.WHATSAPP) ||
+            reglas.none { it.activa && it.canal == Canal.WHATSAPP }
+        ) null
         else mes to config.maxMensajesPorMes
     }
 
@@ -96,7 +98,8 @@ class DashboardViewModel @Inject constructor(
      *
      * **Solo mira los canales que usa alguna regla activa.** Con cuatro canales, lo normal es
      * tener uno o dos configurados; avisar de que falta el token de Telegram a quien solo
-     * reenvía por SMS sería ruido, y el ruido enseña a no leer el aviso.
+     * reenvía por SMS sería ruido, y el ruido enseña a no leer el aviso. Por lo mismo se saltan
+     * los canales desactivados en Ajustes: no van a entregar nada, y es a propósito.
      *
      * Se recalcula con cada cambio de la configuración o de las reglas, que es cuando puede dejar
      * de ser cierto.
@@ -106,8 +109,8 @@ class DashboardViewModel @Inject constructor(
         estadoDeLaCuenta.credencialRechazada,
         estadoDelBot.tokenRechazado,
         reglaRepository.observarTodas()
-    ) { _, _, _, reglas ->
-        reglas.filter { it.activa }
+    ) { config, _, _, reglas ->
+        reglas.filter { it.activa && config.estaActivo(it.canal) }
             .map { it.canal }
             .distinct()
             .sortedBy { it.ordinal }

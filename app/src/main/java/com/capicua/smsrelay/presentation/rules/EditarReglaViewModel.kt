@@ -7,6 +7,7 @@ package com.capicua.smsrelay.presentation.rules
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.capicua.smsrelay.data.config.ConfigDataStore
 import com.capicua.smsrelay.data.repository.ReglaRepository
 import com.capicua.smsrelay.domain.model.Regla
 import com.capicua.smsrelay.domain.rules.EvaluadorDeReglas
@@ -23,7 +24,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +51,8 @@ class EditarReglaViewModel @Inject constructor(
     private val reglaRepository: ReglaRepository,
     private val evaluador: EvaluadorDeReglas,
     private val transportes: Transportes,
-    private val descubridorDeChats: DescubridorDeChats
+    private val descubridorDeChats: DescubridorDeChats,
+    private val configDataStore: ConfigDataStore
 ) : ViewModel() {
 
     private val _canal = MutableStateFlow(Canal.POR_DEFECTO)
@@ -57,6 +61,18 @@ class EditarReglaViewModel @Inject constructor(
 
     /** Canales que esta compilación sabe entregar. Los demás salen deshabilitados en el selector. */
     val canalesDisponibles: List<Canal> get() = transportes.disponibles
+
+    /** Canales apagados en Ajustes. Su chip no se ofrece, salvo el de la regla que se edita. */
+    val canalesDesactivados: StateFlow<Set<Canal>> = configDataStore.config
+        .map { it.canalesDesactivados }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    /**
+     * El canal con el que se guardó la regla, o null en una regla nueva. Su chip se enseña aunque
+     * el canal esté apagado: esconderlo cambiaría de canal una regla solo por abrirla.
+     */
+    var canalOriginal: Canal? = null
+        private set
 
     fun elegirCanal(canal: Canal) {
         _canal.value = canal
@@ -123,10 +139,22 @@ class EditarReglaViewModel @Inject constructor(
 
     /** Carga la regla a editar, o deja el formulario en blanco si [reglaId] es [NUEVA]. */
     fun cargar(reglaId: Long) {
-        if (reglaId == NUEVA) return
+        if (reglaId == NUEVA) {
+            // Una regla nueva no puede nacer en un canal apagado: arranca en el primero encendido.
+            viewModelScope.launch {
+                val config = configDataStore.config.first()
+                if (!config.estaActivo(_canal.value)) {
+                    Canal.entries.firstOrNull { config.estaActivo(it) }?.let { _canal.value = it }
+                }
+            }
+            return
+        }
         viewModelScope.launch {
             val regla = reglaRepository.obtenerPorId(reglaId)
-            regla?.let { _canal.value = it.canal }
+            regla?.let {
+                canalOriginal = it.canal
+                _canal.value = it.canal
+            }
             _regla.value = regla
         }
     }
