@@ -15,6 +15,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ## [No publicado]
 
+---
+
+## [1.0.0] - 2026-10-25
+
 ### Añadido
 
 - **Cuatro canales, elegidos regla a regla**: WhatsApp (Cloud API de Meta), Telegram (un bot, a
@@ -53,6 +57,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
   puede enviar**: un número sin registrar o una cuenta sin método de pago pasaban la consulta y
   fallaban en cada envío con un error que no explica nada. Ahora se lee también el
   `health_status` del número, y Ajustes enseña en rojo cada motivo por el que Meta lo bloquea.
+- **El aviso del Panel empezaba por «No se puede entregar nada»** aunque solo fallase uno de los
+  canales. Ahora es la lista de los que no pueden entregar, cada uno con su nombre.
 - **Textos de Ajustes que seguían siendo de SMStoWhats**: la confirmación de importar decía que los
   ajustes del fichero sustituyen a los actuales, y la ayuda del tiempo de espera hablaba solo de
   Meta.

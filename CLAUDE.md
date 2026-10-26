@@ -121,20 +121,19 @@ instale sobre la anterior sin perder nada.
 
 ## El estado
 
-**Las fases 1 a 9 de `MASTERPLAN-RELAY.md` están cerradas (25 oct 2026)**, con 234 tests en verde. Después
-se añadió el **interruptor por canal** (237 tests).
-Queda la **fase 10**: ver salir un SMS real por cada canal real, la batería de pruebas de esa fase
-y publicar la 1.0.0. Hasta entonces la aplicación está en `1.0.0`/`versionCode 1` sin publicar.
+**Las diez fases de `MASTERPLAN-RELAY.md` están cerradas (25 oct 2026)** y la **1.0.0 está
+publicada**, con 241 tests en verde. La fase 10 se hizo en un POCO con dos SIM que se mandaba los SMS
+de una a otra: API, Telegram y SMS entregaron de verdad; **WhatsApp no**, por un bloqueo de la cuenta
+de Meta que no es de la app y que «Comprobar las credenciales» ahora enseña motivo a motivo. Los
+resultados, fila a fila, están al final de la fase 10 del masterplan.
 
 **El repositorio es `github.com/jbautistamartin/SMSRelay`**, público, y existe desde el 25 oct
-2026; las fases 1 a 9 están integradas en `develop`. **`main` sigue teniendo SMStoWhats** —el repo
-se creó con sus ramas— hasta que la 1.0.0 lo actualice. Todavía no hay ningún release, así que el
-comprobador de actualizaciones recibe un 404, que interpreta como «todavía no hay releases», y no
-avisa de nada.
+2026. `main` lleva la 1.0.0 (hasta entonces tenía SMStoWhats, porque el repo se creó con sus
+ramas), y el comprobador de actualizaciones ya encuentra releases.
 
-**Qué pasa con las cuatro anteriores** es la decisión D: una última versión de cada una cuya tarjeta
-de actualizaciones diga que la aplicación sigue en SMSRelay, y después archivar sus repositorios.
-Es trabajo de esos repositorios, no de este, y no está hecho.
+**Qué pasa con las cuatro anteriores** es la decisión D: una última versión de cada una que avisa
+de que la aplicación está descontinuada y sigue en SMSRelay, y después archivar sus repositorios.
+Las últimas versiones se publicaron el 25 oct 2026; archivar los repositorios queda pendiente.
 
 ## Arquitectura
 
@@ -824,11 +823,11 @@ batería → **No optimizar**.
   `androidComponents.onVariants` y `VariantOutputImpl`, que es interna: si AGP la cambia, el APK
   vuelve a llamarse `app-release.apk`. Y R8 en modo completo estricto: un `-keep class X` ya no
   conserva el constructor, así que `proguard-rules.pro` lo pide con `{ <init>(); }`.
-- **Catorce conjuntos de tests unitarios, 237 tests**, todos en Kotlin puro y sin dependencias de
+- **Quince conjuntos de tests unitarios, 241 tests**, todos en Kotlin puro y sin dependencias de
   Android: `EvaluadorDeReglasTest` (51), `MapeoDeRespuestasTest` de WhatsApp (24),
   `PlantillaDeWhatsAppTest` (20), `MapeoDeRespuestasTest` de Telegram (18),
   `NormalizadorTelefonoTest` (18), `ImportacionDeCopiaTest` (17), `ReglasJsonTest` (17),
-  `PlantillaDeUrlTest` (14), `DestinoDeTelegramTest` (12), `CredencialesTest` (12),
+  `PlantillaDeUrlTest` (14), `SaludDelNumeroTest` (4), `DestinoDeTelegramTest` (12), `CredencialesTest` (12),
   `DestinoDeWhatsAppTest` (11), `VersionPublicadaTest` (10), `MapeoDeRespuestasTest` de la API (7) y
   `TokenDeBotTest` (6). No hay tests de instrumentación. **Los mapeos de respuestas, las plantillas
   y la importación están separados del código que hace la petición o lee el fichero para poder

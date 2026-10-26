@@ -396,7 +396,7 @@ y el registro se purgan a los 30 días.
 
 ## Tests
 
-237 tests unitarios en 14 clases, todos en Kotlin puro, sin Android, sin Robolectric y sin base de
+241 tests unitarios en 15 clases, todos en Kotlin puro, sin Android, sin Robolectric y sin base de
 datos en memoria:
 
 | Suite | Qué fija |

@@ -5,9 +5,9 @@
 > sustituyeron un transporte por otro sin tocar la tubería. Esta deja de sustituir: SMSRelay
 > entrega por **los cuatro** —API REST, SMS, Telegram y WhatsApp— y cada regla elige por cuál.
 >
-> Escrito el 25 oct 2026 y revisado el mismo día. **Las fases 1 a 9 están cerradas** (25 oct
-> 2026, un commit por fase, 234 tests); queda la 10, en el dispositivo real. Las decisiones
-> tomadas en la revisión están en el punto 9.
+> Escrito el 25 oct 2026 y revisado el mismo día. **Las diez fases están cerradas** (25 oct
+> 2026): las nueve primeras con un commit por fase y 234 tests, y la 10 en un teléfono real, con
+> la 1.0.0 publicada. Las decisiones tomadas en la revisión están en el punto 9.
 
 ---
 
@@ -528,7 +528,7 @@ aplicación vieja, importar en la nueva, rellenar credenciales.
 > `-1001234567890` con el canal SMS pasaba la validación de importar, por ser solo dígitos y un
 > guion. Ahora se rechaza igual que en el editor, con su caso en `ImportacionDeCopiaTest`.
 
-### Fase 10 — Dispositivo real y release 1.0.0 · `[ ]`
+### Fase 10 — Dispositivo real y release 1.0.0 · `[x]` (25 oct 2026)
 
 Como en SMStoWhats: las nueve anteriores se cierran con tests; esta, cuando un SMS real sale por
 cada canal real. La batería de 9.2 de `MASTERPLAN-WHATSAPP.md` se repite **por canal**, más lo que
@@ -546,6 +546,39 @@ solo existe aquí:
 La fila 6 tiene una pega que conviene saber de antemano: con SMSRelay y la vieja instaladas y las
 dos activas, **cada SMS se reenvía dos veces**. Es lo correcto —son dos aplicaciones— y es la
 razón de que la migración termine apagando la recepción de la vieja.
+
+#### Lo que dio el teléfono (25 oct 2026)
+
+Un POCO con dos SIM —Telcel y AT&T—, la variante debug y las cuatro viejas instaladas con la
+recepción apagada. Los SMS de prueba **los envió el propio teléfono de una SIM a la otra**, desde
+Google Mensajes: es una recepción real por la radio, y no hizo falta un segundo teléfono con saldo.
+
+| # | Resultado |
+|---|---|
+| 1 | **Pasa con tres de cuatro.** Un SMS casó con las cuatro reglas: la API (el servidor de `test-server/`, por `adb reverse`), Telegram y SMS entregaron; WhatsApp falló por un bloqueo de la cuenta de Meta, no de la app (ver abajo), sin retrasar a los otros tres |
+| 2 | **Pasa, con la API en lugar de WhatsApp** como canal sano. Con un token de bot falso, Telegram falló con un permanente `401`, el Panel dijo *Telegram: Telegram rechazó el token…*, y la API entregó el mismo SMS |
+| 3 | **Pasa.** El reenvío por SMS volvió al mismo teléfono —la red lo entregó dos veces— y la guarda descartó las dos copias, reconociendo `+523311298770` como el destino `3311298770` |
+| 4 | **Pasa.** El editor no deja guardar una URL con un marcador en el servidor |
+| 5 | **Pasa** con las copias reales de SMStoSMS y SMStoTelegram importadas desde la interfaz; las de SMStoWhats y SMSGateway están cubiertas por `ImportacionDeCopiaTest`, con ficheros reales |
+| 6 | **Pasa** en lo que se puede ver sin reenviar todo dos veces: cinco iconos distinguibles en el cajón, cinco aplicaciones instaladas a la vez. Las cuatro viejas se dejaron con la recepción apagada, que es el último paso de la migración |
+
+Lo que encontró, y se corrigió antes de la 1.0.0:
+
+- **El canal API no podía llamar a `http://`.** Con `targetSdk 35` Android bloquea el tráfico sin
+  cifrar si el manifiesto no lo permite; SMSGateway lo permitía y la fase 5 no lo trajo. Se añadió
+  `res/xml/network_security_config.xml`.
+- **«Comprobar las credenciales» de WhatsApp decía «✓ sirven»** con un número que Meta tenía
+  bloqueado; cada envío volvía con un `500` y el código `1`, que no dice nada. Ahora se pide el
+  `health_status` del número y Ajustes enseña cada motivo (`SaludDelNumero`, con tests). Con la
+  cuenta de pruebas fueron cinco: número sin registrar, método de pago, cuenta de WhatsApp
+  Business inactiva, empresa sin verificar y perfil incompleto. Es trabajo del Business Manager.
+- **El aviso del Panel empezaba por «No se puede entregar nada»**, herencia de cuando había un
+  solo canal. Con cuatro era falso: en la fila 2 la API sí entregaba. Ahora es la lista de canales
+  que no pueden entregar, cada uno con su nombre.
+
+**WhatsApp queda sin ver entregar en un teléfono real**, por la cuenta de Meta y no por el código:
+la cadena es la de SMStoWhats, que sí se vio funcionar contra el número de prueba de Meta el 18 oct
+2026. La 1.0.0 sale con esa salvedad escrita en las notas del release.
 
 ---
 

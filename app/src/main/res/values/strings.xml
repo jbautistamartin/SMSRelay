@@ -7,7 +7,7 @@
     <string name="dashboard_no_messages">Aún no se han recibido mensajes</string>
     <string name="sms_borrar_todos">Borrar</string>
     <string name="dashboard_resumen">%1$d SMS · %2$d reenvío(s) en curso · %3$d regla(s) activa(s)</string>
-    <string name="dashboard_aviso_transporte">⚠ No se puede entregar nada: %1$s</string>
+    <string name="dashboard_aviso_transporte">⚠ %1$s</string>
     <string name="dashboard_mensajes_mes">Este mes: %1$d de %2$d mensajes · %3$d de servicio y %4$d de plantilla</string>
     <string name="dashboard_mensajes_mes_sin_tope">Este mes: %1$d mensajes · %2$d de servicio y %3$d de plantilla · sin tope</string>
     <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se entregan a ningún número. Crea una regla en la pestaña Reglas.</string>
