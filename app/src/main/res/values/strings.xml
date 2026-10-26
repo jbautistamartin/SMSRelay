@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SMStoWhats</string>
+    <string name="app_name">SMSRelay</string>
 
     <!-- Dashboard -->
     <string name="dashboard_title">SMS Recibidos</string>
     <string name="dashboard_no_messages">Aún no se han recibido mensajes</string>
     <string name="sms_borrar_todos">Borrar</string>
     <string name="dashboard_resumen">%1$d SMS · %2$d reenvío(s) en curso · %3$d regla(s) activa(s)</string>
-    <string name="dashboard_aviso_transporte">⚠ No se puede entregar nada: %1$s</string>
+    <string name="dashboard_aviso_transporte">⚠ %1$s</string>
     <string name="dashboard_mensajes_mes">Este mes: %1$d de %2$d mensajes · %3$d de servicio y %4$d de plantilla</string>
     <string name="dashboard_mensajes_mes_sin_tope">Este mes: %1$d mensajes · %2$d de servicio y %3$d de plantilla · sin tope</string>
     <string name="dashboard_sin_reglas">No hay ninguna regla activa: los SMS se reciben pero no se entregan a ningún número. Crea una regla en la pestaña Reglas.</string>
@@ -27,7 +27,7 @@
     <!-- Logs -->
     <string name="logs_title">Logs del sistema</string>
     <string name="logs_copiado">Entrada copiada al portapapeles</string>
-    <string name="logs_copiado_etiqueta">Registro de SMStoWhats</string>
+    <string name="logs_copiado_etiqueta">Registro de SMSRelay</string>
     <string name="logs_no_entries">Sin entradas de log</string>
     <string name="logs_limpiar">Limpiar</string>
     <string name="logs_filtro_reglas">Reglas</string>
@@ -37,11 +37,32 @@
 
     <!-- Settings -->
     <string name="settings_title">Configuración</string>
-    <string name="settings_subtitulo">Las credenciales de la Cloud API y los ajustes que afectan a todas las entregas. Las reglas que deciden a qué número acaba yendo cada SMS tienen su propia pantalla.</string>
+    <string name="settings_subtitulo">Lo que necesita cada canal y los ajustes que afectan a todas las entregas. Las reglas que deciden por dónde y a quién sale cada SMS tienen su propia pantalla.</string>
     <string name="settings_guardar">Guardar configuración</string>
     <string name="settings_guardado">Configuración guardada</string>
     <string name="settings_guardado_sin_recepcion">Guardado. La recepción de SMS queda desactivada: no se entregará nada.</string>
 
+    <string name="settings_seccion_bot">Bot de Telegram</string>
+    <string name="settings_token_bot">Token del bot</string>
+    <string name="settings_token_bot_ayuda">Crea un bot escribiendo a @BotFather en Telegram y pega aquí el token que te dé. Sin token no se entrega nada por Telegram. El token solo viaja en la copia de seguridad si lo pides al exportar.</string>
+    <string name="settings_validar_bot">Comprobar el token</string>
+    <string name="settings_bot_comprobando">Preguntando a Telegram…</string>
+    <string name="settings_bot_correcto">✓ El token sirve · %1$s (@%2$s)</string>
+    <string name="settings_bot_rechazado">✗ Telegram no acepta este token: %1$s</string>
+    <string name="settings_bot_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>
+    <string name="settings_bot_sin_token">Escribe primero un token para poder comprobarlo</string>
+    <string name="settings_token_bot_invalido">El token no tiene la forma que entrega @BotFather (números, dos puntos y una cadena larga)</string>
+    <string name="settings_seccion_canales">Canales</string>
+    <string name="settings_canales_ayuda">Por dónde puede salir cada reenvío. Cada regla elige su canal; solo hace falta configurar los que usen tus reglas. Apaga los que no vayas a usar: sus reglas se conservan pero no reenvían, y su sección desaparece de esta pantalla.</string>
+    <string name="settings_canal_listo">%1$s · listo · %2$d regla(s) activa(s)</string>
+    <string name="settings_canal_sin_uso">%1$s · sin reglas que lo usen</string>
+    <string name="settings_canal_falta">%1$s · ⚠ %2$d regla(s) activa(s), pero %3$s</string>
+    <string name="settings_canal_falta_sin_uso">%1$s · sin reglas · %2$s</string>
+    <string name="settings_canal_desactivado">%1$s · desactivado</string>
+    <string name="settings_canal_desactivado_con_reglas">%1$s · desactivado · %2$d regla(s) activa(s) no reenvían</string>
+    <string name="settings_canal_interruptor">Activar el canal %1$s</string>
+    <string name="settings_canal_ultimo">Tiene que quedar al menos un canal activado. Para dejar de reenviar del todo, apaga la recepción.</string>
+    <string name="logs_filtro_todos_canales">Todos los canales</string>
     <string name="settings_seccion_cuenta">Cuenta de WhatsApp</string>
     <string name="settings_token_acceso">Token de acceso</string>
     <string name="settings_token_acceso_ayuda">El token de usuario de sistema de tu app de Meta, con caducidad «Nunca». El que la consola enseña por defecto caduca en 24 horas y dejaría la aplicación muda al día siguiente. No se incluye en la copia de seguridad.</string>
@@ -50,6 +71,7 @@
     <string name="settings_validar_cuenta">Comprobar las credenciales</string>
     <string name="settings_cuenta_comprobando">Preguntando a Meta…</string>
     <string name="settings_cuenta_correcto">✓ Las credenciales sirven · %1$s · %2$s</string>
+    <string name="settings_cuenta_bloqueada">✗ Las credenciales sirven, pero Meta no deja enviar desde %1$s · %2$s. Se resuelve en el Business Manager, no en esta aplicación:</string>
     <string name="settings_cuenta_calidad">Calidad del número según Meta: %1$s</string>
     <string name="settings_cuenta_rechazado">✗ Meta no acepta estas credenciales: %1$s</string>
     <string name="settings_cuenta_sin_red">No se pudo comprobar: %1$s. Inténtalo cuando haya conexión.</string>
@@ -92,18 +114,33 @@
     <string name="settings_autoinicio">Inicio automático</string>
     <string name="settings_autoinicio_detalle">Xiaomi, Huawei, Oppo y Vivo no dejan arrancar a una aplicación tras reiniciar el teléfono mientras no esté en su lista de inicio automático, que viene vacía. Sin ese permiso, después de cada reinicio no se recibe nada hasta abrir la aplicación a mano. No se puede conceder desde aquí ni comprobar si ya está: este botón abre la pantalla del sistema donde se activa.</string>
     <string name="settings_autoinicio_abrir">Abrir inicio automático</string>
-    <string name="settings_autoinicio_sin_pantalla">Este teléfono no permite abrir esa pantalla desde la app. Búscala en Ajustes → Aplicaciones → SMStoWhats → Inicio automático.</string>
+    <string name="settings_autoinicio_sin_pantalla">Este teléfono no permite abrir esa pantalla desde la app. Búscala en Ajustes → Aplicaciones → SMSRelay → Inicio automático.</string>
 
+    <string name="settings_seccion_sms">SMS</string>
+    <string name="settings_sms_permiso_falta">Falta el permiso de enviar SMS. Sin él, las reglas del canal SMS fallan.</string>
+    <string name="settings_sms_permiso_ok">✓ Permiso de enviar SMS concedido</string>
+    <string name="settings_sms_permiso_pedir">Conceder el permiso</string>
+    <string name="settings_sms_permiso_denegado">Android no ha concedido el permiso. Si no vuelve a preguntar, concédelo a mano en la ficha de la aplicación, en Ajustes del sistema.</string>
+    <string name="settings_sim">Tarjeta con la que enviar</string>
+    <string name="settings_sim_ayuda">Solo afecta a los reenvíos del canal SMS. Con la predeterminada, decide el sistema.</string>
+    <string name="settings_sim_por_defecto">Predeterminada del sistema</string>
+    <string name="settings_sim_detectar">Elegir la SIM de envío</string>
+    <string name="settings_sim_detectar_ayuda">Para saber qué tarjetas hay puestas, Android pide el permiso de leer el estado del teléfono. Solo hace falta en un teléfono con dos SIM.</string>
+    <string name="settings_proteger_bucles">Evitar bucles de reenvío</string>
+    <string name="settings_proteger_bucles_detalle">Solo para el canal SMS: descarta los SMS cuyo remitente sea el destino de una regla SMS, y salta las reglas SMS que reenviarían al propio remitente. Desactívalo solo en pruebas controladas.</string>
+    <string name="settings_seccion_api">API</string>
+    <string name="settings_certificados">Aceptar certificados no verificables</string>
+    <string name="settings_certificados_detalle">Solo para el canal API y solo para un servidor de tu red local con un certificado autofirmado. En Internet permite que alguien en medio se haga pasar por el servidor y lea los SMS.</string>
     <string name="settings_seccion_protecciones">Límites</string>
     <string name="settings_max_reenvios">Máximo de reenvíos por minuto</string>
-    <string name="settings_max_reenvios_ayuda">Corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>
+    <string name="settings_max_reenvios_ayuda">Cuenta los reenvíos de todos los canales juntos y corta una avalancha antes de que se coma la cuota del mes. El exceso se descarta y queda en el registro. Recomendado: 10</string>
 
-    <string name="settings_max_mensajes_mes">Tope de mensajes al mes</string>
-    <string name="settings_max_mensajes_mes_ayuda">Meta regala los primeros 1.000 mensajes de servicio al mes y factura todos los de plantilla. Mil al mes son 33 al día. Pasado el tope, los SMS se descartan y queda en el registro. 0 lo desactiva. Recomendado: 900</string>
+    <string name="settings_max_mensajes_mes">Tope de mensajes de WhatsApp al mes</string>
+    <string name="settings_max_mensajes_mes_ayuda">Meta regala los primeros 1.000 mensajes de servicio al mes y factura todos los de plantilla. Mil al mes son 33 al día. Pasado el tope, los reenvíos por WhatsApp se omiten y queda en el registro; los demás canales siguen. 0 lo desactiva. Recomendado: 900</string>
 
     <string name="settings_seccion_envio">Envío y reintentos</string>
     <string name="settings_timeout_envio">Espera de confirmación</string>
-    <string name="settings_timeout_envio_ayuda">Tiempo que se espera la respuesta de Meta antes de reintentar. Entre 10 y 300 s. Recomendado: 60</string>
+    <string name="settings_timeout_envio_ayuda">Tiempo que se espera la confirmación de cada canal —la respuesta de Meta, de Telegram o de la API, o el envío del SMS— antes de reintentar. Entre 10 y 300 s. Recomendado: 60</string>
     <string name="settings_max_reintentos">Máximo de reintentos</string>
     <string name="settings_max_reintentos_ayuda">Entre 1 y 100. Recomendado: 10</string>
     <string name="settings_intervalo">Intervalo inicial de reintento</string>
@@ -113,15 +150,17 @@
     <string name="settings_backup_titulo">Copia de seguridad</string>
     <string name="settings_backup_aviso">Guarda en un fichero los ajustes y las reglas, para restaurarlos en este teléfono o clonarlos en otro. El fichero contiene los números de destino: trátalo como información sensible.</string>
     <string name="settings_backup_credenciales">Incluir las credenciales</string>
-    <string name="settings_backup_credenciales_aviso">El fichero llevará el token de acceso y el id del número en texto plano. Quien lo abra podrá enviar mensajes de WhatsApp en tu nombre y con cargo a tu cuenta. Guárdalo como guardarías una contraseña: cifrado o en un sitio del que respondas, nunca en una carpeta compartida ni en el correo.</string>
+    <string name="settings_backup_credenciales_aviso">El fichero llevará en texto plano el token de acceso y el id del número de WhatsApp, y el token del bot de Telegram. Quien lo abra podrá enviar mensajes de WhatsApp en tu nombre y con cargo a tu cuenta, y escribir como tu bot. Guárdalo como guardarías una contraseña: cifrado o en un sitio del que respondas, nunca en una carpeta compartida ni en el correo.</string>
     <string name="settings_copia_exportada_credenciales">Copia guardada con credenciales · %1$d regla(s) · custodia el fichero</string>
-    <string name="settings_copia_importada_credenciales">Copia restaurada · %1$d regla(s) añadidas · se han sustituido las credenciales</string>
+    <string name="settings_copia_importada_credenciales">Copia de %1$s restaurada · %2$d regla(s) añadidas · se han sustituido las credenciales</string>
     <string name="settings_exportar">Exportar</string>
     <string name="settings_importar">Importar</string>
-    <string name="settings_importar_confirmar">Los ajustes del fichero sustituyen a los actuales. Las reglas se añaden a las que ya hay, sin borrar ninguna.</string>
+    <string name="settings_importar_confirmar">Se aplican los ajustes comunes del fichero y los de sus canales; los de los demás canales no se tocan, y una credencial que el fichero no traiga no borra la de este teléfono. Las reglas se añaden a las que ya hay, sin borrar ninguna. Vale la copia de SMSRelay y la de cualquiera de las cuatro aplicaciones anteriores.</string>
     <string name="settings_copia_exportada">Copia guardada · %1$d regla(s)</string>
-    <string name="settings_copia_importada">Copia restaurada · %1$d regla(s) añadidas</string>
-    <string name="settings_copia_importada_con_rechazos">Copia restaurada · %1$d regla(s) añadidas · %2$d rechazadas por datos no válidos</string>
+    <string name="settings_copia_importada">Copia de %1$s restaurada · %2$d regla(s) añadidas</string>
+    <string name="settings_copia_importada_con_rechazos">Copia de %1$s restaurada · %2$d regla(s) añadidas · %3$d rechazadas por datos no válidos</string>
+    <string name="settings_copia_avisos_titulo">Hay canales sin preparar</string>
+    <string name="settings_copia_avisos">Las reglas de la copia de %1$s ya están dentro, pero algunas no pueden entregar todavía:\n\n%2$s\n\nCompleta los ajustes de esos canales, más arriba en esta pantalla.</string>
     <string name="settings_copia_fallo">No se pudo completar: %1$s</string>
 
     <string name="settings_error_rango">Debe estar entre %1$d y %2$d</string>
@@ -137,13 +176,13 @@
     <!-- About -->
     <string name="about_empresa">Capicua</string>
     <string name="about_autor">José Luis Bautista Martín</string>
-    <string name="about_descripcion">Recibe SMS en este dispositivo y los entrega automáticamente en WhatsApp, a números de personas, a través de la Cloud API de Meta y una cuenta de empresa propia, según reglas con expresiones regulares sobre el remitente y el texto.</string>
+    <string name="about_descripcion">Recibe SMS en este dispositivo y los reenvía automáticamente según reglas con expresiones regulares sobre el remitente y el texto. Cada regla elige su canal: WhatsApp, a través de la Cloud API de Meta y una cuenta de empresa propia; Telegram, a una persona, un grupo o un canal por medio de un bot; otro teléfono por SMS, desde la SIM de este; o una API REST propia, con una petición GET.</string>
     <string name="about_marcadores_titulo">Marcadores de la plantilla</string>
-    <string name="about_marcadores_detalle">{mensaje}   → texto del SMS\n{telefono}  → remitente del SMS\n{fecha}     → fecha de recepción, en hora local\n\nConviene dejar {telefono} y {fecha} en la plantilla: en WhatsApp todos los avisos llegan del mismo número, y sin ellos no se sabe de quién era cada SMS. Con una plantilla de Meta aprieta más todavía, porque el cuerpo aprobado es idéntico en todos los reenvíos.</string>
+    <string name="about_marcadores_detalle">{mensaje}   → texto del SMS\n{telefono}  → remitente del SMS\n{fecha}     → fecha de recepción, en hora local\n\nConviene dejar {telefono} y {fecha} en la plantilla: en WhatsApp y en Telegram todos los avisos llegan del mismo emisor, y sin ellos no se sabe de quién era cada SMS. Con una plantilla de Meta aprieta más todavía, porque el cuerpo aprobado es idéntico en todos los reenvíos.\n\nEn el destino solo hay marcadores en dos canales. Por SMS, {telefono} como destino contesta a quien escribió. En la URL de una API valen los tres, y {fecha} ahí va en ISO 8601 y en UTC, que es lo que lee una máquina; nunca en el servidor, para que el texto de un SMS no pueda elegir a quién se manda.</string>
     <string name="about_privacidad_titulo">Aviso de privacidad</string>
-    <string name="about_privacidad_detalle">Lee esto antes de poner la aplicación en marcha.\n\nEl contenido de los SMS que llegan a este dispositivo se envía por internet a los servidores de Meta, que es una empresa ajena a este proyecto, y queda guardado en la conversación de destino y en el teléfono de quien la recibe. Ni Capicua ni el autor reciben ninguno de esos mensajes; Meta sí.\n\nLos reenvíos salen de una cuenta de empresa de WhatsApp registrada a tu nombre, no de la aplicación. Ante Meta y ante quien los recibe, el emisor eres tú.\n\nEl remitente original de cada SMS no lo sabe y no ha dado su consentimiento. Pueden ser claves de un solo uso, avisos de un banco o mensajes personales.\n\nFuera de la ventana de 24 horas, los mensajes se entregan mediante plantillas aprobadas por Meta, que llegan a un número sin que esa persona haya escrito antes ni haya pedido nada. Eso es, en los términos de Meta, mensajería no solicitada: si quien recibe los bloquea o los denuncia, Meta puede limitar o bloquear tu número.\n\nAdemás, los mensajes y los números implicados quedan almacenados en este dispositivo durante el periodo de retención configurado.\n\nQuien instala y configura la aplicación es el único responsable de cumplir la normativa de protección de datos y el secreto de las comunicaciones que le sea aplicable.</string>
+    <string name="about_privacidad_detalle">Lee esto antes de poner la aplicación en marcha.\n\nEl contenido de los SMS que llegan a este dispositivo sale de él hacia el canal que diga cada regla, y queda guardado allí donde se entrega: en la conversación de destino y en el teléfono de quien lo recibe, o en el servidor de la API. Ni Capicua ni el autor reciben ninguno de esos mensajes.\n\nEl remitente original de cada SMS no lo sabe y no ha dado su consentimiento. Pueden ser claves de un solo uso, avisos de un banco o mensajes personales.\n\nAdemás, los mensajes y los números implicados quedan almacenados en este dispositivo durante el periodo de retención configurado.\n\nPor WhatsApp. El contenido se envía por internet a los servidores de Meta, que es una empresa ajena a este proyecto; Meta sí recibe los mensajes. Los reenvíos salen de una cuenta de empresa de WhatsApp registrada a tu nombre, no de la aplicación. Ante Meta y ante quien los recibe, el emisor eres tú. Fuera de la ventana de 24 horas, los mensajes se entregan mediante plantillas aprobadas por Meta, que llegan a un número sin que esa persona haya escrito antes ni haya pedido nada. Eso es, en los términos de Meta, mensajería no solicitada: si quien recibe los bloquea o los denuncia, Meta puede limitar o bloquear tu número.\n\nPor Telegram. El contenido se envía por internet a los servidores de Telegram, otra empresa ajena a este proyecto, que lo guarda en el chat de destino. Los mensajes salen de un bot que tú has creado, y en un grupo o un canal los lee todo el que esté dentro, también quien entre después.\n\nPor SMS. El mensaje sale desde la SIM de este teléfono y pasa por tu operador de telefonía, que lo cobra según tu tarifa. Quien lo recibe ve tu número como remitente, no el de quien escribió el SMS original.\n\nPor una API. El contenido va dentro de la URL de una petición a un servidor que eliges tú, y queda en sus registros y en los de cualquier intermediario. Si activaste aceptar certificados no válidos, la conexión ya no garantiza que ese servidor sea el que dice ser.\n\nQuien instala y configura la aplicación es el único responsable de cumplir la normativa de protección de datos y el secreto de las comunicaciones que le sea aplicable.</string>
     <string name="about_responsabilidad_titulo">Uso bajo tu responsabilidad</string>
-    <string name="about_responsabilidad_detalle">Esta aplicación se entrega «tal cual», sin garantía de ningún tipo. Quien la instala, la configura y la pone en marcha es el único responsable del uso que haga de ella y de cumplir la legislación que le sea aplicable, incluidas la protección de datos y el secreto de las comunicaciones. Ni Capicua ni el autor, José Luis Bautista Martín, responden de ningún daño, pérdida o retraso de mensajes, coste, sanción o incumplimiento derivado de su uso, de su mal uso o de la imposibilidad de usarla. Esto incluye expresamente lo que Meta te facture por los mensajes entregados y cualquier restricción o bloqueo que Meta aplique a tu número o a tu cuenta.</string>
+    <string name="about_responsabilidad_detalle">Esta aplicación se entrega «tal cual», sin garantía de ningún tipo. Quien la instala, la configura y la pone en marcha es el único responsable del uso que haga de ella y de cumplir la legislación que le sea aplicable, incluidas la protección de datos y el secreto de las comunicaciones. Ni Capicua ni el autor, José Luis Bautista Martín, responden de ningún daño, pérdida o retraso de mensajes, coste, sanción o incumplimiento derivado de su uso, de su mal uso o de la imposibilidad de usarla. Esto incluye expresamente lo que Meta te facture por los mensajes entregados y cualquier restricción o bloqueo que Meta aplique a tu número o a tu cuenta, lo que tu operador te cobre por los SMS enviados, lo que Telegram haga con tu bot y lo que haga con los mensajes el servidor de la API que configures.</string>
     <string name="about_actualizacion_titulo">Actualizaciones</string>
     <string name="about_actualizacion_avisos">Comprobar una vez al día</string>
     <string name="about_actualizacion_buscar">Buscar ahora</string>
@@ -158,7 +197,7 @@
     <string name="about_actualizacion_apagada">El aviso automático está apagado. Puedes buscar a mano cuando quieras.</string>
     <string name="about_actualizacion_fallo">No se pudo comprobar: %1$s</string>
     <string name="about_actualizacion_fallo_descarga">No se pudo descargar: %1$s</string>
-    <string name="about_actualizacion_autorizar">Android necesita que autorices a SMStoWhats a instalar aplicaciones. Te llevo a esa pantalla; después vuelve y pulsa otra vez.</string>
+    <string name="about_actualizacion_autorizar">Android necesita que autorices a SMSRelay a instalar aplicaciones. Te llevo a esa pantalla; después vuelve y pulsa otra vez.</string>
     <string name="about_proyecto_titulo">Código abierto</string>
     <string name="about_proyecto_detalle">Todo el código de la aplicación está publicado en GitHub, con el registro de cambios, las versiones descargables y el sitio donde dar parte de un fallo.</string>
     <string name="about_proyecto_boton">Ver el proyecto en GitHub</string>
@@ -188,6 +227,8 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="reglas_criterio_sin_mayusculas">sin distinguir mayúsculas</string>
     <string name="reglas_criterio_todo">Sin filtros: casa con todos los SMS</string>
     <string name="reglas_destino">→ %1$s</string>
+    <string name="destino_por_canal">%1$s · %2$s</string>
+    <string name="reglas_canal_desactivado">%1$s · canal desactivado</string>
     <string name="reglas_destino_continua">→ %1$s · sigue evaluando</string>
 
     <!-- Reglas: editor -->
@@ -205,8 +246,33 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_ignorar_mayusculas">Ignorar mayúsculas</string>
     <string name="regla_ignorar_mayusculas_ayuda">Aplica las dos expresiones sin distinguir mayúsculas de minúsculas: «hola» casa con «HOLA». Equivale a escribir (?i) en ambas.</string>
 
-    <string name="regla_destino">Número de destino</string>
-    <string name="regla_destino_ayuda">El número de WhatsApp de la persona, en formato internacional: «+», el prefijo del país y el número. Por ejemplo +34600112233. Tiene que tener WhatsApp y haber escrito al número emisor en las últimas 24 horas, o hará falta una plantilla.</string>
+    <string name="regla_descubrir_chats">Elegir de los chats del bot</string>
+    <string name="regla_chats_buscando">Preguntando al bot…</string>
+    <string name="regla_chats_titulo">Chats que han escrito al bot</string>
+    <string name="regla_chats_ninguno">Nadie ha escrito al bot todavía. Un bot no puede escribir primero: pídele a quien va a recibir los avisos que abra el bot en Telegram y le mande /start. Después vuelve aquí.</string>
+    <string name="regla_chats_sin_token">Configura primero el token del bot en Ajustes</string>
+    <string name="regla_chats_error">No se pudo preguntar al bot: %1$s</string>
+    <string name="regla_destino_remitente">Contestar al remitente ({telefono})</string>
+    <string name="regla_sms_permiso">Para entregar por SMS hace falta el permiso de enviar SMS. Sin él, las reglas de este canal fallarán.</string>
+    <string name="regla_canal">Canal</string>
+    <string name="canal_whatsapp">WhatsApp</string>
+    <string name="canal_telegram">Telegram</string>
+    <string name="canal_sms">SMS</string>
+    <string name="canal_api">API</string>
+    <string name="canal_ayuda_whatsapp">Por la Cloud API de Meta, desde el número de empresa configurado en Ajustes.</string>
+    <string name="canal_ayuda_telegram">Por un bot de Telegram, a una persona, un grupo o un canal.</string>
+    <string name="canal_ayuda_sms">Como un SMS más, desde la SIM de este teléfono. Cada parte cuesta lo que cueste un SMS.</string>
+    <string name="canal_ayuda_api">Una petición GET a tu servidor, con el mensaje en la URL.</string>
+    <string name="canal_no_disponible">Esta versión todavía no entrega por este canal.</string>
+    <string name="canal_desactivado">Este canal está desactivado en Ajustes: la regla se guarda, pero no reenvía nada hasta que lo actives.</string>
+    <string name="regla_destino_whatsapp">Número de WhatsApp</string>
+    <string name="regla_destino_ayuda_whatsapp">El número de WhatsApp de la persona, en formato internacional: «+», el prefijo del país y el número. Por ejemplo +34600112233. Tiene que tener WhatsApp y haber escrito al número emisor en las últimas 24 horas, o hará falta una plantilla.</string>
+    <string name="regla_destino_telegram">Chat de Telegram</string>
+    <string name="regla_destino_ayuda_telegram">El id numérico del chat (un grupo o canal empieza por -100) o el @nombre de un canal público. El bot tiene que estar en el chat.</string>
+    <string name="regla_destino_sms">Número de teléfono</string>
+    <string name="regla_destino_ayuda_sms">El número al que se envía el SMS, tal como lo marcarías. Escribe {telefono} para contestar a quien mandó el SMS.</string>
+    <string name="regla_destino_api">URL de la API</string>
+    <string name="regla_destino_ayuda_api">Se llama con GET. Marcadores: {mensaje} (el texto de la plantilla), {telefono} y {fecha} (ISO-8601 UTC), siempre después del servidor. Por ejemplo https://api.ejemplo.com/sms?de={telefono}&amp;texto={mensaje}</string>
     <string name="regla_plantilla">Plantilla del texto</string>
     <string name="regla_plantilla_ayuda">Marcadores: {mensaje}, {telefono}, {fecha}. Conviene dejar {telefono}: en WhatsApp todo llega del mismo número, y sin el remitente no se sabe de quién era el SMS.</string>
     <string name="regla_previsualizacion">Así saldría</string>
@@ -214,7 +280,7 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="regla_activa">Activa</string>
     <string name="regla_activa_ayuda">Desactívala para que no se evalúe, sin borrarla</string>
     <string name="regla_continuar">Seguir evaluando</string>
-    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite entregar el mismo SMS a varios números.</string>
+    <string name="regla_continuar_ayuda">Tras casar esta regla, continúa con las siguientes. Permite entregar el mismo SMS a varios destinos, incluso por canales distintos.</string>
     <string name="regla_guardar">Guardar regla</string>
 
     <!-- Reglas: panel de prueba -->
@@ -229,9 +295,9 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
     <string name="probar_envio_real_ayuda">La prueba real entrega un mensaje de verdad al primer número de destino, y consume cuota como cualquier otro.</string>
     <string name="probar_enviar">Enviar de prueba</string>
     <string name="regla_longitud">%1$d / %2$d caracteres</string>
-    <string name="probar_enviar_confirmar">Se entregará un mensaje real a %1$s.</string>
-    <string name="probar_envio_correcto">✓ Entregado a %1$s</string>
-    <string name="probar_envio_correcto_breve">Mensaje de prueba entregado a %1$s</string>
+    <string name="probar_enviar_confirmar">Se entregará un mensaje real por %1$s a %2$s.</string>
+    <string name="probar_envio_correcto">✓ Entregado por %1$s a %2$s</string>
+    <string name="probar_envio_correcto_breve">Mensaje de prueba entregado por %1$s a %2$s</string>
     <string name="probar_envio_fallido">✗ %1$s</string>
 
     <!-- Común -->
@@ -243,6 +309,6 @@ Sin reglas no se reenvía nada: los SMS se reciben y se quedan marcados como «s
 
     <!-- Permissions -->
     <string name="permiso_sms_titulo">Permiso obligatorio</string>
-    <string name="permiso_sms_mensaje">Esta aplicación necesita permiso para recibir SMS. Sin él no entra ningún mensaje y no hay nada que reenviar. Concédelo en Ajustes → Aplicaciones → SMStoWhats → Permisos.</string>
+    <string name="permiso_sms_mensaje">Esta aplicación necesita permiso para recibir SMS. Sin él no entra ningún mensaje y no hay nada que reenviar. Concédelo en Ajustes → Aplicaciones → SMSRelay → Permisos.</string>
     <string name="permiso_entendido">Entendido</string>
 </resources>

@@ -1,0 +1,662 @@
+// SMSRelay para Android
+// Copyright © 2026 Capicua · José Luis Bautista Martín
+// Licencia: GNU Lesser General Public License v2.1
+// https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+package com.capicua.smsrelay.domain.rules
+
+import com.capicua.smsrelay.domain.model.Regla
+import com.capicua.smsrelay.domain.transport.Canal
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Tests del motor de reglas.
+ *
+ * [EvaluadorDeReglas] es Kotlin puro, así que se instancia directamente: no hace falta
+ * Robolectric, ni Room en memoria, ni dispatchers de prueba.
+ */
+class EvaluadorDeReglasTest {
+
+    private val evaluador = EvaluadorDeReglas()
+
+    private val fecha = "07/10/2026 19:30:00"
+
+    private fun regla(
+        id: Long = 1,
+        orden: Int = 0,
+        nombre: String = "Regla $id",
+        regexTelefono: String? = null,
+        regexMensaje: String? = null,
+        ignorarMayusculas: Boolean = false,
+        canal: Canal = Canal.POR_DEFECTO,
+        destino: String = "+34600000001",
+        plantilla: String = Regla.PLANTILLA_POR_DEFECTO,
+        activa: Boolean = true,
+        continuar: Boolean = false
+    ) = Regla(
+        id = id,
+        orden = orden,
+        nombre = nombre,
+        regexTelefono = regexTelefono,
+        regexMensaje = regexMensaje,
+        ignorarMayusculas = ignorarMayusculas,
+        canal = canal,
+        destino = destino,
+        plantilla = plantilla,
+        activa = activa,
+        continuar = continuar
+    )
+
+    private fun evaluar(
+        reglas: List<Regla>,
+        telefono: String = "+34611111111",
+        mensaje: String = "mensaje de prueba"
+    ) = evaluador.evaluar(telefono, mensaje, fecha, reglas)
+
+    // ── Activación y orden ────────────────────────────────────────────────────
+
+    @Test
+    fun `una regla desactivada no se evalua`() {
+        val resultado = evaluar(listOf(regla(activa = false)))
+
+        assertFalse(resultado.hayCoincidencias)
+        assertTrue(resultado.reglasInvalidas.isEmpty())
+    }
+
+    @Test
+    fun `gana la primera regla por orden y la evaluacion se detiene`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, destino = "+34600000001"),
+                regla(id = 2, orden = 1, destino = "+34600000002")
+            )
+        )
+
+        assertEquals(1, resultado.coincidencias.size)
+        assertEquals("+34600000001", resultado.coincidencias.first().destino)
+        assertEquals(1L, resultado.coincidencias.first().reglaId)
+    }
+
+    @Test
+    fun `el orden de entrada de la lista es irrelevante, manda el campo orden`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 2, orden = 5, destino = "+34600000002"),
+                regla(id = 1, orden = 1, destino = "+34600000001")
+            )
+        )
+
+        assertEquals("+34600000001", resultado.coincidencias.single().destino)
+    }
+
+    // ── continuar ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `continuar permite que un SMS se reenvie a varios destinos`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, destino = "+34600000001", continuar = true),
+                regla(id = 2, orden = 1, destino = "+34600000002", continuar = true),
+                regla(id = 3, orden = 2, destino = "+34600000003")
+            )
+        )
+
+        assertEquals(
+            listOf("+34600000001", "+34600000002", "+34600000003"),
+            resultado.coincidencias.map { it.destino }
+        )
+    }
+
+    @Test
+    fun `continuar en la ultima regla no provoca error`() {
+        val resultado = evaluar(listOf(regla(continuar = true)))
+
+        assertEquals(1, resultado.coincidencias.size)
+    }
+
+    @Test
+    fun `una regla con continuar que no casa no interrumpe la cadena`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, regexMensaje = "no-aparece", continuar = true),
+                regla(id = 2, orden = 1, destino = "+34600000002")
+            )
+        )
+
+        assertEquals("+34600000002", resultado.coincidencias.single().destino)
+    }
+
+    // ── Sin coincidencias ─────────────────────────────────────────────────────
+
+    @Test
+    fun `sin reglas el resultado esta vacio`() {
+        val resultado = evaluar(emptyList())
+
+        assertFalse(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `si ninguna regla casa el resultado esta vacio`() {
+        val resultado = evaluar(listOf(regla(regexMensaje = "factura")), mensaje = "tu codigo es 4821")
+
+        assertFalse(resultado.hayCoincidencias)
+    }
+
+    // ── Expresiones inválidas ─────────────────────────────────────────────────
+
+    @Test
+    fun `una regex invalida descarta solo esa regla y las demas siguen evaluandose`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, regexMensaje = "[a-", destino = "+34600000001"),
+                regla(id = 2, orden = 1, destino = "+34600000002")
+            )
+        )
+
+        assertEquals("+34600000002", resultado.coincidencias.single().destino)
+        assertEquals(1, resultado.reglasInvalidas.size)
+    }
+
+    @Test
+    fun `una regex invalida se reporta con su campo, su patron y un motivo`() {
+        val resultado = evaluar(listOf(regla(id = 7, nombre = "Banco", regexTelefono = "(sin cerrar")))
+
+        val invalida = resultado.reglasInvalidas.single()
+        assertEquals(7L, invalida.reglaId)
+        assertEquals("Banco", invalida.nombreRegla)
+        assertEquals(CampoRegla.TELEFONO, invalida.campo)
+        assertEquals("(sin cerrar", invalida.patron)
+        assertTrue(invalida.motivo.isNotBlank())
+    }
+
+    @Test
+    fun `si los dos patrones son invalidos se reportan los dos`() {
+        val resultado = evaluar(listOf(regla(regexTelefono = "[a-", regexMensaje = "(b")))
+
+        assertEquals(2, resultado.reglasInvalidas.size)
+        assertEquals(
+            setOf(CampoRegla.TELEFONO, CampoRegla.MENSAJE),
+            resultado.reglasInvalidas.map { it.campo }.toSet()
+        )
+    }
+
+    @Test
+    fun `una regex invalida nunca produce una coincidencia`() {
+        val resultado = evaluar(listOf(regla(regexMensaje = "[a-")))
+
+        assertFalse(resultado.hayCoincidencias)
+    }
+
+    // ── Semántica de coincidencia parcial ─────────────────────────────────────
+
+    @Test
+    fun `la coincidencia es parcial, no hace falta describir el mensaje entero`() {
+        val resultado = evaluar(
+            listOf(regla(regexMensaje = "codigo")),
+            mensaje = "Tu codigo es 4821"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `un patron anclado si exige el texto completo`() {
+        val reglas = listOf(regla(regexMensaje = "^codigo$"))
+
+        assertFalse(evaluar(reglas, mensaje = "Tu codigo es 4821").hayCoincidencias)
+        assertTrue(evaluar(reglas, mensaje = "codigo").hayCoincidencias)
+    }
+
+    @Test
+    fun `con el ajuste apagado se distinguen mayusculas y minusculas`() {
+        val resultado = evaluar(listOf(regla(regexMensaje = "CODIGO")), mensaje = "tu codigo es 4821")
+
+        assertFalse(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `el modificador i ignora mayusculas y minusculas`() {
+        val resultado = evaluar(
+            listOf(regla(regexMensaje = "(?i)CODIGO")),
+            mensaje = "tu codigo es 4821"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    // ── Criterios ausentes ────────────────────────────────────────────────────
+
+    @Test
+    fun `una regla sin patrones casa con cualquier SMS`() {
+        val resultado = evaluar(
+            listOf(regla()),
+            telefono = "cualquiera",
+            mensaje = "lo que sea"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `un patron en blanco equivale a no filtrar`() {
+        val resultado = evaluar(listOf(regla(regexTelefono = "   ", regexMensaje = "")))
+
+        assertTrue(resultado.hayCoincidencias)
+        assertTrue(resultado.reglasInvalidas.isEmpty())
+    }
+
+    @Test
+    fun `filtrar solo por telefono deja el mensaje libre`() {
+        val reglas = listOf(regla(regexTelefono = "^\\+34600"))
+
+        assertTrue(evaluar(reglas, telefono = "+34600123456", mensaje = "cualquier cosa").hayCoincidencias)
+        assertFalse(evaluar(reglas, telefono = "+34700123456", mensaje = "cualquier cosa").hayCoincidencias)
+    }
+
+    @Test
+    fun `filtrar solo por mensaje deja el telefono libre`() {
+        val reglas = listOf(regla(regexMensaje = "factura"))
+
+        assertTrue(evaluar(reglas, telefono = "+34999999999", mensaje = "tu factura ya esta").hayCoincidencias)
+        assertFalse(evaluar(reglas, telefono = "+34999999999", mensaje = "hola").hayCoincidencias)
+    }
+
+    @Test
+    fun `los dos criterios deben cumplirse a la vez`() {
+        val reglas = listOf(regla(regexTelefono = "BANCO", regexMensaje = "codigo"))
+
+        assertTrue(evaluar(reglas, telefono = "BANCO", mensaje = "tu codigo es 1234").hayCoincidencias)
+        assertFalse(evaluar(reglas, telefono = "BANCO", mensaje = "tu factura").hayCoincidencias)
+        assertFalse(evaluar(reglas, telefono = "+34600000000", mensaje = "tu codigo es 1234").hayCoincidencias)
+    }
+
+    @Test
+    fun `un remitente alfanumerico se trata como texto, sin normalizar`() {
+        val resultado = evaluar(
+            listOf(regla(regexTelefono = "^BANCO$")),
+            telefono = "BANCO"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    // ── Plantillas ────────────────────────────────────────────────────────────
+
+    /**
+     * La plantilla por defecto dejó de ser `{mensaje}` al cambiar el medio.
+     *
+     * Con el SMS bastaba el cuerpo, porque el reenvío llegaba como un SMS más y el teléfono ya
+     * enseñaba de quién era. Por Telegram todo llega del mismo bot: cuatro avisos seguidos
+     * serían cuatro mensajes indistinguibles. El remitente y la fecha delante son el contexto
+     * que el SMS daba gratis y que ahora hay que poner a mano.
+     */
+    @Test
+    fun `la plantilla por defecto lleva remitente y fecha delante del mensaje`() {
+        val resultado = evaluar(
+            listOf(regla()),
+            telefono = "BANCO",
+            mensaje = "Tu codigo es 4821"
+        )
+
+        assertEquals(
+            "BANCO · 07/10/2026 19:30:00\nTu codigo es 4821",
+            resultado.coincidencias.single().textoFinal
+        )
+    }
+
+    @Test
+    fun `la plantilla sustituye los tres marcadores`() {
+        val resultado = evaluar(
+            listOf(regla(plantilla = "De {telefono} el {fecha}: {mensaje}")),
+            telefono = "+34611111111",
+            mensaje = "Tu codigo es 4821"
+        )
+
+        assertEquals(
+            "De +34611111111 el 07/10/2026 19:30:00: Tu codigo es 4821",
+            resultado.coincidencias.single().textoFinal
+        )
+    }
+
+    @Test
+    fun `un marcador repetido se sustituye en todas sus apariciones`() {
+        val resultado = evaluar(
+            listOf(regla(plantilla = "{telefono} / {telefono}")),
+            telefono = "+34611111111"
+        )
+
+        assertEquals("+34611111111 / +34611111111", resultado.coincidencias.single().textoFinal)
+    }
+
+    @Test
+    fun `el cuerpo del SMS no puede inyectar marcadores en la plantilla`() {
+        // {mensaje} se sustituye en ultimo lugar justo para esto: el contenido ajeno
+        // no se vuelve a escanear y los marcadores que traiga quedan literales.
+        val resultado = evaluar(
+            listOf(regla(plantilla = "De {telefono}: {mensaje}")),
+            telefono = "+34611111111",
+            mensaje = "hoy es {fecha} y mi numero es {telefono}"
+        )
+
+        assertEquals(
+            "De +34611111111: hoy es {fecha} y mi numero es {telefono}",
+            resultado.coincidencias.single().textoFinal
+        )
+    }
+
+    @Test
+    fun `una plantilla sin marcadores envia un texto fijo`() {
+        val resultado = evaluar(listOf(regla(plantilla = "Aviso recibido")))
+
+        assertEquals("Aviso recibido", resultado.coincidencias.single().textoFinal)
+    }
+
+    @Test
+    fun `cada coincidencia congela su propio destino y texto`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, destino = "+34600000001", plantilla = "A: {mensaje}", continuar = true),
+                regla(id = 2, orden = 1, destino = "+34600000002", plantilla = "B: {mensaje}")
+            ),
+            mensaje = "hola"
+        )
+
+        assertEquals(
+            listOf("A: hola", "B: hola"),
+            resultado.coincidencias.map { it.textoFinal }
+        )
+        assertEquals("Regla 1", resultado.coincidencias[0].nombreRegla)
+    }
+
+    // ── Validación de patrones para la pantalla de reglas ─────────────────────
+
+    @Test
+    fun `validarPatron devuelve null cuando el patron compila`() {
+        assertNull(evaluador.validarPatron("^\\+34[0-9]{9}$"))
+    }
+
+    @Test
+    fun `validarPatron devuelve null cuando el patron esta vacio`() {
+        assertNull(evaluador.validarPatron(null))
+        assertNull(evaluador.validarPatron(""))
+        assertNull(evaluador.validarPatron("   "))
+    }
+
+    @Test
+    fun `validarPatron describe el error cuando el patron no compila`() {
+        val motivo = evaluador.validarPatron("[a-")
+
+        assertNotNull(motivo)
+        assertTrue(motivo!!.isNotBlank())
+    }
+
+    // ── Ignorar mayúsculas ───────────────────────────────────────────────────
+
+    @Test
+    fun `una regla nueva ignora mayusculas sin que nadie lo pida`() {
+        // El valor por defecto del modelo, que es lo que estrena una regla recien creada: el
+        // mismo remitente escribe «CODIGO» o «codigo» segun el dia, y una regla que distinga
+        // deja de casar sin dar ningun error. Este test existe para que ese valor no se
+        // cambie por descuido al tocar el data class.
+        val reglaRecienCreada = Regla(
+            id = 0,
+            orden = 0,
+            nombre = "Nueva",
+            regexMensaje = "hola",
+            destino = "+34600000001"
+        )
+
+        assertTrue(reglaRecienCreada.ignorarMayusculas)
+        assertTrue(
+            evaluar(listOf(reglaRecienCreada), mensaje = "HOLA que tal").hayCoincidencias
+        )
+    }
+
+    @Test
+    fun `con el ajuste apagado las expresiones distinguen mayusculas`() {
+        val resultado = evaluar(
+            listOf(regla(regexMensaje = "hola")),
+            mensaje = "HOLA que tal"
+        )
+
+        assertFalse(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `con ignorarMayusculas el patron del mensaje casa en cualquier caja`() {
+        val resultado = evaluar(
+            listOf(regla(regexMensaje = "hola", ignorarMayusculas = true)),
+            mensaje = "HOLA que tal"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `ignorarMayusculas se aplica tambien al patron del remitente`() {
+        val resultado = evaluar(
+            listOf(regla(regexTelefono = "banco", ignorarMayusculas = true)),
+            telefono = "BANCO"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `ignorarMayusculas afecta a los dos criterios a la vez`() {
+        val resultado = evaluar(
+            listOf(
+                regla(regexTelefono = "banco", regexMensaje = "codigo", ignorarMayusculas = true)
+            ),
+            telefono = "BANCO",
+            mensaje = "Tu CODIGO es 4821"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `ignorarMayusculas no afecta a una regla que no lo activa`() {
+        // Dos reglas con el mismo patrón: solo casa la que lo pide. Confirma que la opción
+        // es por regla y no un ajuste global del evaluador.
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, regexMensaje = "hola", ignorarMayusculas = false),
+                regla(id = 2, orden = 1, regexMensaje = "hola", ignorarMayusculas = true)
+            ),
+            mensaje = "HOLA"
+        )
+
+        assertEquals("Regla 2", resultado.coincidencias.single().nombreRegla)
+    }
+
+    @Test
+    fun `ignorarMayusculas convive con el modificador (?i) escrito a mano`() {
+        val resultado = evaluar(
+            listOf(regla(regexMensaje = "(?i)hola", ignorarMayusculas = true)),
+            mensaje = "HoLa"
+        )
+
+        assertTrue(resultado.hayCoincidencias)
+    }
+
+    @Test
+    fun `ignorarMayusculas no convierte un patron roto en valido`() {
+        val resultado = evaluar(listOf(regla(regexMensaje = "[a-", ignorarMayusculas = true)))
+
+        assertFalse(resultado.hayCoincidencias)
+        assertEquals(1, resultado.reglasInvalidas.size)
+    }
+
+    // ── Destino ──────────────────────────────────────────────────────────────
+
+    /**
+     * En el destino no se resuelve ningún marcador **salvo `{telefono}` en el canal SMS**, que
+     * es contestar a quien escribió.
+     *
+     * Lo que fijan estos tests es una propiedad de seguridad y no solo una simplificación: si
+     * algún día se resolviera `{mensaje}` ahí, el cuerpo de un SMS ajeno decidiría a dónde se
+     * entrega. Y en los canales que no son SMS, `{telefono}` tampoco se resuelve: el remitente de
+     * un SMS no es un chat de Telegram, y por WhatsApp contestar sería escribir desde una cuenta
+     * de empresa a alguien que no pidió nada.
+     */
+    @Test
+    fun `el destino se usa tal cual, sin resolver marcadores`() {
+        val coincidencia = evaluar(
+            listOf(regla(canal = Canal.TELEGRAM, destino = "-1001234567890")),
+            telefono = "+34611111111"
+        ).coincidencias.single()
+
+        assertEquals("-1001234567890", coincidencia.destino)
+        assertFalse(coincidencia.respondeAlRemitente)
+    }
+
+    @Test
+    fun `fuera del canal SMS el marcador de telefono en el destino no se sustituye`() {
+        // El canal API sí rellena {telefono}, pero en la URL y con PlantillaDeUrl: tiene su test.
+        listOf(Canal.WHATSAPP, Canal.TELEGRAM).forEach { canal ->
+            val coincidencia = evaluar(
+                listOf(regla(canal = canal, destino = "{telefono}")),
+                telefono = "+34611111111"
+            ).coincidencias.single()
+
+            assertEquals(canal.name, "{telefono}", coincidencia.destino)
+            assertFalse(canal.name, coincidencia.respondeAlRemitente)
+        }
+    }
+
+    @Test
+    fun `en el canal SMS el marcador de telefono resuelve al remitente`() {
+        val coincidencia = evaluar(
+            listOf(regla(canal = Canal.SMS, destino = " {telefono} ")),
+            telefono = "+34611111111"
+        ).coincidencias.single()
+
+        assertEquals("+34611111111", coincidencia.destino)
+        assertTrue(coincidencia.respondeAlRemitente)
+    }
+
+    @Test
+    fun `en el canal SMS un destino fijo no se marca como respuesta al remitente`() {
+        val coincidencia = evaluar(listOf(regla(canal = Canal.SMS, destino = "600000001")))
+            .coincidencias.single()
+
+        assertEquals("600000001", coincidencia.destino)
+        assertFalse(coincidencia.respondeAlRemitente)
+    }
+
+    @Test
+    fun `el cuerpo del SMS no puede influir en el destino`() {
+        // Si {mensaje} se resolviera aquí, un tercero decidiría a dónde se entrega su propio
+        // mensaje escribiendo un destino en el texto del SMS. Ni siquiera el canal SMS lo hace.
+        // El canal API queda fuera: allí {mensaje} rellena un hueco de la URL, codificado y
+        // después del servidor, y eso lo prueba PlantillaDeUrlTest.
+        (Canal.entries - Canal.API).forEach { canal ->
+            val coincidencia = evaluar(
+                listOf(regla(canal = canal, destino = "{mensaje}")),
+                mensaje = "+34699999999"
+            ).coincidencias.single()
+
+            assertEquals(canal.name, "{mensaje}", coincidencia.destino)
+        }
+    }
+
+    @Test
+    fun `contestar a un remitente alfanumerico deja el destino sin digitos`() {
+        // El evaluador no decide si se puede enviar; solo resuelve. Quien tramita el SMS
+        // comprueba después que el destino sea enviable.
+        val coincidencia = evaluar(
+            listOf(regla(canal = Canal.SMS, destino = "{telefono}")),
+            telefono = "BANCO"
+        ).coincidencias.single()
+
+        assertEquals("BANCO", coincidencia.destino)
+        assertTrue(coincidencia.respondeAlRemitente)
+        assertFalse(NormalizadorTelefono.esDestinoEnviable(coincidencia.destino))
+    }
+
+    @Test
+    fun `respondeAlRemitente reconoce el marcador para la validacion del formulario`() {
+        assertTrue(evaluador.respondeAlRemitente("{telefono}"))
+        assertFalse(evaluador.respondeAlRemitente("+34600000001"))
+        assertFalse(evaluador.respondeAlRemitente(null))
+    }
+
+    @Test
+    fun `en el canal API el destino es la URL rellena con el texto ya compuesto`() {
+        val coincidencia = evaluador.evaluar(
+            telefono = "+34611111111",
+            mensaje = "Tu codigo es 4821",
+            fecha = fecha,
+            reglas = listOf(
+                regla(
+                    canal = Canal.API,
+                    destino = "https://e.com/sms?de={telefono}&t={mensaje}&f={fecha}",
+                    plantilla = "[{telefono}] {mensaje}"
+                )
+            ),
+            fechaIso = "2026-10-07T17:30:00Z"
+        ).coincidencias.single()
+
+        assertEquals("[+34611111111] Tu codigo es 4821", coincidencia.textoFinal)
+        assertEquals(
+            "https://e.com/sms?de=%2B34611111111&t=%5B%2B34611111111%5D%20Tu%20codigo%20es%204821" +
+                "&f=2026-10-07T17%3A30%3A00Z",
+            coincidencia.destino
+        )
+    }
+
+    @Test
+    fun `el destino se recorta`() {
+        val coincidencia = evaluar(listOf(regla(destino = "  123456789  ")))
+            .coincidencias.single()
+
+        assertEquals("123456789", coincidencia.destino)
+    }
+
+    // ── Canal ─────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `cada coincidencia lleva el canal de su regla`() {
+        val resultado = evaluar(
+            listOf(
+                regla(id = 1, orden = 0, canal = Canal.TELEGRAM, destino = "-1001234567890", continuar = true),
+                regla(id = 2, orden = 1, canal = Canal.WHATSAPP, destino = "+34600000002")
+            )
+        )
+
+        assertEquals(
+            listOf(Canal.TELEGRAM, Canal.WHATSAPP),
+            resultado.coincidencias.map { it.canal }
+        )
+    }
+
+    @Test
+    fun `el canal no interviene en si una regla casa`() {
+        val porCanal = Canal.entries.map { canal ->
+            evaluar(listOf(regla(canal = canal, regexMensaje = "codigo")), mensaje = "tu codigo")
+                .hayCoincidencias
+        }
+
+        assertTrue(porCanal.all { it })
+    }
+
+    // ── resolverPlantilla como API pública ────────────────────────────────────
+
+    @Test
+    fun `resolverPlantilla es utilizable sin evaluar reglas`() {
+        val texto = evaluador.resolverPlantilla(
+            plantilla = "{telefono} dice {mensaje}",
+            telefono = "+34600000000",
+            mensaje = "hola",
+            fecha = fecha
+        )
+
+        assertEquals("+34600000000 dice hola", texto)
+    }
+}

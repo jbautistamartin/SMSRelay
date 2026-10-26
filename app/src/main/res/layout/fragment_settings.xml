@@ -182,6 +182,45 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp" />
 
+        <!-- ── Canales ─────────────────────────────────────────────────────
+             La sección «destino» del orden común de la casa (la conexión en SMSGateway, la SIM
+             en SMStoSMS, el bot en SMStoTelegram, la cuenta en SMStoWhats). Aquí son cuatro, así
+             que arriba va un resumen: si cada canal está listo y cuántas reglas activas lo usan.
+             Una regla activa por un canal sin configurar sale en ámbar, porque es un aviso. Las
+             subsecciones de debajo, una por canal, son las de siempre. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_seccion_canales"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/settings_canales_ayuda"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutline"
+            app:strokeWidth="1dp">
+
+            <!-- Lo rellena el fragment: una línea por canal. -->
+            <LinearLayout
+                android:id="@+id/layout_estado_canales"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp" />
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- ── Cuenta de WhatsApp ──────────────────────────────────────────
              Tercera sección, donde las otras tres aplicaciones de la familia ponen su destino
              (la conexión en SMSGateway, la SIM en SMStoSMS, el bot en SMStoTelegram): las dos
@@ -193,220 +232,483 @@
              instalación nueva trae vacíos y sin los que no se entrega nada. Sigue siendo verdad,
              y por eso el subtítulo de la pantalla los nombra y el panel avisa cuando faltan: lo
              que no puede es romper el orden común. -->
-        <TextView
+        <!-- Se esconde entera con el canal desactivado en la tarjeta «Canales». -->
+        <LinearLayout
+            android:id="@+id/layout_seccion_whatsapp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/settings_seccion_cuenta"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginBottom="8dp" />
+            android:orientation="vertical">
 
-        <!-- password_toggle: enmascarado por defecto, con el ojo para comprobar lo que se
-             ha pegado. Un token es una credencial y no debe quedarse legible en pantalla, pero
-             esconderlo sin poder verlo haría imposible detectar un pegado a medias. -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_token_acceso"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:hint="@string/settings_token_acceso"
-            app:endIconMode="password_toggle"
-            app:helperText="@string/settings_token_acceso_ayuda"
-            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_token_acceso"
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textPassword"
-                android:imeOptions="actionNext"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:text="@string/settings_seccion_cuenta"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="8dp" />
 
-        <!-- La segunda credencial. No se enmascara: no es secreta, y a cambio hay que poder
-             compararla de un vistazo con la que enseña la consola de Meta, que es donde está
-             el error más frecuente de toda la configuración. -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_id_numero"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:hint="@string/settings_id_numero"
-            app:helperText="@string/settings_id_numero_ayuda"
-            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_id_numero"
+            <!-- password_toggle: enmascarado por defecto, con el ojo para comprobar lo que se
+                 ha pegado. Un token es una credencial y no debe quedarse legible en pantalla, pero
+                 esconderlo sin poder verlo haría imposible detectar un pegado a medias. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_token_acceso"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number"
-                android:imeOptions="actionDone"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginBottom="8dp"
+                android:hint="@string/settings_token_acceso"
+                app:endIconMode="password_toggle"
+                app:helperText="@string/settings_token_acceso_ayuda"
+                app:helperTextTextColor="?attr/colorOnSurfaceVariant">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_validar_cuenta"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/settings_validar_cuenta" />
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_token_acceso"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:imeOptions="actionNext"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
-            android:id="@+id/text_view_resultado_cuenta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            android:visibility="gone" />
-
-        <!-- ── Entrega ─────────────────────────────────────────────────────
-             Va justo detrás de las credenciales porque es la otra mitad de «¿puede esta
-             aplicación entregar algo?». Sin plantilla, solo entrega dentro de la ventana de
-             24 h que abre el destinatario. -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/settings_seccion_entrega"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="@string/settings_entrega_explicacion"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <RadioGroup
-            android:id="@+id/radio_group_modo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp">
-
-            <com.google.android.material.radiobutton.MaterialRadioButton
-                android:id="@+id/radio_modo_automatico"
+            <!-- La segunda credencial. No se enmascara: no es secreta, y a cambio hay que poder
+                 compararla de un vistazo con la que enseña la consola de Meta, que es donde está
+                 el error más frecuente de toda la configuración. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_id_numero"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_modo_automatico" />
+                android:layout_marginBottom="8dp"
+                android:hint="@string/settings_id_numero"
+                app:helperText="@string/settings_id_numero_ayuda"
+                app:helperTextTextColor="?attr/colorOnSurfaceVariant">
 
-            <com.google.android.material.radiobutton.MaterialRadioButton
-                android:id="@+id/radio_modo_texto_libre"
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_id_numero"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_validar_cuenta"
+                style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_modo_texto_libre" />
+                android:layout_marginBottom="8dp"
+                android:text="@string/settings_validar_cuenta" />
 
-            <com.google.android.material.radiobutton.MaterialRadioButton
-                android:id="@+id/radio_modo_plantilla"
+            <TextView
+                android:id="@+id/text_view_resultado_cuenta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_modo_plantilla" />
-        </RadioGroup>
+                android:layout_marginBottom="24dp"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:visibility="gone" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_plantilla_nombre"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            <!-- ── Entrega ─────────────────────────────────────────────────────
+                 Va justo detrás de las credenciales porque es la otra mitad de «¿puede esta
+                 aplicación entregar algo?». Sin plantilla, solo entrega dentro de la ventana de
+                 24 h que abre el destinatario. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_seccion_entrega"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="@string/settings_entrega_explicacion"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <RadioGroup
+                android:id="@+id/radio_group_modo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp">
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/radio_modo_automatico"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_modo_automatico" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/radio_modo_texto_libre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_modo_texto_libre" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/radio_modo_plantilla"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_modo_plantilla" />
+            </RadioGroup>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_plantilla_nombre"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="@string/settings_plantilla_nombre"
+                app:helperText="@string/settings_plantilla_nombre_ayuda"
+                app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_plantilla_nombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:imeOptions="actionNext"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_plantilla_idioma"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="@string/settings_plantilla_idioma"
+                app:helperText="@string/settings_plantilla_idioma_ayuda"
+                app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_plantilla_idioma"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- El cuerpo exacto que hay que dar de alta en el Business Manager. Se puede copiar
+                 porque escribirlo a mano es la forma segura de equivocarse en un salto de línea. -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_plantilla_contrato_titulo"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
+
+                    <TextView
+                        android:id="@+id/text_view_plantilla_contrato"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="monospace"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textIsSelectable="true" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/settings_plantilla_contrato_ayuda"
+                        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/button_copiar_plantilla"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/settings_plantilla_copiar" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- El texto lo pone el fragment: lleva el presupuesto, que se calcula del contrato. -->
+            <TextView
+                android:id="@+id/text_view_plantilla_coste"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+        </LinearLayout>
+
+        <!-- ── Bot de Telegram ─────────────────────────────────────────────
+             La credencial del canal Telegram, después de la del canal WhatsApp. Una
+             instalación que no use el canal la deja vacía y no pasa nada: el aviso del Panel
+             solo mira los canales que usa alguna regla activa. -->
+        <!-- Se esconde entera con el canal desactivado en la tarjeta «Canales». -->
+        <LinearLayout
+            android:id="@+id/layout_seccion_telegram"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:hint="@string/settings_plantilla_nombre"
-            app:helperText="@string/settings_plantilla_nombre_ayuda"
-            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
+            android:orientation="vertical">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_plantilla_nombre"
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"
-                android:imeOptions="actionNext"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:text="@string/settings_seccion_bot"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="8dp" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_plantilla_idioma"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:hint="@string/settings_plantilla_idioma"
-            app:helperText="@string/settings_plantilla_idioma_ayuda"
-            app:helperTextTextColor="?attr/colorOnSurfaceVariant">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_text_plantilla_idioma"
+            <!-- password_toggle: enmascarado por defecto, con el ojo para comprobar lo que se
+                 ha pegado. Un token es una credencial y no debe quedarse legible en pantalla, pero
+                 esconderlo sin poder verlo haría imposible detectar un pegado a medias. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_token_bot"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"
-                android:imeOptions="actionDone"
-                android:singleLine="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginBottom="8dp"
+                android:hint="@string/settings_token_bot"
+                app:endIconMode="password_toggle"
+                app:helperText="@string/settings_token_bot_ayuda"
+                app:helperTextTextColor="?attr/colorOnSurfaceVariant">
 
-        <!-- El cuerpo exacto que hay que dar de alta en el Business Manager. Se puede copiar
-             porque escribirlo a mano es la forma segura de equivocarse en un salto de línea. -->
-        <com.google.android.material.card.MaterialCardView
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_token_bot"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:imeOptions="actionDone"
+                    android:singleLine="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_validar_bot"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/settings_validar_bot" />
+
+            <TextView
+                android:id="@+id/text_view_resultado_bot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:visibility="gone" />
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+        </LinearLayout>
+
+        <!-- ── SMS ─────────────────────────────────────────────────────────
+             Lo que necesita el canal SMS: el permiso de enviar, la SIM de salida y la guarda
+             antibucle. Los dos permisos se piden desde aquí y desde el editor de reglas, nunca
+             al arrancar: quien no usa el canal SMS no tiene por qué ver el diálogo. -->
+        <!-- Se esconde entera con el canal desactivado en la tarjeta «Canales». -->
+        <LinearLayout
+            android:id="@+id/layout_seccion_sms"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:cardElevation="0dp"
-            app:strokeColor="?attr/colorOutline"
-            app:strokeWidth="1dp">
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_seccion_sms"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/text_view_sms_permiso"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_sms_permiso"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="@string/settings_sms_permiso_pedir" />
+
+            <!-- La SIM solo se ofrece con dos o más. Sin READ_PHONE_STATE no se puede saber cuántas
+                 hay, y en lugar del selector sale el botón que pide el permiso. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_sim"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="@string/settings_sim"
+                android:visibility="gone"
+                app:helperText="@string/settings_sim_ayuda">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/dropdown_sim"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
+                android:id="@+id/layout_sim_detectar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
                 android:orientation="vertical"
-                android:padding="12dp">
+                android:visibility="gone">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_plantilla_contrato_titulo"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
-
-                <TextView
-                    android:id="@+id/text_view_plantilla_contrato"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:fontFamily="monospace"
-                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                    android:textIsSelectable="true" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/settings_plantilla_contrato_ayuda"
+                    android:text="@string/settings_sim_detectar_ayuda"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/button_copiar_plantilla"
+                    android:id="@+id/button_sim_detectar"
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/settings_plantilla_copiar" />
+                    android:layout_marginStart="-8dp"
+                    android:text="@string/settings_sim_detectar" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- El texto lo pone el fragment: lleva el presupuesto, que se calcula del contrato. -->
-        <TextView
-            android:id="@+id/text_view_plantilla_coste"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_proteger_bucles"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_proteger_bucles_detalle"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_proteger_bucles"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+        </LinearLayout>
+
+        <!-- ── API ─────────────────────────────────────────────────────────
+             El canal API no tiene credencial global: la URL va en cada regla. Lo único que es
+             de todas es cómo tratar un certificado que no se puede verificar. -->
+        <!-- Se esconde entera con el canal desactivado en la tarjeta «Canales». -->
+        <LinearLayout
+            android:id="@+id/layout_seccion_api"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            android:orientation="vertical">
 
-        <com.google.android.material.divider.MaterialDivider
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_seccion_api"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_certificados"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_certificados_detalle"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_certificados"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+        </LinearLayout>
 
         <!-- ── Protecciones ────────────────────────────────────────────────── -->
         <TextView

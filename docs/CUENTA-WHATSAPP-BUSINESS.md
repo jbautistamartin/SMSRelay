@@ -1,6 +1,6 @@
 # Montar la cuenta de WhatsApp Business, paso a paso
 
-Esta guía cubre **todo lo que hay que hacer fuera de la aplicación** para que SMStoWhats pueda
+Esta guía cubre **todo lo que hay que hacer fuera de la aplicación** para que SMSRelay pueda
 entregar en WhatsApp: una **cuenta de WhatsApp Business** en la Cloud API de Meta. Es la parte
 larga del montaje —la aplicación se instala en dos minutos y esto lleva entre media hora y un par
 de días, según si Meta te pide verificar la empresa— y la mayor parte de lo que cuesta no es
@@ -39,7 +39,7 @@ batalla.
 |---|---|---|
 | **WhatsApp** | La app de siempre, para personas | No |
 | **WhatsApp Business** (app del Play Store) | Una app de móvil para atender clientes **a mano**. No tiene API ni se puede automatizar | **No.** Y además inutiliza el número: ver abajo |
-| **WhatsApp Business Platform** → **Cloud API** | Un servicio web al que se le manda un `POST` y entrega el mensaje. Lo aloja Meta | **Sí. Esto es lo que usa SMStoWhats** |
+| **WhatsApp Business Platform** → **Cloud API** | Un servicio web al que se le manda un `POST` y entrega el mensaje. Lo aloja Meta | **Sí. Esto es lo que usa SMSRelay** |
 | **WhatsApp Business Platform** → **On-Premises API** | Lo mismo pero en un servidor tuyo. Meta lo está retirando | No. Si un manual habla de *On-Premises*, no te sirve |
 
 > **Si instalas la app «WhatsApp Business» en el número que vas a usar, lo quemas.** Un número
@@ -77,7 +77,7 @@ Cuenta de Facebook  (tu usuario personal; solo sirve para entrar)
 **«App» es la palabra más sobrecargada de todo esto.** En esta guía:
 
 - **la app de Meta** es el objeto de `developers.facebook.com`, un contenedor técnico que nadie ve;
-- **la aplicación** es SMStoWhats, lo que corre en el teléfono;
+- **la aplicación** es SMSRelay, lo que corre en el teléfono;
 - **la app de WhatsApp Business** es la del Play Store, que no se usa aquí.
 
 ### Las dos consolas, y por qué te vas a equivocar de una
@@ -152,7 +152,7 @@ un número de producción y gastes por encima del tramo gratuito.
 1. Entra en **[developers.facebook.com](https://developers.facebook.com)** y pulsa
    **Iniciar sesión**, con tu cuenta de Facebook.
 2. Arriba a la derecha, **Mis aplicaciones** → **Crear aplicación**.
-3. En *Nombre de la aplicación* pon lo que quieras —`SMStoWhats`, por ejemplo—; es un nombre
+3. En *Nombre de la aplicación* pon lo que quieras —`SMSRelay`, por ejemplo—; es un nombre
    interno que el destinatario nunca ve.
 4. Cuando pregunte **«¿Qué quieres que haga tu aplicación?»**, elige **Otro**.
 5. En el tipo de aplicación, elige **Empresa** (*Business*).
@@ -205,7 +205,7 @@ verificación del número por SMS o llamada. Lo que conviene saber **antes** de 
   la propia app (*Ajustes → Cuenta → Eliminar mi cuenta*) y esperar unos minutos. Desinstalar la
   app **no** basta: la cuenta sigue existiendo en los servidores de Meta.
 - **El nombre a mostrar lo revisa una persona en Meta** y lo rechaza si no se parece al nombre
-  real de la empresa, o si parece el nombre de una app. No pongas «SMStoWhats» aquí si tu empresa
+  real de la empresa, o si parece el nombre de una app. No pongas «SMSRelay» aquí si tu empresa
   se llama otra cosa. Un rechazo no bloquea nada: se vuelve a enviar con otro nombre.
 - **Los límites de mensajería empiezan bajos** (del orden de unos cientos de destinatarios
   distintos al día) y Meta los sube solos según el volumen y la calidad. Para un reenviador de SMS
@@ -294,7 +294,7 @@ Si prefieres llegar por los menús: **business.facebook.com** → **Configuraci�
 
 #### Los cuatro clics
 
-1. Arriba a la derecha, **Añadir** / **Add+**. Ponle un nombre (`smstowhats-token`) y créalo.
+1. Arriba a la derecha, **Añadir** / **Add+**. Ponle un nombre (`smsrelay-token`) y créalo.
 2. Selecciónalo en la lista y pulsa **Asignar activos** (*Assign assets*). **Son dos activos, y
    están en dos pestañas distintas del mismo diálogo** — es aquí donde se atasca casi todo el
    mundo:
@@ -321,7 +321,7 @@ Si prefieres llegar por los menús: **business.facebook.com** → **Configuraci�
    se puede volver a abrir. Si lo pierdes no se rompe nada —vuelves a *Generar token* y sacas
    otro—, pero el anterior deja de servirte porque no lo tienes.
 
-Pégalo en **SMStoWhats → Ajustes → Cuenta de WhatsApp → Token de acceso**. Es una cadena larguísima
+Pégalo en **SMSRelay → Ajustes → Cuenta de WhatsApp → Token de acceso**. Es una cadena larguísima
 que empieza por `EAA…`; cópiala entera y sin espacios al principio ni al final.
 
 ### 3.3 · Comprobarlo sin salir de la consola
@@ -421,7 +421,7 @@ mirar el mensaje, se habría quejado de algo concreto.
 
 Ya puedes dejar la consola. En el teléfono:
 
-1. Abre SMStoWhats → **Ajustes** → **Cuenta de WhatsApp**.
+1. Abre SMSRelay → **Ajustes** → **Cuenta de WhatsApp**.
 2. Pega el **token de acceso** y el **id del número**.
 3. Pulsa **Comprobar las credenciales**.
 
@@ -454,7 +454,7 @@ plantilla la aplicación solo entrega de vez en cuando**, por casualidad.
 > | Dónde | Qué se hace | Apartado |
 > |---|---|---|
 > | **En la consola de Meta** | Darla de alta y esperar a que la aprueben | **5.2** |
-> | **En SMStoWhats → Ajustes → Entrega** | Escribir su **nombre** y su **idioma** | **5.4** |
+> | **En SMSRelay → Ajustes → Entrega** | Escribir su **nombre** y su **idioma** | **5.4** |
 >
 > Darla de alta en Meta no basta: la aplicación no la descubre sola, hay que decirle cómo se llama.
 > Y escribirla en Ajustes sin haberla dado de alta tampoco: cada envío fallará con un `132xxx`.
@@ -469,7 +469,7 @@ Reenvío de SMS
 
 {{1}}
 
-— SMStoWhats
+— SMSRelay
 ```
 
 Las tres propiedades de ese cuerpo son deliberadas y **cambiarlo rompe cosas**:
@@ -553,7 +553,7 @@ Para comprobar que los tres datos encajan, manda un SMS de prueba al teléfono y
 un `132xxx` ahí significa que el nombre o el idioma no coinciden con lo que hay dado de alta, y es
 lo único que falla con la plantilla una vez aprobada.
 
-> **Dentro de la plantilla caben 978 caracteres**, no los 4.096 del texto libre. Lo que pase de
+> **Dentro de la plantilla caben 980 caracteres**, no los 4.096 del texto libre. Lo que pase de
 > ahí se entrega en varios mensajes **y cada uno se factura**.
 
 ---
@@ -668,7 +668,7 @@ Tres avisos más que no son errores de Meta y que explican la mayoría de los «
 ## Lo que esta guía no cubre a propósito
 
 - **Webhooks.** La Cloud API puede avisar de mensajes entrantes y de confirmaciones de entrega,
-  y para eso haría falta un servidor público. SMStoWhats **no levanta ninguno**: solo manda, y se
+  y para eso haría falta un servidor público. SMSRelay **no levanta ninguno**: solo manda, y se
   queda con la respuesta HTTP de cada envío. No hay nada que configurar aquí.
 - **Grupos.** La aplicación entrega solo a personas, por decisión. No hay ningún id de grupo que
   escribir en una regla.

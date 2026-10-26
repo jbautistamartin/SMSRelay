@@ -1,0 +1,57 @@
+// SMSRelay para Android
+// Copyright © 2026 Capicua · José Luis Bautista Martín
+// Licencia: GNU Lesser General Public License v2.1
+// https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+package com.capicua.smsrelay.data.local.db.entity
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
+
+/**
+ * Entidad Room para la tabla de logs de la aplicación.
+ *
+ * Índice en [smsId] para consultas rápidas por mensaje.
+ * Índice en [timestamp] para ordenar y purgar entradas antiguas.
+ *
+ * [destino] y [canal] se guardan desnormalizados a propósito: así el registro se lee de
+ * principio a fin sin cruzar con `reenvios`, y sigue siendo legible —y filtrable por canal—
+ * aunque el reenvío se haya purgado.
+ */
+@Entity(
+    tableName = "log_entries",
+    indices = [
+        Index(value = ["sms_id"]),
+        Index(value = ["timestamp"])
+    ]
+)
+data class LogEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id")
+    val id: Long = 0,
+
+    /** Nombre de la constante de `LogTipo`. */
+    @ColumnInfo(name = "tipo")
+    val tipo: String,
+
+    @ColumnInfo(name = "sms_id")
+    val smsId: String? = null,
+
+    @ColumnInfo(name = "reenvio_id")
+    val reenvioId: String? = null,
+
+    @ColumnInfo(name = "destino")
+    val destino: String? = null,
+
+    /** Nombre de la constante de `Canal`, o null si la entrada no es de un reenvío. */
+    @ColumnInfo(name = "canal")
+    val canal: String? = null,
+
+    @ColumnInfo(name = "detalle")
+    val detalle: String,
+
+    @ColumnInfo(name = "timestamp")
+    val timestamp: Long
+)
