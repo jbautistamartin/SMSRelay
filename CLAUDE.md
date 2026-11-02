@@ -133,7 +133,8 @@ ramas), y el comprobador de actualizaciones ya encuentra releases.
 
 **Qué pasa con las cuatro anteriores** es la decisión D: una última versión de cada una que avisa
 de que la aplicación está descontinuada y sigue en SMSRelay, y después archivar sus repositorios.
-Las últimas versiones se publicaron el 25 oct 2026; archivar los repositorios queda pendiente.
+Está hecha: las últimas versiones se publicaron el 25 oct 2026 y los cuatro repositorios están
+archivados en GitHub (solo lectura; sus releases siguen descargándose).
 
 ## Arquitectura
 

@@ -24,9 +24,11 @@ regulares sobre el remitente y el texto. **Cada regla elige por dónde sale el m
 > las alertas de la alarma por SMS desde el mismo teléfono. Si vienes de una de ellas, ver
 > [Migrar desde las aplicaciones anteriores](#migrar-desde-las-aplicaciones-anteriores).
 
-**Todavía no hay versión publicada.** La 1.0.0 saldrá cuando un SMS real se vea salir por cada uno
-de los cuatro canales, que es lo que los tests no pueden demostrar por sí solos. Lo que cambia en
-cada versión está en [`CHANGELOG.md`](CHANGELOG.md).
+**La 1.0.0 está publicada** y se descarga desde la
+[última release](https://github.com/jbautistamartin/SMSRelay/releases/latest). Se probó en un
+teléfono real con dos SIM: la API, Telegram y el SMS entregaron de verdad; WhatsApp quedó pendiente
+de un bloqueo de la cuenta de Meta que no es de la aplicación, y que «Comprobar las credenciales»
+explica motivo a motivo. Lo que cambia en cada versión está en [`CHANGELOG.md`](CHANGELOG.md).
 
 No está en Google Play: `RECEIVE_SMS`, `READ_SMS` y `SEND_SMS` pertenecen a un grupo de permisos
 restringido cuya publicación exige una declaración aprobada.
