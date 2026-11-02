@@ -1,0 +1,27 @@
+<Project>
+  <!-- Común a los proyectos de dotnet/, como en APItoSMS. La licencia es la de toda la familia SMS. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Autoría -->
+    <Authors>José Luis Bautista Martín</Authors>
+    <Company>Capicua</Company>
+    <Copyright>Copyright © 2026 Capicua</Copyright>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/jbautistamartin/SMSRelay</RepositoryUrl>
+    <!-- La de la aplicación: la web de pruebas va en su mismo release. -->
+    <Version>1.0.1</Version>
+  </PropertyGroup>
+
+  <!-- Nombre seguro con la clave de la casa, la misma que SilentRunner. La clave vive fuera del
+       repositorio (SMS/Claves, junto al almacén de los APK) y nunca se publica con el código: sin
+       ella, como en un clon de otra persona, se compila sin firmar. -->
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)..\..\Claves\capicua.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly Condition="Exists('$(AssemblyOriginatorKeyFile)')">true</SignAssembly>
+  </PropertyGroup>
+</Project>

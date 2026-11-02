@@ -1,13 +1,13 @@
-// SMSRelay — Servidor de pruebas del canal API (heredado de SMSGateway)
+// SMSRelay — Web de pruebas del canal API (heredada de SMSGateway)
 // Copyright © 2026 Capicua · José Luis Bautista Martín
 // Licencia: GNU Lesser General Public License v2.1
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TestServer.Models;
-using TestServer.Services;
+using Capicua.SmsRelay.Pruebas.Web.Models;
+using Capicua.SmsRelay.Pruebas.Web.Services;
 
-namespace TestServer.Endpoints;
+namespace Capicua.SmsRelay.Pruebas.Web.Endpoints;
 
 public static class SmsEndpoints
 {
@@ -62,8 +62,8 @@ public static class SmsEndpoints
     // ── Handlers ──────────────────────────────────────────────────────────────
 
     // Puertos fijos configurados en appsettings.json
-    private const int PuertoHttp  = 5000;
-    private const int PuertoHttps = 5001;
+    private const int PuertoHttp  = Puertos.Http;
+    private const int PuertoHttps = Puertos.Https;
 
     private static IResult ServerInfo()
     {

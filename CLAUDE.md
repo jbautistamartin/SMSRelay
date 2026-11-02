@@ -89,9 +89,9 @@ adb logcat -s "SmsReceiver" "SmsIngestionService" "DispatchWorker" "WhatsAppSend
 # Simular un SMS entrante en un emulador (no hace falta SIM)
 adb emu sms send +34600112233 "Tu codigo es 4821"
 
-# Servidor de pruebas del canal API (ASP.NET, .NET 10; heredado de SMSGateway)
+# Web de pruebas del canal API (ASP.NET, .NET 10; heredada de SMSGateway). Ver «dotnet/».
 # Página en http://localhost:5000 con lo que va llegando, en vivo. Con el teléfono por USB:
-dotnet run --project test-server/TestServer.csproj
+dotnet run --project dotnet/Capicua.SmsRelay.Pruebas.Web
 adb reverse tcp:5000 tcp:5000
 # y como destino de una regla API:
 #   http://127.0.0.1:5000/sms?mensaje={mensaje}&telefono={telefono}&fecha={fecha}
@@ -862,3 +862,34 @@ Los cuatro primeros se conservan como historia, no como plan vigente. Varias cos
 son verdad aquí —que no hay `SEND_SMS`, que el destino es siempre un E.164, que las guardas
 antibucle no deben volver, que los ajustes se reemplazan al importar— y `MASTERPLAN-RELAY.md`
 explica en cada caso qué cambió y por qué. **Lo que diga este fichero gana.**
+
+## `dotnet/`
+
+La web de pruebas del canal API, **`Capicua.SmsRelay.Pruebas.Web`**, con la misma forma que el
+`dotnet/` de APItoSMS: todo proyecto .NET empieza por **`Capicua.`** (carpeta, ensamblado y
+*namespace*), un `Directory.Build.props` común (net10.0, `TreatWarningsAsErrors`, licencia
+`LGPL-2.1-only`, `<Version>` igual a la de la app) y la solución `dotnet/Capicua.SmsRelay.slnx`.
+Hasta la 1.0.0 era `test-server/`, heredado de SMSGateway; los masterplans lo siguen llamando así.
+
+- **Nombre seguro** con `SMS/Claves/capicua.snk`. Sin el fichero se compila sin firmar y sin
+  error: antes de publicar, el token tiene que ser `a313609336f4f9ff`.
+- **Escucha en toda la red**, en el 5000 (HTTP) y el 5001 (HTTPS), porque el teléfono tiene que
+  llegar. El HTTPS usa un **certificado autofirmado generado al arrancar**
+  (`CertificadoDePruebas`), no el de desarrollo de .NET: publicada, ese no existe y Kestrel no
+  arrancaría. Se exporta e importa como PFX porque en Windows `SslStream` no acepta una clave
+  efímera.
+- **Publicada, la raíz es la carpeta del ejecutable**, como en APItoSMS: así encuentra `wwwroot` y
+  deja ahí `sms_historial.json`, que está fuera del publish y en el `.gitignore`.
+- **Va al release** autocontenida en un solo ejecutable, zip para `win-x64` y `.tar.gz` para
+  `linux-x64` (conserva el permiso de ejecución), más `SHA256SUMS.txt`:
+
+```bash
+cd dotnet
+for R in win-x64 linux-x64; do
+  dotnet publish Capicua.SmsRelay.Pruebas.Web -c Release -r $R --self-contained \
+    -p:PublishSingleFile=true -p:DebugType=None -p:IsTransformWebConfigDisabled=true \
+    -o publicar/$R/Capicua.SmsRelay.Pruebas.Web
+done
+# En win-x64 sobran aspnetcorev2_inprocess.dll y web.config (son de IIS): se borran antes del zip.
+```
+

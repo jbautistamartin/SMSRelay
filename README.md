@@ -193,6 +193,34 @@ Sin Retrofit ni OkHttp: cada llamada de red del proyecto es una docena de línea
 
 ---
 
+## La web de pruebas del canal API
+
+Para probar una regla del canal API sin tener todavía el servidor de verdad. Cada release la trae
+lista para usar, **sin instalar .NET**: `Capicua.SmsRelay.Pruebas.Web-<versión>-win-x64.zip` y
+`…-linux-x64.tar.gz`. Se descomprime, se ejecuta `Capicua.SmsRelay.Pruebas.Web` y se abre
+<http://localhost:5000>, donde aparece en vivo cada petición que llega.
+
+| Puerto | Para qué |
+|---|---|
+| `5000` | HTTP. Lo normal en la red local |
+| `5001` | HTTPS con un certificado autofirmado que se genera al arrancar: en el teléfono hay que encender **«Aceptar certificados no válidos»** en el canal API |
+
+La página enseña las URLs listas para pegar como destino de una regla, con la IP de la
+computadora. Por ejemplo:
+
+```
+http://192.168.1.20:5000/sms?mensaje={mensaje}&telefono={telefono}&fecha={fecha}
+```
+
+El teléfono tiene que llegar a la computadora: en la misma wifi y con el puerto abierto en su
+firewall (Windows lo pregunta la primera vez), o por el cable con
+`adb reverse tcp:5000 tcp:5000` y `http://127.0.0.1:5000/…` como destino. Lo recibido se guarda en
+`sms_historial.json`, junto al ejecutable.
+
+Desde el código: `dotnet run --project dotnet/Capicua.SmsRelay.Pruebas.Web` (.NET 10).
+
+---
+
 ## Compilar e instalar desde el código
 
 ### 1. Compilar
@@ -383,6 +411,11 @@ app/src/main/java/com/capicua/smsrelay/
 ├── service/          ← SmsIngestionService
 ├── util/             ← Doze, inicio automático, interruptor de recepción
 └── worker/           ← DispatchWorker, OrphanRescueWorker, HealthMonitorWorker, ColaDeEnvios
+
+dotnet/
+├── Capicua.SmsRelay.slnx
+├── Directory.Build.props         ← común: net10.0, licencia, versión, nombre seguro
+└── Capicua.SmsRelay.Pruebas.Web/ ← la web de pruebas del canal API (antes test-server/)
 ```
 
 ---

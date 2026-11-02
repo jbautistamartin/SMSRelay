@@ -111,9 +111,9 @@ Desktop.ini
 # Claude Code — configuración local del asistente
 # ──────────────────────────────────────────────────────────────
 .claude/
-test-server/.vs/
-test-server/obj/
-test-server/bin/
+dotnet/**/.vs/
+dotnet/**/obj/
+dotnet/**/bin/
 .vs
 sms_historial.json
 sms_recibidos.log
