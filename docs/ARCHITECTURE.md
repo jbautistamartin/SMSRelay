@@ -433,10 +433,11 @@ adb emu sms send +34600112233 "Tu codigo es 4821"
 ```
 
 Para probar el canal SMS, dos emuladores pueden mandarse SMS usando su número de puerto (`5554`,
-`5556`…) como número de teléfono. Para el canal API está **`test-server/`**, el servidor de
-pruebas que venía con SMSGateway: `dotnet run --project test-server/TestServer.csproj` lo levanta
-en el puerto 5000, con una página que enseña en vivo cada petición y una ayuda con las URLs listas
-para pegar como destino. Desde el emulador, `10.0.2.2` es la máquina anfitriona; con un teléfono
+`5556`…) como número de teléfono. Para el canal API está **`dotnet/Capicua.SmsRelay.Pruebas.Web`**,
+la web de pruebas que venía con SMSGateway (hasta la 1.0.0, `test-server/`):
+`dotnet run --project dotnet/Capicua.SmsRelay.Pruebas.Web` la levanta en el puerto 5000 (y 5001 con
+HTTPS autofirmado), con una página que enseña en vivo cada petición y una ayuda con las URLs listas
+para pegar como destino. El release la trae autocontenida para Windows y Linux. Desde el emulador, `10.0.2.2` es la máquina anfitriona; con un teléfono
 por USB, `adb reverse tcp:5000 tcp:5000` y `http://127.0.0.1:5000/sms?mensaje={mensaje}&…`.
 
 Las URLs `http://` funcionan porque `res/xml/network_security_config.xml` permite el tráfico sin

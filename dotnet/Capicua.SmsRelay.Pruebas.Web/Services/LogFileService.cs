@@ -1,13 +1,13 @@
-// SMSRelay — Servidor de pruebas del canal API (heredado de SMSGateway)
+// SMSRelay — Web de pruebas del canal API (heredada de SMSGateway)
 // Copyright © 2026 Capicua · José Luis Bautista Martín
 // Licencia: GNU Lesser General Public License v2.1
 
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TestServer.Models;
+using Capicua.SmsRelay.Pruebas.Web.Models;
 
-namespace TestServer.Services;
+namespace Capicua.SmsRelay.Pruebas.Web.Services;
 
 /// <summary>
 /// Persiste el historial de SMS en <c>sms_historial.json</c> (JSON Lines,

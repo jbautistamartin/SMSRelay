@@ -1,8 +1,8 @@
-// SMSRelay — Servidor de pruebas del canal API (heredado de SMSGateway)
+// SMSRelay — Web de pruebas del canal API (heredada de SMSGateway)
 // Copyright © 2026 Capicua · José Luis Bautista Martín
 // Licencia: GNU Lesser General Public License v2.1
 
-namespace TestServer.Models;
+namespace Capicua.SmsRelay.Pruebas.Web.Models;
 
 /// <summary>
 /// Representa un SMS recibido por la app Android y enviado a este servidor de pruebas.

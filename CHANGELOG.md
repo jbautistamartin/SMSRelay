@@ -17,6 +17,29 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y l
 
 ---
 
+## [1.0.1] - 2026-11-02
+
+La aplicación no cambia: esta versión publica la web de pruebas del canal API.
+
+### Añadido
+
+- **La web de pruebas del canal API va en el release**, autocontenida en un solo ejecutable, sin
+  instalar .NET: `Capicua.SmsRelay.Pruebas.Web-<versión>-win-x64.zip` y
+  `…-linux-x64.tar.gz`, con sus sumas en `SHA256SUMS.txt`.
+
+### Cambiado
+
+- **`test-server/` pasa a `dotnet/Capicua.SmsRelay.Pruebas.Web`**, con el nombre y la estructura de
+  `dotnet/` de APItoSMS: `Directory.Build.props` común, la solución `Capicua.SmsRelay.slnx` y
+  nombre seguro con la clave de la casa (`PublicKeyToken=a313609336f4f9ff`).
+- **El HTTPS del puerto 5001 usa un certificado autofirmado que se genera al arrancar**, en lugar del
+  de desarrollo de .NET, que en la versión publicada no existe. Para que el teléfono lo acepte hay
+  que encender «Aceptar certificados no válidos» en el canal API.
+- Publicada, la web toma como raíz la carpeta del ejecutable: encuentra su `wwwroot` y guarda
+  `sms_historial.json` ahí, se lance desde donde se lance.
+
+---
+
 ## [1.0.0] - 2026-10-25
 
 ### Añadido

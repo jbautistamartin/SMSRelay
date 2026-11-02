@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Capicua.SmsRelay.Pruebas.Web</RootNamespace>
+    <Description>Web de pruebas del canal API de SMSRelay (heredada de SMSGateway): recibe las peticiones GET de la app y las enseña en vivo en el navegador por Server-Sent Events.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- El historial de los SMS recibidos es de cada equipo: nunca va en un paquete publicado. -->
+    <Content Update="sms_historial.json" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
+  </ItemGroup>
+</Project>
